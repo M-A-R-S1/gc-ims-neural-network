@@ -1,4 +1,5 @@
 .idea/
+.data/IMS_Olive_Oil_Geography/
 venv/
 __pycache__/
 *.pyc
