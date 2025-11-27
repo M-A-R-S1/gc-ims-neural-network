@@ -1,6 +1,22 @@
+from pathlib import Path
+import preprocess
+
 
 if __name__ == '__main__':
-       # First Step -> GC-IMS Preprocessing
+    print("TEST")
+
+    input_dir = Path("./data/IMS_Olive_Oil_Geography/Greece/O-034")
+    output_dir = Path("./output/spectra/")
+
+    #if not output_dir.exists():
+    #    output_dir.mkdir(parents=True, exist_ok=True)
+
+    filtered_data = preprocess.preprocess_spectra(input_dir=input_dir,
+                                                  output_dir=output_dir)
+
+
+
+    # First Step -> GC-IMS Preprocessing
     # input_dir --> Ordner mit den Rohdaten der Spektren.
     # output_dir --> Ordner für die verarbeiteten Daten
     # plot_dir --> Ordner für die erzeugten Heatmaps/Plots.
