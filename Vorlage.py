@@ -119,6 +119,7 @@ def preprocess_and_visualize_spectra(input_dir, output_plot_dir):
         # Zuschnitt auf einen relevanten Bereich der Retentionszeit(rt)
         sample.cut_rt(start=200, stop=2500)
         sample.values_processed = np.copy(sample.values)
+        # TODO -> Why creating a copy?
 
         # Baseline-Korrektur
         # Zeilenweise und spaltenweise wird ein niedriger Perzentilwert (5 %) als Basislinie subtrahiert
@@ -138,6 +139,10 @@ def preprocess_and_visualize_spectra(input_dir, output_plot_dir):
         sample.values = sample.values_processed
         # Glättung: uniform_filter mittelt lokal über ein Fenster von 10x10 Punkten, um Rauschen zu reduzieren
         sample.values_processed = uniform_filter(sample.values, size=(10, 10))
+        """ TODO -> In der Arbeit steht "Am Ende der Vorverarbeitung wurde mittels des Uniform-Filters mit einem
+        # 11×11-Fenster gefiltert" ... Hier im Code wird aber 10x10 verwendet. Die uniform_filter function arbeitet NICHT
+        # mit einem 0-index. Also müsste es auf 11x11 geändert werden?
+        """
 
         # Vorverarbeitetes Spektrum visualisieren
         # Zeichnet das vorverarbeitete Spektrum

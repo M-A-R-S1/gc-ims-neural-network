@@ -5,15 +5,13 @@ import preprocess
 if __name__ == '__main__':
     print("TEST")
 
-    input_dir = Path("./data/IMS_Olive_Oil_Geography/Greece/O-034")
+    input_dir = Path("./data/IMS_Olive_Oil_Geography/Greece")
     output_dir = Path("./output/spectra/")
 
-    #if not output_dir.exists():
-    #    output_dir.mkdir(parents=True, exist_ok=True)
-
+    # Step 1: Preprocess the .mea files
     filtered_data = preprocess.preprocess_spectra(input_dir=input_dir,
-                                                  output_dir=output_dir)
-
+                                                  output_dir=output_dir,
+                                                  create_plots="single")
 
 
     # First Step -> GC-IMS Preprocessing
