@@ -1,156 +1,121 @@
-import os
 import ims
 from pathlib import Path
 from scipy.ndimage import uniform_filter
-import matplotlib.pyplot as plt
 import numpy as np
+import plot
 
 
-def preprocess_spectra(input_dir: Path, output_dir: Path) -> list:
-    # read .ims data.
-    dataset = ims.Dataset.read_mea(input_dir)
-    print(f"Opening dataset: {dataset.name} ({len(dataset.data)} Spectra)")
+# Overhauled function. Original function = preprocess_and_visualize_spectra
+def preprocess_spectra(input_dir: Path,
+                       output_dir: Path,
+                       create_plots: str = "all",
+                       drift_cut: tuple[float, float] = (1.02, 2.5),
+                       retention_cut: tuple[int, int] = (80, 900),
+                       percentile: float = 5.0,
+                       uniform_filter_size: tuple[int, int] = (11, 11)) -> list[ims.Spectrum]:
+    """
+    This function takes care of the preprocess steps for .mea files.
+    All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as datasets.
+    Each dataset corresponds to one directory and is preprocessed by the following:
+    - 1. Interpolation to a common Reactant Ion Peaks (RIP)
+    - 2. Baseline correction for drift- and retention time.
+    - 3. Background noise reduction (1) for each axis, computed with a given percentile.
+    - 4. Background noise reduction (2) smooth the spectrum by applying a uniform filter.
+    This function returns the preprocessed spectra as a list.
 
-    # Define the output directories for the plotted spectra images.
-    output_dir_raw = output_dir / dataset.name / 'raw'
-    output_dir_processed = output_dir / dataset.name / 'processed'
-    if not output_dir_raw.exists():
-        output_dir_raw.mkdir(parents=True, exist_ok=True)
-    if not output_dir_processed.exists():
-        output_dir_processed.mkdir(parents=True, exist_ok=True)
+    The GC-IMS spectra can be plotted and saved as .png files if the function parameter is set accordingly:
+    - "single" -> Creates a plot image for each individual .mea file.
+    - "overview" -> Creates a plot image for up to 16 .mea files inside the same directory.
+    - "all" -> Creates both single and overview plot images.
+    - "none" -> Creates no plot images.
 
-    # Interpolates all spectra to a common RIP (Reactant Ion Peaks)
-    dataset.interp_riprel()
+    :param input_dir: The directory where the .mea files are located in.
+    :param output_dir: Saving path of the plotting image.
+    :param create_plots: Specifies which images to create. [none = no images | single = one image for each .mea file |
+    overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
+    :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
+    :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
+    :param percentile: Value for the background noise reduction. [e.g. percentile=5.0 removes the lowest 5% of the data from a spectrum]
+    :param uniform_filter_size: Tuple for the uniform filter size.
+    :return: list of preprocessed spectra.
+    """
 
+    # List of processed spectra.
     processed_data = []
-    # Renaming table
-    # TODO -> Adjust, based on future .mea file names ... or remove it completely.
-    name_map = {
-        "Citrus": "Citrushonig",
-        "Lavendel": "Lavendelhonig",
-        "Sonnenblume": "Sonnenblumenhonig",
-        "Linde": "Lindenhonig",
-        "Eukalyptus": "Eukalyptushonig",
-        "Akazie": "Akazienhonig",
-        "Buchweizen": "Buchweizenhonig",
-        "Raps": "Rapshonig",
-        "Kastanie": "Kastanienhonig"
-    }
 
-    # Walk through all spectra of the dataset.
-    for idx, spectrum in enumerate(dataset.data):
-        print("############################################################")
-        print(f"Spectrum {idx + 1}/{len(dataset.data)}")
-        if spectrum.values.size == 0:
-            print(f"Spectrum empty ---- Skipping.")
+    # list of plotting strategies.
+    plotting_strategy = ["none", "all", "single", "overview"]
+    # check if the user plotting strategy exists. If not default to "all".
+    if not create_plots.lower() in plotting_strategy:
+        create_plots = "all"
+    else:
+        create_plots = create_plots.lower()
+
+    # Create a set of all subdirectories of the given input_dir which have .mea files in them.
+    dir_set = set(p.parent for p in input_dir.rglob('*.mea'))
+
+    # If there are no .mea files at all report this to the user.
+    if not dir_set:
+        print(f"No .mea files found in {input_dir} and sub directories.")
+        return processed_data
+
+    # Walk through all found subdirectories.
+    for current_input_dir in sorted(list(dir_set)):
+        try:
+            # Create the dataset for all .mea files in the current subdirectory.
+            dataset = ims.Dataset.read_mea(current_input_dir)
+        except Exception as e:
+            print("=======================================================")
+            print(f"ERROR: could not read files at {current_input_dir}: {e} ---- Skipping.")
             continue
 
-        # Relative path of the spectrum file.
-        spectrum_path = Path(spectrum.name)
+        print("=======================================================")
+        print(f"Opening dataset: {dataset.name} ({len(dataset.data)} Spectra)")
+        print("-------------------------------------------------------")
 
-        # Create the name for the current spectrum.
-        # TODO -> Adjust, based on future .mea file names.
-        name_parts = spectrum_path.stem.split('_')
-        if len(name_parts) >= 6:
-            name_original = name_parts[2]
-            number_1 = name_parts[3]
-            number_2 = name_parts[5]
-            name_short = name_map.get(name_original, name_original)
-            spectrum_name = f"{name_short}_{number_1}_{number_2}"
-        else:
-            spectrum_name = spectrum_path
+        # Set the output directory
+        current_output_dir = output_dir / current_input_dir.relative_to(input_dir)
 
-        # Raw spectrum plotting.
-        plt.figure(figsize=(10, 6))
-        spectrum.plot()
-        plt.title(f"{spectrum_name} [raw]")
-        plt.xlabel("Drifttime [ms]")
-        plt.ylabel("Retentiontime [s]")
-        # Change the colorbar label.
-        cbar = plt.gcf().axes[-1]
-        cbar.set_ylabel("Intensity", fontsize=10)
-        # Saving the image.
-        imagename_raw = output_dir_raw /  f"{spectrum_name}_raw.png"
-        plt.savefig(imagename_raw, dpi=300, bbox_inches='tight')
-        plt.close()
-        print(f"Raw spectra saved [{spectrum_name}_raw.png]")
+        # Interpolates all spectra to a common RIP (Reactant Ion Peaks)
+        dataset.interp_riprel()
 
-        # Baseline correction for drift- and retention time.
-        spectrum.cut_dt(start=1.02, stop=2.5)
-        spectrum.cut_rt(start=80, stop=900)
-        # Why???
-        # TODO -> Ask why, and IF this is correct. -> The uniform_filter is used but only on the copied data!?
-        spectrum.values_processed = np.copy(spectrum.values)
+        # Walk through all spectra of the dataset.
+        for idx, spectrum in enumerate(dataset.data):
+            print(f"- Spectrum {idx + 1}/{len(dataset.data)}")
+            if spectrum.values.size == 0:
+                print(f"- Spectrum empty ---- Skipping.")
+                continue
 
-        # Baseline-Korrektur
-        # Zeilenweise und spaltenweise wird ein niedriger Perzentilwert (5 %) als Basislinie subtrahiert
+            # Plot the raw spectrum.
+            if create_plots in ["all", "single"]:
+                plot.single_gcims_plot(spectrum=spectrum,
+                                       output_dir=current_output_dir,
+                                       condition="raw")
 
-        # Background noise reduction for each axis, computed with a given percentile.
-        percentile = 5
-        spectrum.values_processed -= np.percentile(spectrum.values_processed, percentile, axis=0, keepdims=True)
-        spectrum.values_processed -= np.percentile(spectrum.values_processed, percentile, axis=1, keepdims=True)
-        # Adjust negative values to 0.
-        spectrum.values_processed[spectrum.values_processed < 0] = 0
-        spectrum.values = spectrum.values_processed
-        # Glättung: uniform_filter mittelt lokal über ein Fenster von 10x10 Punkten, um Rauschen zu reduzieren
+            # Baseline correction for drift- and retention time.
+            spectrum.cut_dt(start=drift_cut[0], stop=drift_cut[1])
+            spectrum.cut_rt(start=retention_cut[0], stop=retention_cut[1])
+            # Background noise reduction for each axis, computed with a given percentile.
+            # Adjust negative values to 0.
+            # Smooth the adjusted spectrum values and reduce noise.
+            spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=0, keepdims=True)
+            spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=1, keepdims=True)
+            spectrum.values[spectrum.values < 0] = 0
+            spectrum.values = uniform_filter(input=spectrum.values, size=uniform_filter_size)
 
-        """ TODO -> In der Arbeit steht "Am Ende der Vorverarbeitung wurde mittels des Uniform-Filters mit einem
-        # 11×11-Fenster gefiltert" ... Hier im Code wird aber 10x10 verwendet. Die uniform_filter function arbeitet NICHT
-        # mit einem 0-index. Also müsste es auf 11x11 geändert werden?
-        """
-        spectrum.values_processed = uniform_filter(spectrum.values_processed, size=(10, 10))
-        # TODO -> Warum wird eine Glättung NUR auf den kopierten Daten durchgeführt? Fehler? Sinn?
+            # Plot the processed spectrum.
+            if create_plots in ["all", "single"]:
+                plot.single_gcims_plot(spectrum=spectrum,
+                                       output_dir=current_output_dir,
+                                       condition="processed")
 
-        # Vorverarbeitetes Spektrum visualisieren
-        # Zeichnet das vorverarbeitete Spektrum
-        plt.figure(figsize=(10, 6))
-        spectrum.plot()
-        # Beschriftung der Achsen:relative Driftzeit, Retentionszeit.
-        plt.title(f"{spectrum_name} PROCESSED")
-        plt.xlabel("Drifttime [ms]")
-        plt.ylabel("Retentiontime [s]")
-        # Legt Colorbar-Beschriftung auf "Intensität".
-        cbar = plt.gcf().axes[-1]  # Annahme: letzte Achse ist die Colorbar
-        cbar.set_ylabel("Intensity", fontsize=10)
-        caption = ""
-        plt.figtext(0.5, -0.008, caption, wrap=True, horizontalalignment='center', fontsize=7)
-        # Speichert PNG-Datei im Ausgabeordner
-        plot_filename_processed = os.path.join(output_dir_processed, f"{spectrum_name}_processed_minBaseline.png")
-        plt.savefig(plot_filename_processed, dpi=300, bbox_inches='tight')
-        plt.close()
-        print(f"Processed spectra saved in {plot_filename_processed}")
+            # Add the processed spectrum to the list.
+            processed_data.append(spectrum)
 
-        processed_data.append(spectrum)
+        # Plot overview of all spectra inside the current subdirectory.
+        if create_plots in ["all", "overview"]:
+            plot.overview_gcims_plot(dataset=dataset,
+                                     output_dir=current_output_dir,
+                                     condition="processed")
 
-        """
-        # Grid-Plot der ersten 18 Rohspektren
-        # Erstellt Rasterdarstellung (n_rows x n_cols)
-        n_spectra = min(18, len(processed_data))
-        n_cols = 6
-        n_rows = math.ceil(n_spectra / n_cols)
-
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(18, 3 * n_rows), sharex=True, sharey=True)
-        axes = axes.flatten()
-        # Zeigt jedes Spektrum in imshow mit Farbcodierung cmap="viridis"
-        for idx in range(n_spectra):
-            ax = axes[idx]
-            spectrum = filtered_data[idx]
-            ax.imshow(spectrum.values, aspect='auto', cmap='viridis')
-            ax.set_title(f"{idx + 1}: {spectrum.name}", fontsize=8)
-            ax.axis('off')
-
-        # Leere Subplots ausblenden, falls weniger als 18 Spektren
-        for idx in range(n_spectra, len(axes)):
-            axes[idx].axis('off')
-
-        plt.suptitle("Grid-Plot der ersten 18 Rohspektren", fontsize=16)
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
-
-        grid_plot_path = os.path.join(output_dir, "grid_plot_18_rohspektren.png")
-        plt.savefig(grid_plot_path, dpi=300, bbox_inches='tight')
-        plt.close()
-        print(f"Grid-Plot mit 18 Rohspektren gespeichert unter: {grid_plot_path}")
-        """
-
-    # Gibt alle erfolgreich vorverarbeiteten Spektren zurück
     return processed_data
