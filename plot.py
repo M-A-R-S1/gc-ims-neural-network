@@ -48,7 +48,8 @@ def single_gcims_plot(spectrum: ims.Spectrum,
 
 def overview_gcims_plot(dataset: ims.Dataset,
                         output_dir: Path,
-                        condition: str) -> None:
+                        condition: str,
+                        size: tuple[int, int] = (5, 6)) -> None:
     """
     This function creates an overview plot for a given GC-IMS dataset and saves it at the root of the "output_dir"
     parameter path. The created plot contains up to 16 subplots and uses all .mea files of the "output_dir" parameter
@@ -57,6 +58,7 @@ def overview_gcims_plot(dataset: ims.Dataset,
     :param dataset: The GC-IMS dataset with all spectra of a directory.
     :param output_dir: Saving path of the plotting image.
     :param condition: The condition of the dataset [e.g. "raw" for raw data, or "processed" for preprocessed data"]
+    :param size: Size tuple for the subplot figures. Default size (5,6)
     :return: None.
     """
     # Create the output directory.
@@ -68,7 +70,7 @@ def overview_gcims_plot(dataset: ims.Dataset,
     COLS = 4
     ROWS = math.ceil(SPECTRA_NUM / COLS)
 
-    fig, axes = plt.subplots(ROWS, COLS, figsize=(COLS * 5, ROWS * 6), sharex=True, sharey=True)
+    fig, axes = plt.subplots(ROWS, COLS, figsize=(COLS * size[0], ROWS * size[1]), sharex=True, sharey=True)
     plt.suptitle(f"Spectra overview plot [{output_dir.name} - {condition}]", fontsize=16)
 
     # Walk through all spectra and create the plots.

@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # Step 1: Preprocess the .mea files
     filtered_data = preprocess.preprocess_spectra(input_dir=input_dir,
                                                   output_dir=output_dir,
-                                                  create_plots="single")
+                                                  create_plots="overview")
 
 
     # First Step -> GC-IMS Preprocessing
