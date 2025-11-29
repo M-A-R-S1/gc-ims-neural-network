@@ -1,17 +1,43 @@
 from pathlib import Path
 import preprocess
+import os
 
 
 if __name__ == '__main__':
     print("TEST")
 
-    input_dir = Path("./data/IMS_Olive_Oil_Geography/Greece")
+    input_dir = Path("./data/IMS_Olive_Oil_Geography/Greece/O-034")
     output_dir = Path("./output/spectra/")
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
 
     # Step 1: Preprocess the .mea files
-    filtered_data = preprocess.preprocess_spectra(input_dir=input_dir,
-                                                  output_dir=output_dir,
-                                                  create_plots="overview")
+    processed_data = preprocess.start(input_dir=input_dir,
+                                      output_dir=output_dir,
+                                      create_plots="None")
+
+    print(processed_data)
+
+    """
+    window_size = 5
+    min_margin = 5
+    Zustand = "processed"
+    plot_dir = Path("./output/testing/plot")
+    if not plot_dir.exists():
+        plot_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        all_peak_df = preprocess.parallel_process_spectra(processed_data, window_size, plot_dir, Zustand, min_margin)
+    except Exception as e:
+        print(f"Fehler bei der Peak-Erkennung: {str(e)}")
+
+    # Speichert die kombinierten Peak-Daten als CSV
+    all_peak_df.to_csv(os.path.join(output_dir, "11x11_raw_all_peak_data_exact_nachbarn_weniger.csv"), index=False)
+    # print("Alle Peak-Daten gespeichert.")
+
+    # Speichert die kombinierten Peak-Daten als Excel-Datei
+    all_peak_df.to_excel(os.path.join(output_dir, "11x11_raw_all_peak_data_exact_nachbarn_weniger.xlsx"), index=False)
+    """
 
 
     # First Step -> GC-IMS Preprocessing
@@ -51,4 +77,8 @@ if __name__ == '__main__':
 
     # Speichert die kombinierten Peak-Daten als Excel-Datei
     #     all_peak_df.to_excel(os.path.join(output_dir, "11x11_raw_all_peak_data_exact_nachbarn_weniger.xlsx"), index=False)
+
+
+###########################################################################################################################################################################
+
 
