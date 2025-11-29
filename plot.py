@@ -46,7 +46,7 @@ def single_gcims_plot(spectrum: ims.Spectrum,
     print(f"- Plot saved [{spectrum_name}_{condition}.png]")
 
 
-def overview_gcims_plot(dataset: ims.Dataset,
+def overview_gcims_plot(dataset: list[ims.Spectrum],
                         output_dir: Path,
                         condition: str,
                         size: tuple[int, int] = (5, 6)) -> None:
@@ -66,7 +66,7 @@ def overview_gcims_plot(dataset: ims.Dataset,
         output_dir.mkdir(parents=True, exist_ok=True)
 
     # Define plot layout parameters.
-    SPECTRA_NUM = min(len(dataset.data), 16)
+    SPECTRA_NUM = min(len(dataset), 16)
     COLS = 4
     ROWS = math.ceil(SPECTRA_NUM / COLS)
 
@@ -74,7 +74,7 @@ def overview_gcims_plot(dataset: ims.Dataset,
     plt.suptitle(f"Spectra overview plot [{output_dir.name} - {condition}]", fontsize=16)
 
     # Walk through all spectra and create the plots.
-    for idx, spectrum in enumerate(dataset.data):
+    for idx, spectrum in enumerate(dataset):
         # Create the Plot in the gc-ims design.
         axes[idx].imshow(spectrum.values,
                   origin="lower",
