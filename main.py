@@ -16,10 +16,22 @@ if __name__ == '__main__':
     # - Background noise reduction
     # - Gaussian smoothing
     preprocessed_data = preprocess.start(input_dir=input_dir,
-                                      output_dir=output_dir,
-                                      create_plots="None")
+                                         output_dir=output_dir,
+                                         create_plots="None")
 
-    print(preprocessed_data)
+    # Step 2: Calculate peaks on preprocessed data.
+    try:
+        peak_dataframe = preprocess.get_all_peaks(preprocessed_data, 5, output_dir)
+
+        csv_filename = output_dir / "All_peak_data.csv"
+        excel_filename = output_dir / "All_peak_data.xlsx"
+        peak_dataframe.to_csv(csv_filename, index=False)
+        print(f"All peaks saved as .csv file")
+        peak_dataframe.to_excel(excel_filename, index=False)
+        print(f"All peaks saved as .xlsx file")
+    except Exception as e:
+        print(f" Error during peak detection: {str(e)}")
+
 
     """
     window_size = 5
@@ -30,7 +42,7 @@ if __name__ == '__main__':
         plot_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        all_peak_df = preprocess.parallel_process_spectra(processed_data, window_size, plot_dir, Zustand, min_margin)
+        all_peak_df = preprocess.parallel_process_spectra(processed_data, window_size, output_dir, Zustand, min_margin)
     except Exception as e:
         print(f"Fehler bei der Peak-Erkennung: {str(e)}")
 

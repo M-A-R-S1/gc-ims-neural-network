@@ -1,5 +1,7 @@
 import ims
 from pathlib import Path
+
+import numpy
 from scipy.ndimage import uniform_filter
 import numpy as np
 import plot
@@ -192,41 +194,44 @@ def preprocess_spectra(spectrum: ims.Spectrum,
     return spectrum
 
 
-def get_all_peaks(filtered_data, window_size, output_dir, condition) -> pd.DataFrame:
-
-    all_peak_data_list = []
+def get_all_peaks(preprocessed_data: list[ims.Spectrum],
+                  window_size: int,
+                  output_dir: Path) -> pd.DataFrame:
 
     # Check how many cpu cores are available.
     cpu_cores = os.cpu_count()
     tasks = []
 
     # Collect needed arguments for each peak finding computation.
-    for idx, spectrum in enumerate(filtered_data):
+    for idx, spectrum in enumerate(preprocessed_data):
 
         task_args = (spectrum,
                      idx,
                      window_size,
-                     output_dir,
-                     condition)
+                     output_dir)
 
         tasks.append(task_args)
 
     # Start parallel processing. One cpu core handels one spectrum.
     with Pool(cpu_cores) as p:
-        all_peak_data_list = p.starmap(peak_detection, tasks)
+        results = p.starmap(peak_detection, tasks)
 
-    all_peak_df = pd.DataFrame(all_peak_data_list)
+    peak_data = [item for dictionary in results for item in dictionary]
+    peak_dataframe = pd.DataFrame(peak_data)
 
-    return all_peak_df
+    return peak_dataframe
 
 
-def peak_detection(spectrum, idx, window_size, output_dir, condition):
+def peak_detection(spectrum: ims.Spectrum,
+                   idx: int,
+                   window_size: int,
+                   output_dir: Path) -> list[dict]:
+    print(f"Peak Detection Started on: Spectrum {idx + 1}")
     # copy: Sicherung der vorverarbeiteten Daten (values_backup), damit die Peak-Findung nicht die echten Werte verändert.
     values_backup = spectrum.values.copy()
-
     # Normalization in just one line of code ...
     spectrum.normalization()
-
+    # List of dictionaries which contain selected peak information.
     spectrum_peak_data = []
 
     try:
@@ -236,7 +241,7 @@ def peak_detection(spectrum, idx, window_size, output_dir, condition):
         peak_tree = max_tree_local_maxima(spectrum.values, connectivity=2)
         # Define the upper tree hierarchy threshold.
         hierarchy_threshold = int(peak_tree.max() * 0.95)
-        # Define the min intensity thresghold.
+        # Define the min intensity threshold.
         min_intensity_threshold = 0.035
 
         # List of tuples with peak coordinates (Retention-index, Drift-index) which satisfy the selection conditions.
@@ -248,9 +253,9 @@ def peak_detection(spectrum, idx, window_size, output_dir, condition):
             )
         )
 
-        # Get all retention indicies from the selected peak coordinates.
+        # Get all retention indices from the selected peak coordinates.
         ret_idx = selected_peak_coords[:, 0]
-        # Get all drift indicies from the selected peak coordinates.
+        # Get all drift indices from the selected peak coordinates.
         drift_idx = selected_peak_coords[:, 1]
         # List of normalized intensities which correlate to the coordinates of the "selected_peak_coords" list.
         selected_peak_intensities = spectrum.values[ret_idx, drift_idx]
@@ -294,9 +299,15 @@ def peak_detection(spectrum, idx, window_size, output_dir, condition):
 
         # Contains the strongest peak coordinates and all of their neighbor coords within a radius of the window size.
         neighbor_peak_coords = []
+        # Contains a tuple for each coordinate in "strongest peaks" with the retention and drift times.
+        strongest_peak_times = []
 
         # Walk through all the strongest peak coordinates.
         for ret_idx, drift_idx in strongest_peak_coords:
+
+            # Append the retention and drift time to the list.
+            strongest_peak_times.append((spectrum.ret_time[ret_idx], spectrum.drift_time[drift_idx]))
+
             # Now walk through the peak neighborhood within a radius of the window size.
             for dx in range(-window_size, window_size+1):
                 for dy in range(-window_size, window_size+1):
@@ -308,140 +319,125 @@ def peak_detection(spectrum, idx, window_size, output_dir, condition):
         # Remove duplicate coordinate pairs from the list by converting the list temporarily to a set.
         neighbor_peak_coords = list(set(neighbor_peak_coords))
 
-
-        # TODO -> Hier geht es weiter
-        neuer_name = spectrum.name
-
-        # Visualisierung
-        # spectrum.plot() zeichnet das komplette 2D-Spektrum
-        #
-        plt.figure(figsize=(12, 8))
-        spectrum.plot()
-
-        # highest_hierarchy_peaks: enthält die Matrix-Indices (ret_index, drift_index) der Peak
-        # spectrum.drift_time[drift_index]--> Umrechnung von Spaltenindex zu realer Driftzeit
-        # spectrum.ret_time[ret_index]--> Umrechnung von Zeilenindex zu realer Retentionszeit.
-        # r+', markersize=3--> rotes Kreuz '+' für die einzelnen Peaks
-        # peak_ids.append()--> speichert die Peak-Koordinaten in einer Liste
-        peak_ids = []
-        for coord in strongest_peak_coords:
-            ret_index, drift_index = coord
-            plt.plot(spectrum.drift_time[drift_index], spectrum.ret_time[ret_index], 'r+', markersize=3)
-            peak_ids.append((spectrum.ret_time[ret_index], spectrum.drift_time[drift_index]))
-
-        # X-Achse = Driftzeit; Y-Achse = Retentionszeit
-        plt.title(f"Peak-Plot (Original): {neuer_name}")
-        plt.xlabel("Relative Driftzeit [ms]")
-        plt.ylabel("Retentionszeit [s]")
-
-        # Farbskala = Intensität (Colorbar)
-        cbar = plt.gcf().axes[-1]
-        cbar.set_ylabel("Intensität", fontsize=10)
-        # Fügt unterhalb des Plots eine Textzeile hinzu
-        caption = ""
-        plt.figtext(0.5, -0.05, caption, wrap=True, horizontalalignment='center', fontsize=7)
-        # Speichert den Plot als PNG mit hoher Auflösung (300 dpi)
-        # bbox_inches="tight"--> unnötige Ränder werden abgeschnitten
-        peak_plot_filename = os.path.join(output_dir, f"peak_plot_{neuer_name}_peak_plot_vorverarbeitet.png")
-        plt.savefig(peak_plot_filename, dpi=300, bbox_inches="tight")
-        plt.close()
-        print(f"Peak-Plot gespeichert unter: {peak_plot_filename}")
-
-        # Verwendung der erweiterten Koordinate
-        # all_coords_to_process--> kommt aus dem Schritt davor, wo um jeden Peak herum eine Nachbarschaft gebildet wurde
-        # Jede coord ist ein Tupel(ret_index, drift_index)--> Indizes im 2D-Datenarray (values_backup)
-        # values_backup: Roh-Intensitätsmatrix des Spektrums
-        # peak_intensity: Intensität an genau dieser Koordinate
-        # ret_time und drift_time: Physikalische Werte statt Array-Indizes
-        # spectrum.ret_time[ret_index] --> Retentionszeit in Sekunden
-        # spectrum.drift_time[drift_index] --> Driftzeit in Millisekunden
-        # ret_index, drift_index = coord
-        # peak_intensity = values_backup[ret_index, drift_index]
-        # ret_time = spectrum.ret_time[ret_index]
-        # drift_time = spectrum.drift_time[drift_index]
+        # Plotting here
+        plot.single_gcims_plot(spectrum=spectrum,
+                               output_dir=output_dir,
+                               condition="Peaks",
+                               size=(12, 8),
+                               peak_cords=strongest_peak_coords)
 
         for coord in neighbor_peak_coords:
-            ret_index, drift_index = coord
-            peak_intensity = values_backup[ret_index, drift_index]
-            ret_time = spectrum.ret_time[ret_index]
-            drift_time = spectrum.drift_time[drift_index]
-            # Erzeugt 8-stellige eindeutige Kennung (aus einer UUID), damit Dateinamen nicht kollidieren.
-            unique_id = uuid.uuid4().hex[:8]
-            # extract_window--> externe Funktion, welches ein 11x11 Peakfenster aus dem GC-IMS ausschneidet
-            # gibt eine Peakfenster mit einer Intensitätsmatrix wieder.
-            peak_window, intensity = extract_window(spectrum,
-                                                    {"ret_time": ret_time, "drift_time": drift_time},
-                                                    window_size,
-                                                    output_dir,
-                                                    condition,
-                                                    unique_id)
+            ret_idx, drift_idx = coord
 
-            # Gültigkeitsprüfung des Fensters
-            # Ist das Fenster leer (size == 0) oder hat es nicht die erwartete Form--> überspringen, da der Peak am Rand liegen könnte oder fehlerhaft ist
-            if peak_window.size == 0 or peak_window.shape != (2 * window_size + 1, 2 * window_size + 1):
-                print(f"Ungültiges Fenster für Peak bei RT={ret_time}, DT={drift_time}. Überspringe.")
-                continue
+            # Get the peak window for a pair of retention and drift indices.
+            peak_window = get_peak_window(spectrum=spectrum,
+                                          ret_idx=ret_idx,
+                                          drift_idx=drift_idx,
+                                          window_size=window_size,
+                                          output_dir=output_dir,
+                                          condition="peaks")
 
-            # Speichert den Fensterausschnitt als NumPy-Datei
-            # Dateiname enthält:spectrum.name (Probenname);Retentions- & Driftzeit (6 Nachkommastellen), unique_id; Fenstergröße 11x11
-            window_filename = os.path.join(
-                output_dir, f"{spectrum.name}_peak_window_RT_{ret_time:.6f}_DT_{drift_time:.6f}_{unique_id}_11x11.npy"
-            )
+            # Define the numpy filename and create the needed directories.
+            numpy_dir = output_dir / "npy_files" / spectrum.name
+            if not numpy_dir.exists():
+                numpy_dir.mkdir(parents=True, exist_ok=True)
 
-            # np.save(window_filename, peak_window)
+            numpy_filename = numpy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{window_size*2+1}x{window_size*2+1}.npy"
 
-            # Metadaten zu diesem Peak
-            # Für jeden Peak wird ein Dictionary mit allen wichtigen Infos erstellt
-            # honey_type: Probenklassifizierung (Honigsorte)
-            # npy_file: Pfad zur gespeicherten NumPy-Datei
-            # ret_time: Retentionszeit
-            # drift_time: Driftzeit
-            # intensity: Intensität
+            # Save numpy file.
+            np.save(numpy_filename, peak_window)
 
+            # Dictionary with selected information about peaks.
             peak_data = {
                 'honey_type': honey_type,
-                'ret_time': ret_time,
-                'drift_time': drift_time,
-                'intensity': peak_intensity,
-                'npy_file': window_filename,
+                'ret_time': spectrum.ret_time[ret_idx],
+                'drift_time': spectrum.drift_time[drift_idx],
+                'intensity': values_backup[ret_idx, drift_idx],
+                'npy_file': numpy_filename,
             }
 
             spectrum_peak_data.append(peak_data)
 
-        # all_peaks_data ist ein globales Dictionary:
-        # Schlüssel = Spektrumsname, Wert = Liste aller Peak-Koordinaten
-        # Die Liste wird erweitert
-        if spectrum.name not in all_peaks_data:
-            all_peaks_data[spectrum.name] = []
-
-        all_peaks_data[spectrum.name].extend(peak_ids)
-
-        # Aus spectrum_peak_data wird ein Pandas-DataFrame
-        # Export als Excel-Datei (.xlsx), Sheetname = "Peak Data".
-        # Enthält alle Metadaten zum Spektrum.
-
+        """
         spectrum_df = pd.DataFrame(spectrum_peak_data)
         excel_filename = os.path.join(output_dir,
                                       f"{spectrum.name}_peak_data_highest_hierarchy_Mean-Average-Filter_baseline_mit_nachbarn.xlsx")
         with pd.ExcelWriter(excel_filename) as writer:
             spectrum_df.to_excel(writer, index=False, sheet_name='Peak Data')
         print(f"Peak-Daten für {spectrum.name} gespeichert in {excel_filename}")
-
         # Falls etwas im Loop schiefgeht --> Fehlermeldung mit Spektrumsnummer und Name
+        """
+
+        print(f"- {len(neighbor_peak_coords)} Peaks extracted - Spectrum {idx + 1} [{spectrum.name}]")
 
     except Exception as e:
-        print(f"Fehler bei der Verarbeitung von Spektrum {spectrum_index + 1} ({spectrum.name}): {str(e)}")
-    # Gibt spectrum_peak_data zurück --> Liste aller Peak-Infos dieses Spektrums.
-    print(f"Spektrum {spectrum_index + 1} abgeschlossen: {spectrum.name}")
+        print(f"Error - Spectrum {idx + 1} [{spectrum.name}] Skipped: {str(e)}")
+
     return spectrum_peak_data
 
 
+def get_peak_window(spectrum: ims.Spectrum,
+                    ret_idx: int,
+                    drift_idx: int,
+                    window_size: int,
+                    output_dir: Path,
+                    condition: str) -> numpy.array:
 
+    start_ret_idx = ret_idx - window_size
+    end_ret_idx = ret_idx + window_size + 1
+    start_drift_index = drift_idx - window_size
+    end_drift_index = drift_idx + window_size + 1
 
+    peak_window = spectrum.values[start_ret_idx:end_ret_idx, start_drift_index:end_drift_index]
 
+    """
+    # Erstellt Heatmap und speichern
+    # Enthält:
+    # Probenname (sample.name)
+    # Retentionszeit und Driftzeit mit 6 Nachkommastellen
+    # Die eindeutige ID (unique_id)
+    # Die Fenstergröße (11x11)
+    # Suffix _vorverarbeitet.png--> Hinweis, dass es aus vorverarbeiteten Daten stammt
+    heatmap_filename = os.path.join(
+        output_dir,
+        f"{sample.name}_heatmap_RT_{peak_ret_time:.6f}_DT_{peak_drift_time:.6f}_{unique_id}_11x11_vorverarbeitet.png"
+    )
 
+    plt.figure(figsize=(10, 10))
 
+    # Zeichne die Heatmap
+    # verwendet Seaborn Heatmap
+    # annot=True --> Zahlenwerte werden in jedes Feld geschrieben.
+    # fmt=".2f" --> 2 Nachkommastellen.
+    # cmap="viridis" --> Farbverlauf
+    # linecolor='white' --> weiße Gitterlinien.
+    # linewidths=0.5 --> dünne Linien
+    sns.heatmap(
+        peak_window,
+        annot=True,
+        fmt=".2f",
+        cmap="viridis",
+        cbar=True,
+        linecolor='white',
+        linewidths=0.5,
+        annot_kws={"size": 5}
+    )
+    # Titel und Achsenbeschriftung
+    plt.title(f"Peak Heatmap: {sample.name}")
+    # X-Achsenbeschriftung
+    plt.xlabel("Drift Time")
+    # Y-Achsenbeschriftung
+    plt.ylabel("Retention Time")
+    # Text unter der Grafik
+    fig_caption = ("")
+    plt.figtext(0.445, 0.02, fig_caption, ha="center", va="center", fontsize=7)  # Unterhalb des Plots
+    # Speichern der Heatmap
+    plt.savefig(heatmap_filename, bbox_inches="tight")
+    plt.close()
+    print(f"Heatmap gespeichert unter: {heatmap_filename}")
+    """
 
+    return peak_window
 
 
 

@@ -1,3 +1,4 @@
+import numpy
 from matplotlib import pyplot as plt
 from pathlib import Path
 import math
@@ -7,7 +8,8 @@ import ims
 def single_gcims_plot(spectrum: ims.Spectrum,
                       output_dir: Path,
                       condition: str,
-                      size: tuple[int, int] = (10,6)) -> None:
+                      size: tuple[int, int] = (10,6),
+                      peak_cords: numpy.ndarray[tuple[int, int]] = None) -> None:
     """
     This function creates a plot for a given GC-IMS spectrum and saves it at the "output_dir/condition" path.
     The created plot shows the spectrum of one .mea file.
@@ -16,6 +18,7 @@ def single_gcims_plot(spectrum: ims.Spectrum,
     :param output_dir: Saving path of the plotting image.
     :param condition: The condition of the dataset [e.g. "raw" for raw data, or "processed" for preprocessed data"]
     :param size: Size of the plot (Default size is 10,6)
+    :param peak_cords: Numpy Array of peak coordinate tuples (retention index, drift index).
     :return: None.
     """
 
@@ -34,6 +37,13 @@ def single_gcims_plot(spectrum: ims.Spectrum,
     # Creat the plot.
     plt.figure(figsize=size)
     spectrum.plot()
+
+    # Plot Peaks (if in the function arguments)
+    if len(peak_cords) > 0:
+        for coord in peak_cords:
+            ret_idx, drift_idx = coord
+            plt.plot(spectrum.drift_time[drift_idx], spectrum.ret_time[ret_idx], 'r+', markersize=3)
+
     plt.title(f"{spectrum_name} [{condition}]")
     plt.xlabel("Drifttime [ms]")
     plt.ylabel("Retentiontime [s]")
