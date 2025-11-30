@@ -6,7 +6,7 @@ import ims
 
 
 def single_gcims_plot(spectrum: ims.Spectrum,
-                      output_dir: Path,
+                      plot_dir: Path,
                       condition: str,
                       size: tuple[int, int] = (10,6),
                       peak_cords: numpy.ndarray[tuple[int, int]] = None) -> None:
@@ -15,7 +15,7 @@ def single_gcims_plot(spectrum: ims.Spectrum,
     The created plot shows the spectrum of one .mea file.
 
     :param spectrum: The GC-IMS spectrum of one .mea file.
-    :param output_dir: Saving path of the plotting image.
+    :param plot_dir: Saving path of the plotting image.
     :param condition: The condition of the dataset [e.g. "raw" for raw data, or "processed" for preprocessed data"]
     :param size: Size of the plot (Default size is 10,6)
     :param peak_cords: Numpy Array of peak coordinate tuples (retention index, drift index).
@@ -30,9 +30,9 @@ def single_gcims_plot(spectrum: ims.Spectrum,
     spectrum_name = Path(spectrum.name)
 
     # Create the output directory.
-    output_dir = output_dir / condition
-    if not output_dir.exists():
-        output_dir.mkdir(parents=True, exist_ok=True)
+    plot_dir = plot_dir / condition
+    if not plot_dir.exists():
+        plot_dir.mkdir(parents=True, exist_ok=True)
 
     # Creat the plot.
     plt.figure(figsize=size)
@@ -50,14 +50,14 @@ def single_gcims_plot(spectrum: ims.Spectrum,
     cbar = plt.gcf().axes[-1]
     cbar.set_ylabel("Intensity", fontsize=10)
     # Saving the plot image.
-    image_name = output_dir / f"{spectrum_name}_{condition}.png"
+    image_name = plot_dir / f"{spectrum_name}_{condition}.png"
     plt.savefig(image_name, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"- Plot saved [{spectrum_name}_{condition}.png]")
 
 
 def overview_gcims_plot(dataset: list[ims.Spectrum],
-                        output_dir: Path,
+                        plot_dir: Path,
                         condition: str,
                         size: tuple[int, int] = (5, 6)) -> None:
     """
@@ -66,14 +66,14 @@ def overview_gcims_plot(dataset: list[ims.Spectrum],
     path.
 
     :param dataset: The GC-IMS dataset with all spectra of a directory.
-    :param output_dir: Saving path of the plotting image.
+    :param plot_dir: Saving path of the plotting image.
     :param condition: The condition of the dataset [e.g. "raw" for raw data, or "processed" for preprocessed data"]
     :param size: Size tuple for the subplot figures. Default size (5,6)
     :return: None.
     """
     # Create the output directory.
-    if not output_dir.exists():
-        output_dir.mkdir(parents=True, exist_ok=True)
+    if not plot_dir.exists():
+        plot_dir.mkdir(parents=True, exist_ok=True)
 
     # Define plot layout parameters.
     SPECTRA_NUM = min(len(dataset), 16)
@@ -81,7 +81,7 @@ def overview_gcims_plot(dataset: list[ims.Spectrum],
     ROWS = math.ceil(SPECTRA_NUM / COLS)
 
     fig, axes = plt.subplots(ROWS, COLS, figsize=(COLS * size[0], ROWS * size[1]), sharex=True, sharey=True)
-    plt.suptitle(f"Spectra overview plot [{output_dir.name} - {condition}]", fontsize=16)
+    plt.suptitle(f"Spectra overview plot [{plot_dir.name} - {condition}]", fontsize=16)
 
     # Walk through all spectra and create the plots.
     for idx, spectrum in enumerate(dataset):
@@ -106,8 +106,8 @@ def overview_gcims_plot(dataset: list[ims.Spectrum],
         axes[idx].axis('off')
 
     # Saving the plot image.
-    image_name = output_dir / f"overview_plot_{output_dir.name}_{condition}.png"
+    image_name = plot_dir / f"overview_plot_{plot_dir.name}_{condition}.png"
     plt.tight_layout(rect=(0, 0.03, 1, 0.97))
     plt.savefig(image_name, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"- Overview plot saved [{output_dir.name}_{condition}.png]")
+    print(f"- Overview plot saved [{plot_dir.name}_{condition}.png]")
