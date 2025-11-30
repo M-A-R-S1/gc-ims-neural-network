@@ -1,20 +1,14 @@
 import ims
 from pathlib import Path
-import numpy
 from scipy.ndimage import uniform_filter
 import numpy as np
 import plot
 from multiprocessing import Pool
 import os
-
-
 import pandas as pd
-import multiprocessing
 from skimage.morphology import max_tree_local_maxima
+
 from PIL import Image, ImageDraw, ImageFont
-import uuid
-from matplotlib import pyplot as plt
-import seaborn as sns
 
 
 # Overhauled function. Original function = preprocess_and_visualize_spectra
@@ -276,8 +270,8 @@ def peak_detection(spectrum: ims.Spectrum,
         """
 
     print(f"Peak Detection Started on: Spectrum {idx + 1}")
-    # copy: Sicherung der vorverarbeiteten Daten (values_backup), damit die Peak-Findung nicht die echten Werte verändert.
-    values_backup = spectrum.values.copy()
+    # Keep the non normalized values for later use.
+    values_non_normalized = spectrum.values.copy()
     # Normalization in just one line of code ...
     spectrum.normalization()
     # List of dictionaries which contain selected peak information.
@@ -326,7 +320,7 @@ def peak_detection(spectrum: ims.Spectrum,
         ret_idx = strongest_peak_coords[:, 0]
         drift_idx = strongest_peak_coords[:, 1]
         # Get the max retention and drift indices.
-        ret_max_idx, drift_max_idx = values_backup.shape
+        ret_max_idx, drift_max_idx = values_non_normalized.shape
 
         # Create mask conditions.
         mask_ret_min = ret_idx >= neighbor_distance
@@ -343,37 +337,21 @@ def peak_detection(spectrum: ims.Spectrum,
         # Only Coordinates where the mask is set to "True" are considered.
         strongest_peak_coords = strongest_peak_coords[final_validity_mask]
 
-        # Reload the value backups ... But why?
-        spectrum.values = values_backup
+        # Print the number of found peaks.
+        print(f"{len(strongest_peak_coords)} Peaks found in: Spectrum {idx + 1}")
+
+        # Reload the non normalized values.
+        spectrum.values = values_non_normalized
+
+        # Plot the current spectrum with the strongest peaks marked with a red X.
+        plot.single_gcims_plot(spectrum=spectrum,
+                               plot_dir=plot_dir,
+                               condition="peaks",
+                               size=(12, 8),
+                               peak_cords=strongest_peak_coords)
 
         # Contains the strongest peak coordinates and all of their neighbor coords within a radius of the window size.
         neighbor_peak_coords = []
-        # Contains a tuple for each coordinate in "strongest peaks" with the retention and drift times.
-        strongest_peak_times = []
-
-        # Walk through all the strongest peak coordinates.
-        for ret_idx, drift_idx in strongest_peak_coords:
-
-            # Append the retention and drift time to the list.
-            strongest_peak_times.append((spectrum.ret_time[ret_idx], spectrum.drift_time[drift_idx]))
-
-            # Now walk through the peak neighborhood within a radius of the window size.
-            for dx in range(-neighbor_distance, neighbor_distance+1):
-                for dy in range(-neighbor_distance, neighbor_distance+1):
-                    new_ret = ret_idx + dx
-                    new_drift = drift_idx + dy
-                    # Add every neighbor coordinate to the list.
-                    neighbor_peak_coords.append((new_ret, new_drift))
-
-        # Remove duplicate coordinate pairs from the list by converting the list temporarily to a set.
-        neighbor_peak_coords = list(set(neighbor_peak_coords))
-
-        # Plotting here
-        plot.single_gcims_plot(spectrum=spectrum,
-                               plot_dir=plot_dir,
-                               condition="Peaks",
-                               size=(12, 8),
-                               peak_cords=strongest_peak_coords)
 
         # Create padding_values and copy from the spectrum.values and add a padding of 0 around them.
         # Why? If a peak was detected near the spectrum edge, this could lead to errors in the shape and or saved
@@ -385,6 +363,36 @@ def peak_detection(spectrum: ims.Spectrum,
             mode='constant',
             constant_values=0
         )
+
+        # Walk through all the strongest peak coordinates.
+        for ret_idx, drift_idx in strongest_peak_coords:
+
+            # Create the heatmap window.
+            start_ret_idx = ret_idx - neighbor_distance
+            end_ret_idx = ret_idx + 3 * neighbor_distance + 1
+            start_drift_idx = drift_idx - neighbor_distance
+            end_drift_idx = drift_idx + 3 * neighbor_distance + 1
+            heatmap_window = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+
+            # Plot the peak heatmaps.
+            plot.plot_peak_heatmap(spectrum=spectrum,
+                                   heatmap_window=heatmap_window,
+                                   ret_idx=ret_idx,
+                                   drift_idx=drift_idx,
+                                   window_size=neighbor_distance,
+                                   plot_dir=plot_dir,
+                                   condition="peaks")
+
+            # Now walk through the peak neighborhood within a radius of the window size.
+            for dx in range(-neighbor_distance, neighbor_distance+1):
+                for dy in range(-neighbor_distance, neighbor_distance+1):
+                    new_ret = ret_idx + dx
+                    new_drift = drift_idx + dy
+                    # Add every neighbor coordinate to the list.
+                    neighbor_peak_coords.append((new_ret, new_drift))
+
+        # Remove duplicate coordinate pairs from the list by converting the list temporarily to a set.
+        neighbor_peak_coords = list(set(neighbor_peak_coords))
 
         for coord in neighbor_peak_coords:
             ret_idx, drift_idx = coord
@@ -400,10 +408,6 @@ def peak_detection(spectrum: ims.Spectrum,
             if peak_window.shape != (2 * neighbor_distance + 1, 2 * neighbor_distance + 1):
                 raise ValueError(f"Peak Window has the wrong shape: {peak_window.shape}. "
                                  f"Expected Shape: ({2*neighbor_distance + 1}, {2*neighbor_distance + 1})")
-
-            # TODO .. Plotting  the peak windows.
-            # Plot the peak window.
-            #plot_peak_window(spectrum, ret_idx, drift_idx, neighbor_distance, plot_dir, condition)
 
             # Define the numpy filename and create the needed directories.
             numpy_dir = npy_dir / spectrum.name
@@ -421,7 +425,7 @@ def peak_detection(spectrum: ims.Spectrum,
                 'spectrum': spectrum.name,
                 'ret_time': spectrum.ret_time[ret_idx],
                 'drift_time': spectrum.drift_time[drift_idx],
-                'intensity': values_backup[ret_idx, drift_idx],
+                'intensity': spectrum.values[ret_idx, drift_idx],
                 'npy_file': numpy_filename,
             }
 
@@ -446,65 +450,6 @@ def peak_detection(spectrum: ims.Spectrum,
         raise
 
     return spectrum_peak_data
-
-
-# TODO -> Creat the plot function and move it to the plot.npy.
-def plot_peak_window(spectrum: ims.Spectrum,
-                    ret_idx: int,
-                    drift_idx: int,
-                    window_size: int,
-                    plot_dir: Path,
-                    condition: str) -> numpy.array:
-
-    """
-    # Erstellt Heatmap und speichern
-    # Enthält:
-    # Probenname (sample.name)
-    # Retentionszeit und Driftzeit mit 6 Nachkommastellen
-    # Die eindeutige ID (unique_id)
-    # Die Fenstergröße (11x11)
-    # Suffix _vorverarbeitet.png--> Hinweis, dass es aus vorverarbeiteten Daten stammt
-    heatmap_filename = os.path.join(
-        output_dir,
-        f"{sample.name}_heatmap_RT_{peak_ret_time:.6f}_DT_{peak_drift_time:.6f}_{unique_id}_11x11_vorverarbeitet.png"
-    )
-
-    plt.figure(figsize=(10, 10))
-
-    # Zeichne die Heatmap
-    # verwendet Seaborn Heatmap
-    # annot=True --> Zahlenwerte werden in jedes Feld geschrieben.
-    # fmt=".2f" --> 2 Nachkommastellen.
-    # cmap="viridis" --> Farbverlauf
-    # linecolor='white' --> weiße Gitterlinien.
-    # linewidths=0.5 --> dünne Linien
-    sns.heatmap(
-        peak_window,
-        annot=True,
-        fmt=".2f",
-        cmap="viridis",
-        cbar=True,
-        linecolor='white',
-        linewidths=0.5,
-        annot_kws={"size": 5}
-    )
-    # Titel und Achsenbeschriftung
-    plt.title(f"Peak Heatmap: {sample.name}")
-    # X-Achsenbeschriftung
-    plt.xlabel("Drift Time")
-    # Y-Achsenbeschriftung
-    plt.ylabel("Retention Time")
-    # Text unter der Grafik
-    fig_caption = ("")
-    plt.figtext(0.445, 0.02, fig_caption, ha="center", va="center", fontsize=7)  # Unterhalb des Plots
-    # Speichern der Heatmap
-    plt.savefig(heatmap_filename, bbox_inches="tight")
-    plt.close()
-    print(f"Heatmap gespeichert unter: {heatmap_filename}")
-    """
-
-
-
 
 ##################################################################################################################################################################################################################
 
