@@ -431,18 +431,12 @@ def peak_detection(spectrum: ims.Spectrum,
 
             spectrum_peak_data.append(peak_data)
 
-        # TODO -> Save a csv/excel file for each spectrum separately.
+        # Save the peak data as a .xlsx file
+        peak_dataframe = pd.DataFrame(spectrum_peak_data)
+        peak_filename = npy_dir / f"{spectrum.name}_peaks.xlsx"
+        peak_dataframe.to_excel(peak_filename, index=False)
 
-        """
-        spectrum_df = pd.DataFrame(spectrum_peak_data)
-        excel_filename = os.path.join(output_dir,
-                                      f"{spectrum.name}_peak_data_highest_hierarchy_Mean-Average-Filter_baseline_mit_nachbarn.xlsx")
-        with pd.ExcelWriter(excel_filename) as writer:
-            spectrum_df.to_excel(writer, index=False, sheet_name='Peak Data')
-        print(f"Peak-Daten für {spectrum.name} gespeichert in {excel_filename}")
-        # Falls etwas im Loop schiefgeht --> Fehlermeldung mit Spektrumsnummer und Name
-        """
-
+        # Notify that the peak detection on this spectrum is finished and print the number of peaks.
         print(f"- {len(neighbor_peak_coords)} Peaks extracted - Spectrum {idx + 1} [{spectrum.name}]")
 
     except Exception as err:
