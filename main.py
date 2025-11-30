@@ -12,11 +12,14 @@ if __name__ == '__main__':
         output_dir.mkdir(parents=True, exist_ok=True)
 
     # Step 1: Preprocess the .mea files
-    processed_data = preprocess.start(input_dir=input_dir,
+    # - RIP Interpolation (for each dataset)
+    # - Background noise reduction
+    # - Gaussian smoothing
+    preprocessed_data = preprocess.start(input_dir=input_dir,
                                       output_dir=output_dir,
                                       create_plots="None")
 
-    print(processed_data)
+    print(preprocessed_data)
 
     """
     window_size = 5

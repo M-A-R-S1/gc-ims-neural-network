@@ -47,7 +47,7 @@ def start(input_dir: Path,
     """
 
     # List of processed spectra.
-    processed_data = []
+    preprocessed_data = []
 
     # list of plotting strategies.
     plotting_strategy = ["none", "all", "single", "overview"]
@@ -63,7 +63,7 @@ def start(input_dir: Path,
     # If there are no .mea files at all report this to the user.
     if not dir_set:
         print(f"No .mea files found in {input_dir} and sub directories.")
-        return processed_data
+        return preprocessed_data
 
     # Walk through all found subdirectories.
     for current_input_dir in sorted(list(dir_set)):
@@ -109,15 +109,15 @@ def start(input_dir: Path,
 
         # Start parallel processing. One cpu core handels one spectrum.
         with Pool(cpu_cores) as p:
-            processed_data = p.starmap(preprocess_spectra, tasks)
+            preprocessed_data = p.starmap(preprocess_spectra, tasks)
 
         # Plot overview of all spectra inside the current subdirectory.
         if create_plots in ["all", "overview"]:
-            plot.overview_gcims_plot(dataset=processed_data,
+            plot.overview_gcims_plot(dataset=preprocessed_data,
                                      output_dir=current_output_dir,
                                      condition="processed")
 
-    return processed_data
+    return preprocessed_data
 
 
 def preprocess_spectra(spectrum: ims.Spectrum,
@@ -190,6 +190,276 @@ def preprocess_spectra(spectrum: ims.Spectrum,
 
     # Return the preprocessed spectrum.
     return spectrum
+
+
+def get_all_peaks(filtered_data, window_size, output_dir, condition) -> pd.DataFrame:
+
+    all_peak_data_list = []
+
+    # Check how many cpu cores are available.
+    cpu_cores = os.cpu_count()
+    tasks = []
+
+    # Collect needed arguments for each peak finding computation.
+    for idx, spectrum in enumerate(filtered_data):
+
+        task_args = (spectrum,
+                     idx,
+                     window_size,
+                     output_dir,
+                     condition)
+
+        tasks.append(task_args)
+
+    # Start parallel processing. One cpu core handels one spectrum.
+    with Pool(cpu_cores) as p:
+        all_peak_data_list = p.starmap(peak_detection, tasks)
+
+    all_peak_df = pd.DataFrame(all_peak_data_list)
+
+    return all_peak_df
+
+
+def peak_detection(spectrum, idx, window_size, output_dir, condition):
+    # copy: Sicherung der vorverarbeiteten Daten (values_backup), damit die Peak-Findung nicht die echten Werte verändert.
+    values_backup = spectrum.values.copy()
+
+    # Normalization in just one line of code ...
+    spectrum.normalization()
+
+    spectrum_peak_data = []
+
+    try:
+        honey_type = "Unknown"
+
+        # Create a max tree.
+        peak_tree = max_tree_local_maxima(spectrum.values, connectivity=2)
+        # Define the upper tree hierarchy threshold.
+        hierarchy_threshold = int(peak_tree.max() * 0.95)
+        # Define the min intensity thresghold.
+        min_intensity_threshold = 0.035
+
+        # List of tuples with peak coordinates (Retention-index, Drift-index) which satisfy the selection conditions.
+        selected_peak_coords = np.column_stack(
+            np.where(
+                (peak_tree >= 0.5) &
+                (peak_tree <= hierarchy_threshold) &
+                (spectrum.values > min_intensity_threshold)
+            )
+        )
+
+        # Get all retention indicies from the selected peak coordinates.
+        ret_idx = selected_peak_coords[:, 0]
+        # Get all drift indicies from the selected peak coordinates.
+        drift_idx = selected_peak_coords[:, 1]
+        # List of normalized intensities which correlate to the coordinates of the "selected_peak_coords" list.
+        selected_peak_intensities = spectrum.values[ret_idx, drift_idx]
+
+        # Are there peaks?
+        # If so, select only peaks, which belong to the upper 4.5% intensities.
+        if len(selected_peak_intensities) > 0:
+            intensity_threshold = np.percentile(selected_peak_intensities, 95.5)
+            # Create a mask with True/False values for the threshold condition.
+            intensity_mask = selected_peak_intensities >= intensity_threshold
+            # Use the mask on the selected peak coordinates.
+            # Only Coordinates where the mask is set to "True" are considered.
+            strongest_peak_coords = selected_peak_coords[intensity_mask]
+        else:
+            # No peaks. Create an empty numpy array.
+            strongest_peak_coords = np.array([])
+
+        # Split the retention and drift indices.
+        ret_idx = strongest_peak_coords[:, 0]
+        drift_idx = strongest_peak_coords[:, 1]
+        # Get the max retention and drift indices.
+        ret_max_idx, drift_max_idx = values_backup.shape
+
+        # Create mask conditions.
+        mask_ret_min = ret_idx >= window_size
+        mask_ret_max = ret_idx < (ret_max_idx - window_size)
+        mask_drift_min = drift_idx >= window_size
+        mask_drift_max = drift_idx < (drift_max_idx - window_size)
+        # Combine all 4 mask conditions to one mask condition.
+        final_validity_mask = (mask_ret_min &
+                               mask_ret_max &
+                               mask_drift_min &
+                               mask_drift_max)
+
+        # Use the mask on the strongest peak coordinates.
+        # Only Coordinates where the mask is set to "True" are considered.
+        strongest_peak_coords = strongest_peak_coords[final_validity_mask]
+
+        # Reload the value backups ... But why?
+        spectrum.values = values_backup
+
+        # Contains the strongest peak coordinates and all of their neighbor coords within a radius of the window size.
+        neighbor_peak_coords = []
+
+        # Walk through all the strongest peak coordinates.
+        for ret_idx, drift_idx in strongest_peak_coords:
+            # Now walk through the peak neighborhood within a radius of the window size.
+            for dx in range(-window_size, window_size+1):
+                for dy in range(-window_size, window_size+1):
+                    new_ret = ret_idx + dx
+                    new_drift = drift_idx + dy
+                    # Add every neighbor coordinate to the list.
+                    neighbor_peak_coords.append((new_ret, new_drift))
+
+        # Remove duplicate coordinate pairs from the list by converting the list temporarily to a set.
+        neighbor_peak_coords = list(set(neighbor_peak_coords))
+
+
+        # TODO -> Hier geht es weiter
+        neuer_name = spectrum.name
+
+        # Visualisierung
+        # spectrum.plot() zeichnet das komplette 2D-Spektrum
+        #
+        plt.figure(figsize=(12, 8))
+        spectrum.plot()
+
+        # highest_hierarchy_peaks: enthält die Matrix-Indices (ret_index, drift_index) der Peak
+        # spectrum.drift_time[drift_index]--> Umrechnung von Spaltenindex zu realer Driftzeit
+        # spectrum.ret_time[ret_index]--> Umrechnung von Zeilenindex zu realer Retentionszeit.
+        # r+', markersize=3--> rotes Kreuz '+' für die einzelnen Peaks
+        # peak_ids.append()--> speichert die Peak-Koordinaten in einer Liste
+        peak_ids = []
+        for coord in strongest_peak_coords:
+            ret_index, drift_index = coord
+            plt.plot(spectrum.drift_time[drift_index], spectrum.ret_time[ret_index], 'r+', markersize=3)
+            peak_ids.append((spectrum.ret_time[ret_index], spectrum.drift_time[drift_index]))
+
+        # X-Achse = Driftzeit; Y-Achse = Retentionszeit
+        plt.title(f"Peak-Plot (Original): {neuer_name}")
+        plt.xlabel("Relative Driftzeit [ms]")
+        plt.ylabel("Retentionszeit [s]")
+
+        # Farbskala = Intensität (Colorbar)
+        cbar = plt.gcf().axes[-1]
+        cbar.set_ylabel("Intensität", fontsize=10)
+        # Fügt unterhalb des Plots eine Textzeile hinzu
+        caption = ""
+        plt.figtext(0.5, -0.05, caption, wrap=True, horizontalalignment='center', fontsize=7)
+        # Speichert den Plot als PNG mit hoher Auflösung (300 dpi)
+        # bbox_inches="tight"--> unnötige Ränder werden abgeschnitten
+        peak_plot_filename = os.path.join(output_dir, f"peak_plot_{neuer_name}_peak_plot_vorverarbeitet.png")
+        plt.savefig(peak_plot_filename, dpi=300, bbox_inches="tight")
+        plt.close()
+        print(f"Peak-Plot gespeichert unter: {peak_plot_filename}")
+
+        # Verwendung der erweiterten Koordinate
+        # all_coords_to_process--> kommt aus dem Schritt davor, wo um jeden Peak herum eine Nachbarschaft gebildet wurde
+        # Jede coord ist ein Tupel(ret_index, drift_index)--> Indizes im 2D-Datenarray (values_backup)
+        # values_backup: Roh-Intensitätsmatrix des Spektrums
+        # peak_intensity: Intensität an genau dieser Koordinate
+        # ret_time und drift_time: Physikalische Werte statt Array-Indizes
+        # spectrum.ret_time[ret_index] --> Retentionszeit in Sekunden
+        # spectrum.drift_time[drift_index] --> Driftzeit in Millisekunden
+        # ret_index, drift_index = coord
+        # peak_intensity = values_backup[ret_index, drift_index]
+        # ret_time = spectrum.ret_time[ret_index]
+        # drift_time = spectrum.drift_time[drift_index]
+
+        for coord in neighbor_peak_coords:
+            ret_index, drift_index = coord
+            peak_intensity = values_backup[ret_index, drift_index]
+            ret_time = spectrum.ret_time[ret_index]
+            drift_time = spectrum.drift_time[drift_index]
+            # Erzeugt 8-stellige eindeutige Kennung (aus einer UUID), damit Dateinamen nicht kollidieren.
+            unique_id = uuid.uuid4().hex[:8]
+            # extract_window--> externe Funktion, welches ein 11x11 Peakfenster aus dem GC-IMS ausschneidet
+            # gibt eine Peakfenster mit einer Intensitätsmatrix wieder.
+            peak_window, intensity = extract_window(spectrum,
+                                                    {"ret_time": ret_time, "drift_time": drift_time},
+                                                    window_size,
+                                                    output_dir,
+                                                    condition,
+                                                    unique_id)
+
+            # Gültigkeitsprüfung des Fensters
+            # Ist das Fenster leer (size == 0) oder hat es nicht die erwartete Form--> überspringen, da der Peak am Rand liegen könnte oder fehlerhaft ist
+            if peak_window.size == 0 or peak_window.shape != (2 * window_size + 1, 2 * window_size + 1):
+                print(f"Ungültiges Fenster für Peak bei RT={ret_time}, DT={drift_time}. Überspringe.")
+                continue
+
+            # Speichert den Fensterausschnitt als NumPy-Datei
+            # Dateiname enthält:spectrum.name (Probenname);Retentions- & Driftzeit (6 Nachkommastellen), unique_id; Fenstergröße 11x11
+            window_filename = os.path.join(
+                output_dir, f"{spectrum.name}_peak_window_RT_{ret_time:.6f}_DT_{drift_time:.6f}_{unique_id}_11x11.npy"
+            )
+
+            # np.save(window_filename, peak_window)
+
+            # Metadaten zu diesem Peak
+            # Für jeden Peak wird ein Dictionary mit allen wichtigen Infos erstellt
+            # honey_type: Probenklassifizierung (Honigsorte)
+            # npy_file: Pfad zur gespeicherten NumPy-Datei
+            # ret_time: Retentionszeit
+            # drift_time: Driftzeit
+            # intensity: Intensität
+
+            peak_data = {
+                'honey_type': honey_type,
+                'ret_time': ret_time,
+                'drift_time': drift_time,
+                'intensity': peak_intensity,
+                'npy_file': window_filename,
+            }
+
+            spectrum_peak_data.append(peak_data)
+
+        # all_peaks_data ist ein globales Dictionary:
+        # Schlüssel = Spektrumsname, Wert = Liste aller Peak-Koordinaten
+        # Die Liste wird erweitert
+        if spectrum.name not in all_peaks_data:
+            all_peaks_data[spectrum.name] = []
+
+        all_peaks_data[spectrum.name].extend(peak_ids)
+
+        # Aus spectrum_peak_data wird ein Pandas-DataFrame
+        # Export als Excel-Datei (.xlsx), Sheetname = "Peak Data".
+        # Enthält alle Metadaten zum Spektrum.
+
+        spectrum_df = pd.DataFrame(spectrum_peak_data)
+        excel_filename = os.path.join(output_dir,
+                                      f"{spectrum.name}_peak_data_highest_hierarchy_Mean-Average-Filter_baseline_mit_nachbarn.xlsx")
+        with pd.ExcelWriter(excel_filename) as writer:
+            spectrum_df.to_excel(writer, index=False, sheet_name='Peak Data')
+        print(f"Peak-Daten für {spectrum.name} gespeichert in {excel_filename}")
+
+        # Falls etwas im Loop schiefgeht --> Fehlermeldung mit Spektrumsnummer und Name
+
+    except Exception as e:
+        print(f"Fehler bei der Verarbeitung von Spektrum {spectrum_index + 1} ({spectrum.name}): {str(e)}")
+    # Gibt spectrum_peak_data zurück --> Liste aller Peak-Infos dieses Spektrums.
+    print(f"Spektrum {spectrum_index + 1} abgeschlossen: {spectrum.name}")
+    return spectrum_peak_data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##################################################################################################################################################################################################################
 
