@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # Step 2: Calculate peaks on preprocessed data.
     try:
         peak_dataframe = preprocess.get_all_peaks(preprocessed_data=preprocessed_data,
-                                                  window_size=5,
+                                                  neighbor_distance=5,
                                                   plot_dir=plot_dir,
                                                   npy_dir=npy_dir)
 
