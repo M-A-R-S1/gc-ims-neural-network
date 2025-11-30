@@ -375,15 +375,31 @@ def peak_detection(spectrum: ims.Spectrum,
                                size=(12, 8),
                                peak_cords=strongest_peak_coords)
 
+        # Create padding_values and copy from the spectrum.values and add a padding of 0 around them.
+        # Why? If a peak was detected near the spectrum edge, this could lead to errors in the shape and or saved
+        # intensities of the peak windows. The padding guarantees the correct shape and failsafe the intensities of
+        # indices outside the spectrum edges to 0.
+        padded_values = np.pad(
+            spectrum.values,
+            pad_width=neighbor_distance,
+            mode='constant',
+            constant_values=0
+        )
+
         for coord in neighbor_peak_coords:
             ret_idx, drift_idx = coord
 
             # Create a peak window for each pair of retention and drift indices.
-            start_ret_idx = ret_idx - neighbor_distance
-            end_ret_idx = ret_idx + neighbor_distance + 1
-            start_drift_index = drift_idx - neighbor_distance
-            end_drift_index = drift_idx + neighbor_distance + 1
-            peak_window = spectrum.values[start_ret_idx:end_ret_idx, start_drift_index:end_drift_index]
+            start_ret_idx = ret_idx
+            end_ret_idx = ret_idx + 2*neighbor_distance + 1
+            start_drift_idx = drift_idx
+            end_drift_idx = drift_idx + 2*neighbor_distance + 1
+            peak_window = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+
+            # Check if the peak window has the corret shape. This should always be the case!
+            if peak_window.shape != (2 * neighbor_distance + 1, 2 * neighbor_distance + 1):
+                raise ValueError(f"Peak Window has the wrong shape: {peak_window.shape}. "
+                                 f"Expected Shape: ({2*neighbor_distance + 1}, {2*neighbor_distance + 1})")
 
             # TODO .. Plotting  the peak windows.
             # Plot the peak window.
