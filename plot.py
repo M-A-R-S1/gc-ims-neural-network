@@ -1,6 +1,7 @@
 import numpy
 from matplotlib import pyplot as plt
 from pathlib import Path
+import seaborn as sns
 import math
 import ims
 
@@ -9,16 +10,17 @@ def single_gcims_plot(spectrum: ims.Spectrum,
                       plot_dir: Path,
                       condition: str,
                       size: tuple[int, int] = (10,6),
-                      peak_cords: numpy.ndarray[tuple[int, int]] = None) -> None:
+                      peak_cords: numpy.ndarray[tuple[int, ...]] = None) -> None:
     """
-    This function creates a plot for a given GC-IMS spectrum and saves it at the "output_dir/condition" path.
+    This function creates a plot for a given gc-ims spectrum and saves it at the "output_dir/condition" path.
     The created plot shows the spectrum of one .mea file.
 
-    :param spectrum: The GC-IMS spectrum of one .mea file.
+    :param spectrum: The gc-ims spectrum of one .mea file.
     :param plot_dir: Saving path of the plotting image.
     :param condition: The condition of the dataset [e.g. "raw" for raw data, or "processed" for preprocessed data"]
     :param size: Size of the plot (Default size is 10,6)
     :param peak_cords: Numpy Array of peak coordinate tuples (retention index, drift index).
+
     :return: None.
     """
 
@@ -61,14 +63,15 @@ def overview_gcims_plot(dataset: list[ims.Spectrum],
                         condition: str,
                         size: tuple[int, int] = (5, 6)) -> None:
     """
-    This function creates an overview plot for a given GC-IMS dataset and saves it at the root of the "output_dir"
+    This function creates an overview plot for a given gc-ims dataset and saves it at the root of the "output_dir"
     parameter path. The created plot contains up to 16 subplots and uses all .mea files of the "output_dir" parameter
     path.
 
-    :param dataset: The GC-IMS dataset with all spectra of a directory.
+    :param dataset: The gc-ims dataset with all spectra of a directory.
     :param plot_dir: Saving path of the plotting image.
     :param condition: The condition of the dataset [e.g. "raw" for raw data, or "processed" for preprocessed data"]
     :param size: Size tuple for the subplot figures. Default size (5,6)
+
     :return: None.
     """
     # Create the output directory.
@@ -111,3 +114,54 @@ def overview_gcims_plot(dataset: list[ims.Spectrum],
     plt.savefig(image_name, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"- Overview plot saved [{plot_dir.name}_{condition}.png]")
+
+
+def plot_peak_heatmap(spectrum: ims.Spectrum,
+                      heatmap_window: numpy.ndarray[tuple[int, ...]],
+                      ret_idx: int,
+                      drift_idx: int,
+                      window_size: int,
+                      plot_dir: Path,
+                      condition: str) -> None:
+    """
+       This function creates a heatmap plot for a detected peak and saves it." The created plot covers the entire area
+       of the centered peak itself, as well as all surrounding neighbor peaks.
+
+       :param spectrum: The gc-ims spectrum.
+       :param heatmap_window: The peak window.
+       :param ret_idx: The retention index of the center peak.
+       :param drift_idx: The drift index of the center peak.
+       :param window_size: The size of the peak window.
+       :param plot_dir: Saving path of the plotting image.
+       :param condition: The condition of the dataset [In this case by default "peak"]
+
+       :return: None.
+       """
+
+    heatmap_dir = plot_dir / condition / spectrum.name
+    if not heatmap_dir.exists():
+        heatmap_dir.mkdir(parents=True, exist_ok=True)
+
+    heatmap_file = heatmap_dir / f"HM_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4 * window_size + 1}x{4 * window_size + 1}.png"
+
+    # Create the heatmap plot
+    plt.figure(figsize=(10, 10))
+    sns.heatmap(
+        heatmap_window,
+        annot=True,
+        fmt=".1f",
+        cmap="RdBu_r",
+        cbar=True,
+        linecolor='white',
+        linewidths=0.5,
+        annot_kws={"size": 5}
+    )
+    plt.title(f"{spectrum.name} Peak Heatmap")
+    plt.xlabel("Drifttime [relative index]")
+    plt.ylabel("Retentiontime [relative index]")
+    fig_caption = f"RT: {spectrum.ret_time[ret_idx]:.4f} [s] , DT: {spectrum.drift_time[drift_idx]:.4f} [ms]"
+    plt.figtext(0.445, 0.04, fig_caption, ha="center", va="center", fontsize=10)
+    # Save the heatmap image.
+    plt.savefig(heatmap_file, bbox_inches="tight")
+    plt.close()
+    print(f"Peak Heatmap saved: {heatmap_file.name}")
