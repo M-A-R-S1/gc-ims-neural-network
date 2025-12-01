@@ -21,7 +21,8 @@ if __name__ == '__main__':
     # - Gaussian smoothing
     preprocessed_data = preprocess.start(input_dir=input_dir,
                                          plot_dir=plot_dir,
-                                         create_plots="None")
+                                         create_plots="all")
+
 
     # Step 2: Calculate peaks on preprocessed data.
     try:

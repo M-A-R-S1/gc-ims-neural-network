@@ -41,7 +41,7 @@ def single_gcims_plot(spectrum: ims.Spectrum,
     spectrum.plot()
 
     # Plot Peaks (if in the function arguments)
-    if len(peak_cords) > 0:
+    if peak_cords is not None and len(peak_cords) > 0:
         plt.title(f"{spectrum_name} [{len(peak_cords)} {condition}]")
         for coord in peak_cords:
             ret_idx, drift_idx = coord

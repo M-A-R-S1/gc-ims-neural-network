@@ -125,34 +125,34 @@ def preprocess_spectra(spectrum: ims.Spectrum,
                        percentile: float = 5.0,
                        uniform_filter_size: tuple[int, int] = (11, 11)) -> ims.Spectrum:
     """
-        This function takes care of the parallel preprocessing of gc-ims spectra. Each cpu core acts on one spectrum.
-        All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as datasets.
-        Each spectrum is preprocessed by the following:
-        - 1. Baseline correction for drift- and retention time.
-        - 2. Background noise reduction (1) for each axis, computed with a given percentile.
-        - 3. Background noise reduction (2) smooth the spectrum by applying a uniform filter.
+    This function takes care of the parallel preprocessing of gc-ims spectra. Each cpu core acts on one spectrum.
+    All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as datasets.
+    Each spectrum is preprocessed by the following:
+    - 1. Baseline correction for drift- and retention time.
+    - 2. Background noise reduction (1) for each axis, computed with a given percentile.
+    - 3. Background noise reduction (2) smooth the spectrum by applying a uniform filter.
 
-        This function then returns the preprocessed spectrum.
+    This function then returns the preprocessed spectrum.
 
-        The gc-ims spectrum can be plotted and saved as .png files if the function parameter is set accordingly:
-        - "single" -> Creates a plot image for each individual .mea file.
-        - "overview" -> Creates a plot image for up to 16 .mea files inside the same directory.
-        - "all" -> Creates both single and overview plot images.
-        - "none" -> Creates no plot images.
+    The gc-ims spectrum can be plotted and saved as .png files if the function parameter is set accordingly:
+    - "single" -> Creates a plot image for each individual .mea file.
+    - "overview" -> Creates a plot image for up to 16 .mea files inside the same directory.
+    - "all" -> Creates both single and overview plot images.
+    - "none" -> Creates no plot images.
 
-        :param spectrum: The spectrum which is about to be preprocessed.
-        :param plot_dir: Saving path of the plotting image.
-        :param idx: The index of this spectrum in the current dataset.
-        :param dataset_length: The length of the current dataset (Number of spectra in the dataset).
-        :param create_plots: Specifies which images to create. [none = no images | single = one image for each .mea file |
-        overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
-        :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
-        :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
-        :param percentile: Value for the background noise reduction. [e.g. percentile=5.0 removes the lowest 5% of the data from a spectrum]
-        :param uniform_filter_size: Tuple for the uniform filter size.
+    :param spectrum: The spectrum which is about to be preprocessed.
+    :param plot_dir: Saving path of the plotting image.
+    :param idx: The index of this spectrum in the current dataset.
+    :param dataset_length: The length of the current dataset (Number of spectra in the dataset).
+    :param create_plots: Specifies which images to create. [none = no images | single = one image for each .mea file |
+    overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
+    :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
+    :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
+    :param percentile: Value for the background noise reduction. [e.g. percentile=5.0 removes the lowest 5% of the data from a spectrum]
+    :param uniform_filter_size: Tuple for the uniform filter size.
 
-        :return: preprocessed spectra.
-        """
+    :return: preprocessed spectra.
+    """
 
     print(f"- Spectrum {idx + 1}/{dataset_length}")
 
@@ -163,19 +163,22 @@ def preprocess_spectra(spectrum: ims.Spectrum,
                                condition="raw")
 
     # Baseline correction for drift- and retention time.
+    spectrum.sub_first_rows(50)
     spectrum.cut_dt(start=drift_cut[0], stop=drift_cut[1])
     spectrum.cut_rt(start=retention_cut[0], stop=retention_cut[1])
     # Background noise reduction for each axis, computed with a given percentile.
     # Adjust negative values to 0.
     # Smooth the adjusted spectrum values and reduce noise.
-    spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=0, keepdims=True)
-    spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=1, keepdims=True)
+
+    # spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=0, keepdims=True)
+    # spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=1, keepdims=True)
     spectrum.values[spectrum.values < 0] = 0
 
     # spectrum.values = uniform_filter(input=spectrum.values, size=uniform_filter_size)
     # TODO -> Testing Gaussian filter
-    from scipy.ndimage import gaussian_filter
-    spectrum.values = gaussian_filter(spectrum.values, sigma=2.0)
+    # from scipy.ndimage import gaussian_filter
+    # spectrum.values = gaussian_filter(spectrum.values, sigma=2.0)
+    spectrum.savgol(window_length=20, polyorder=2)
 
     # Plot the processed spectrum.
     if create_plots in ["all", "single"]:
@@ -284,8 +287,9 @@ def peak_detection(spectrum: ims.Spectrum,
         peak_tree = max_tree_local_maxima(spectrum.values, connectivity=2)
         # Define the upper tree hierarchy threshold.
         hierarchy_threshold = int(peak_tree.max() * 0.95)
-        # Define the min intensity threshold.
+        # Define the min intensity threshold. - 0.035 works good for gauss 2.0
         min_intensity_threshold = 0.035
+
 
         # List of tuples with peak coordinates (Retention-index, Drift-index) which satisfy the selection conditions.
         selected_peak_coords = np.column_stack(
