@@ -21,7 +21,8 @@ if __name__ == '__main__':
     # - Gaussian smoothing
     preprocessed_data = preprocess.start(input_dir=input_dir,
                                          plot_dir=plot_dir,
-                                         create_plots="all")
+                                         create_plots="None")
+
 
 
     # Step 2: Calculate peaks on preprocessed data.
@@ -42,5 +43,6 @@ if __name__ == '__main__':
     except Exception as err:
         print(f" Error during peak detection: {err=}, {type(err)=}")
         raise
+
 
 ###########################################################################################################################################################################

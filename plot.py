@@ -161,6 +161,7 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
     plt.title(f"{spectrum.name} Peak Heatmap")
     plt.xlabel("Drifttime [relative index]")
     plt.ylabel("Retentiontime [relative index]")
+    plt.gca().invert_yaxis()
     fig_caption = f"RT: {spectrum.ret_time[ret_idx]:.4f} [s] , DT: {spectrum.drift_time[drift_idx]:.4f} [ms]"
     plt.figtext(0.445, 0.04, fig_caption, ha="center", va="center", fontsize=10)
     # Save the heatmap image.
