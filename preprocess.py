@@ -162,6 +162,8 @@ def preprocess_spectra(spectrum: ims.Spectrum,
                                plot_dir=plot_dir,
                                condition="raw")
 
+
+    spectrum.rip_ms = 1
     # Baseline correction for drift- and retention time.
     spectrum.sub_first_rows(50)
     spectrum.cut_dt(start=drift_cut[0], stop=drift_cut[1])
@@ -172,13 +174,16 @@ def preprocess_spectra(spectrum: ims.Spectrum,
 
     # spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=0, keepdims=True)
     # spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=1, keepdims=True)
-    spectrum.values[spectrum.values < 0] = 0
+    # spectrum.values[spectrum.values < 0] = 0.0
 
     # spectrum.values = uniform_filter(input=spectrum.values, size=uniform_filter_size)
-    # TODO -> Testing Gaussian filter
+    # TODO -> Testing different filters
     # from scipy.ndimage import gaussian_filter
     # spectrum.values = gaussian_filter(spectrum.values, sigma=2.0)
     spectrum.savgol(window_length=20, polyorder=2)
+
+    # Remove negative values after applying the smooth filter.
+    spectrum.values[spectrum.values < 0] = 0.0
 
     # Plot the processed spectrum.
     if create_plots in ["all", "single"]:
@@ -243,34 +248,34 @@ def peak_detection(spectrum: ims.Spectrum,
                    plot_dir: Path,
                    npy_dir: Path) -> list[dict]:
     """
-        This function handels the peak detection for preprocessed gc-ims spectra in a series of steps.
-        1. Normalization of the spectrum to values between 0 and 1.
-        2. Create a local tree of the spectrum and create hierarchy levels.
-        3. Select peaks from the local tree according to specific conditions [min. intensity | min. hierarchy level | etc.]
-        4. Create a plot with all selected peaks.
-        5. Add neighbor peaks around each selected peak of step 3 within the neighbor_distance radius.
-        6. Create a "peak window" for each peak of the size (neighbor_distance+1 * neighbor_distance+1) and save
-           the intensities inside each window as a npy file.
-        7. Return a list of dictionaries. One dictionary for each "peak window" with the following information.
-            - 'honey_type' -> The honey type of the used spectrum.
-            - 'spectrum' -> The Name of the spectrum.
-            - 'ret_time' -> Retention time [s] of the "peak window" center point.
-            - 'drift_time' -> Drift time [ms] of the "peak window" center point.
-            - 'intensity' -> Intensity [not normalized] of the "peak_window" center point.
-            - 'npy_file' -> Saved npy file of this "peak window" which was created in step 6.
+    This function handels the peak detection for preprocessed gc-ims spectra in a series of steps.
+    1. Normalization of the spectrum to values between 0 and 1.
+    2. Create a local tree of the spectrum and create hierarchy levels.
+    3. Select peaks from the local tree according to specific conditions [min. intensity | min. hierarchy level | etc.]
+    4. Create a plot with all selected peaks.
+    5. Add neighbor peaks around each selected peak of step 3 within the neighbor_distance radius.
+    6. Create a "peak window" for each peak of the size (neighbor_distance+1 * neighbor_distance+1) and save
+       the intensities inside each window as a npy file.
+    7. Return a list of dictionaries. One dictionary for each "peak window" with the following information.
+        - 'honey_type' -> The honey type of the used spectrum.
+        - 'spectrum' -> The Name of the spectrum.
+        - 'ret_time' -> Retention time [s] of the "peak window" center point.
+        - 'drift_time' -> Drift time [ms] of the "peak window" center point.
+        - 'intensity' -> Intensity [not normalized] of the "peak_window" center point.
+        - 'npy_file' -> Saved npy file of this "peak window" which was created in step 6.
 
-        :param spectrum: A single preprocessed gc-ims spectrum.
-        :param idx: The index of the spectrum inside the current dataset.
-        :param neighbor_distance: Defines the radius around a detected peak within which neighbor peaks are created.
-        [e.g. neighbor_distance = 3. In an area of (2*3 +1)² = 7² = 49 indices, neighbor peaks are created.
-        By doing this, every detected peak is not just represented by a center peak window, but by slightly shifted peak
-        windows surrounding this center peak. In this example, a total of 48 shifted peak windows + the center peak window
-        would be created = total of 49 peak windows.]
-        :param plot_dir: Saving path for the plotting image.
-        :param npy_dir: Saving path for the npy files.
+    :param spectrum: A single preprocessed gc-ims spectrum.
+    :param idx: The index of the spectrum inside the current dataset.
+    :param neighbor_distance: Defines the radius around a detected peak within which neighbor peaks are created.
+    [e.g. neighbor_distance = 3. In an area of (2*3 +1)² = 7² = 49 indices, neighbor peaks are created.
+    By doing this, every detected peak is not just represented by a center peak window, but by slightly shifted peak
+    windows surrounding this center peak. In this example, a total of 48 shifted peak windows + the center peak window
+    would be created = total of 49 peak windows.]
+    :param plot_dir: Saving path for the plotting image.
+    :param npy_dir: Saving path for the npy files.
 
-        :return: List of dictionaries which contain peak_window information (as specified above in step 7).
-        """
+    :return: List of dictionaries which contain peak_window information (as specified above in step 7).
+    """
 
     print(f"Peak Detection Started on: Spectrum {idx + 1}")
     # Keep the non normalized values for later use.
@@ -283,6 +288,7 @@ def peak_detection(spectrum: ims.Spectrum,
     try:
         honey_type = "Unknown"
 
+        """
         # Create a max tree.
         peak_tree = max_tree_local_maxima(spectrum.values, connectivity=2)
         # Define the upper tree hierarchy threshold.
@@ -340,9 +346,47 @@ def peak_detection(spectrum: ims.Spectrum,
         # Use the mask on the strongest peak coordinates.
         # Only Coordinates where the mask is set to "True" are considered.
         strongest_peak_coords = strongest_peak_coords[final_validity_mask]
+        """
+
+        # Peak intensity detection threshold
+        intensity_threshold = np.percentile(spectrum.values, [99.3])
+
+        # Find peaks with the integrated find_peaks function.
+        spectrum.detect_peaks(threshold_rel=intensity_threshold, peak_size=2)
+
+        # List with peak coordinates as tuples [(Retention-index, Drift-index)].
+        peak_coords = np.column_stack((spectrum.peaklist['y'].values, spectrum.peaklist['x'].values))
+
+        # Are there peaks?
+        if len(peak_coords) > 0:
+            strongest_peak_coords = peak_coords
+        else:
+            # No peaks. Create an empty numpy array.
+            strongest_peak_coords = np.array([])
+
+        # Split the retention and drift indices.
+        ret_idx = strongest_peak_coords[:, 0]
+        drift_idx = strongest_peak_coords[:, 1]
+        # Get the max retention and drift indices.
+        ret_max_idx, drift_max_idx = values_non_normalized.shape
+
+        # Create mask conditions -> This will remove all peaks which are located too close at the edges.
+        mask_ret_min = ret_idx >= neighbor_distance
+        mask_ret_max = ret_idx < (ret_max_idx - neighbor_distance)
+        mask_drift_min = drift_idx >= neighbor_distance
+        mask_drift_max = drift_idx < (drift_max_idx - neighbor_distance)
+        # Combine all 4 mask conditions to one mask condition.
+        final_validity_mask = (mask_ret_min &
+                               mask_ret_max &
+                               mask_drift_min &
+                               mask_drift_max)
+
+        # Use the mask on the strongest peak coordinates.
+        # Only Coordinates where the mask is set to "True" are considered.
+        strongest_peak_coords = strongest_peak_coords[final_validity_mask]
 
         # Print the number of found peaks.
-        print(f"{len(strongest_peak_coords)} Peaks found in: Spectrum {idx + 1}")
+        #print(f"{len(strongest_peak_coords)} Peaks found in: Spectrum {idx + 1}")
 
         # Reload the non normalized values.
         spectrum.values = values_non_normalized
@@ -379,6 +423,7 @@ def peak_detection(spectrum: ims.Spectrum,
             heatmap_window = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
 
             # Plot the peak heatmaps.
+            """
             plot.plot_peak_heatmap(spectrum=spectrum,
                                    heatmap_window=heatmap_window,
                                    ret_idx=ret_idx,
@@ -386,6 +431,7 @@ def peak_detection(spectrum: ims.Spectrum,
                                    window_size=neighbor_distance,
                                    plot_dir=plot_dir,
                                    condition="peaks")
+            """
 
             # Now walk through the peak neighborhood within a radius of the window size.
             for dx in range(-neighbor_distance, neighbor_distance+1):
@@ -420,8 +466,9 @@ def peak_detection(spectrum: ims.Spectrum,
 
             numpy_filename = numpy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{neighbor_distance*2+1}x{neighbor_distance*2+1}.npy"
 
+            # TODO -> Uncomment saving.
             # Save numpy file.
-            np.save(numpy_filename, peak_window)
+            # np.save(numpy_filename, peak_window)
 
             # Dictionary with selected information about peaks.
             peak_data = {
