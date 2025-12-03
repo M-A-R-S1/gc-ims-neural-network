@@ -38,15 +38,18 @@ def single_gcims_plot(spectrum: ims.Spectrum,
 
     # Creat the plot.
     plt.figure(figsize=size)
-    spectrum.plot()
+    # spectrum.plot()
 
     # Plot Peaks (if in the function arguments)
     if peak_cords is not None and len(peak_cords) > 0:
+        spectrum.plot_thresholding(linewidth=1)
+        #spectrum.plot()
         plt.title(f"{spectrum_name} [{len(peak_cords)} {condition}]")
         for coord in peak_cords:
             ret_idx, drift_idx = coord
             plt.plot(spectrum.drift_time[drift_idx], spectrum.ret_time[ret_idx], 'r+', markersize=3)
     else:
+        spectrum.plot()
         plt.title(f"{spectrum_name} [{condition}]")
 
     plt.xlabel("Drifttime [ms]")
@@ -57,7 +60,6 @@ def single_gcims_plot(spectrum: ims.Spectrum,
     image_name = plot_dir / f"{spectrum_name}_{condition}.png"
     plt.savefig(image_name, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"- Plot saved [{spectrum_name}_{condition}.png]")
 
 
 def overview_gcims_plot(dataset: list[ims.Spectrum],
@@ -115,7 +117,6 @@ def overview_gcims_plot(dataset: list[ims.Spectrum],
     plt.tight_layout(rect=(0, 0.03, 1, 0.97))
     plt.savefig(image_name, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"- Overview plot saved [{plot_dir.name}_{condition}.png]")
 
 
 def plot_peak_heatmap(spectrum: ims.Spectrum,
@@ -123,11 +124,10 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
                       ret_idx: int,
                       drift_idx: int,
                       window_size: int,
-                      plot_dir: Path,
-                      condition: str) -> None:
+                      plot_dir: Path) -> None:
     """
-       This function creates a heatmap plot for a detected peak and saves it." The created plot covers the entire area
-       of the centered peak itself, as well as all surrounding neighbor peaks.
+       This function creates a heatmap plot for a detected peak and saves it. The created plot covers the entire area
+       of the centered peak.
 
        :param spectrum: The gc-ims spectrum.
        :param heatmap_window: The peak window.
@@ -135,12 +135,11 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
        :param drift_idx: The drift index of the center peak.
        :param window_size: The size of the peak window.
        :param plot_dir: Saving path of the plotting image.
-       :param condition: The condition of the dataset [In this case by default "peak"]
 
        :return: None.
        """
 
-    heatmap_dir = plot_dir / condition / spectrum.name
+    heatmap_dir = plot_dir / "heatmap" / spectrum.name
     if not heatmap_dir.exists():
         heatmap_dir.mkdir(parents=True, exist_ok=True)
 
@@ -167,4 +166,3 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
     # Save the heatmap image.
     plt.savefig(heatmap_file, bbox_inches="tight")
     plt.close()
-    print(f"Peak Heatmap saved: {heatmap_file.name}")
