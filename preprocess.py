@@ -203,23 +203,17 @@ def preprocess_spectra(spectrum: ims.Spectrum,
                                condition="raw")
 
     spectrum.rip_ms = 1
-    # Baseline correction for drift- and retention time.
+    # Baseline correction - removing the noisy background by subtracting the mean of an empty area.
     spectrum.sub_first_rows(50)
     spectrum.cut_dt(start=drift_cut[0], stop=drift_cut[1])
     spectrum.cut_rt(start=retention_cut[0], stop=retention_cut[1])
-    # Background noise reduction for each axis, computed with a given percentile.
-    # Adjust negative values to 0.
-    # Smooth the adjusted spectrum values and reduce noise.
 
-    # spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=0, keepdims=True)
-    # spectrum.values -= np.percentile(a=spectrum.values, q=percentile, axis=1, keepdims=True)
-    # spectrum.values[spectrum.values < 0] = 0.0
+    #spectrum.values = uniform_filter(input=spectrum.values, size=uniform_filter_size)
+    #from scipy.ndimage import gaussian_filter
+    #spectrum.values = gaussian_filter(spectrum.values, sigma=1.0)
 
-    # spectrum.values = uniform_filter(input=spectrum.values, size=uniform_filter_size)
-    # TODO -> Testing different filters
-    # from scipy.ndimage import gaussian_filter
-    # spectrum.values = gaussian_filter(spectrum.values, sigma=2.0)
-    spectrum.savgol(window_length=20, polyorder=2)
+    # Smoothing the spectrum with the Savitzky–Golay filter.
+    spectrum.savgol(window_length=10, polyorder=4)
 
     # Remove negative values after applying the smooth filter.
     spectrum.values[spectrum.values < 0] = 0.0
@@ -340,7 +334,7 @@ def peak_detection(spectrum: ims.Spectrum,
     spectrum_peak_data = []
 
     try:
-        label = "Unknown"
+        label = output_dir.name
 
         # 1. Check for peaks and put the peak coordinates in a list with tuples (Retention , Drift).
         # Define the min. peak threshold intensity [non normalized value].
@@ -442,9 +436,8 @@ def peak_detection(spectrum: ims.Spectrum,
 
                 npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4*neighbor_distance + 1}x{4*neighbor_distance + 1}.npy"
 
-                # TODO -> Remove comment from saving npy files.
                 # Save numpy file.
-                # np.save(npy_filename, peak_window)
+                np.save(npy_filename, peak_window)
 
                 # Dictionary with information about peaks.
                 peak_data = {
@@ -457,10 +450,15 @@ def peak_detection(spectrum: ims.Spectrum,
                 }
                 spectrum_peak_data.append(peak_data)
 
+            table_dir = output_dir / "table"
+            if not table_dir.exists():
+                table_dir.mkdir(parents=True, exist_ok=True)
+
+            table_filename = table_dir / f"{spectrum.name}_peaks.xlsx"
+
             # Save the peak data as a .xlsx file
-            peak_dataframe = pd.DataFrame(spectrum_peak_data)
-            peak_filename = output_dir / f"{spectrum.name}_peaks.xlsx"
-            peak_dataframe.to_excel(peak_filename, index=False)
+            peaks_dataframe = pd.DataFrame(spectrum_peak_data)
+            peaks_dataframe.to_excel(table_filename, index=False)
 
             # Notify that the peak detection on this spectrum is finished and print the number of peaks.
             print(f"- {len(peak_coords)} Peaks saved - Spectrum {idx + 1} [{spectrum.name}]")
