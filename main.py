@@ -6,9 +6,9 @@ if __name__ == '__main__':
 
     # Step 0: Define all necessary directories.
     # The root input dir.
-    input_dir = Path("./data")
+    input_dir = Path("./data/IMS_Olive_Oil_Geography/Test")
     # The root output dir.
-    output_dir = Path("./output")
+    output_dir = Path("./output/Test")
 
     # Check and create output if necessary.
     if not output_dir.exists():
