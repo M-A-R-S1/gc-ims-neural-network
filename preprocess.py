@@ -336,6 +336,7 @@ def peak_detection(spectrum: ims.Spectrum,
     try:
         label = output_dir.name
 
+        """ DETECT_PEAKS FUNCTION
         # 1. Check for peaks and put the peak coordinates in a list with tuples (Retention , Drift).
         # Define the min. peak threshold intensity [non normalized value].
         peak_threshold = 100
@@ -345,7 +346,6 @@ def peak_detection(spectrum: ims.Spectrum,
         threshold_intensity_count = len(np.where(values_non_normalized >= peak_threshold)[0])
         # Calculate the % of intensity values which are below the peak_threshold.
         threshold_percentile = 100 - (threshold_intensity_count / intensity_count_max) * 100
-
         # Peak intensity detection threshold.
         intensity_threshold = np.percentile(spectrum.values, [threshold_percentile])
         # Find peaks with the integrated find_peaks function.
@@ -354,6 +354,50 @@ def peak_detection(spectrum: ims.Spectrum,
         # List with peak coordinates as tuples [(Retention-index, Drift-index)].
         peak_coords = np.column_stack((spectrum.peaklist['y'].values, spectrum.peaklist['x'].values))
         #peak_coords = np.column_stack((spectrum.peak_table['y'].values, spectrum.peak_table['x'].values))
+        """
+
+        # Define the min. peak threshold intensity [non normalized value].
+        peak_threshold = 25
+        # How many intensity values are there in total?
+        intensity_count_max = spectrum.values.shape[0] * spectrum.values.shape[1]
+        # How many intensities values are over the peak_threshold?
+        threshold_intensity_count = len(np.where(values_non_normalized >= peak_threshold)[0])
+        # Calculate the % of intensity values which are below the peak_threshold.
+        threshold_percentile = 100 - (threshold_intensity_count / intensity_count_max) * 100
+        # Peak intensity detection threshold.
+        intensity_threshold = np.percentile(spectrum.values, [threshold_percentile])
+
+        # Create a max tree.
+        peak_tree = max_tree_local_maxima(spectrum.values, connectivity=2)
+
+        # List of tuples with peak coordinates (Retention-index, Drift-index) which satisfy the selection conditions.
+        selected_peak_coords = np.column_stack(
+            np.where(
+                (peak_tree > 0) &
+                (spectrum.values > intensity_threshold)
+            )
+        )
+
+        # Get all retention indices from the selected peak coordinates.
+        ret_idx = selected_peak_coords[:, 0]
+        # Get all drift indices from the selected peak coordinates.
+        drift_idx = selected_peak_coords[:, 1]
+        # List of normalized intensities which correlate to the coordinates of the "selected_peak_coords" list.
+        peak_coords = spectrum.values[ret_idx, drift_idx]
+
+        # Are there peaks?
+        # If so, select only peaks which belong to the strongest 10% intensities.
+        if len(peak_coords) > 0:
+            # Threshold value for the 10% strongest intensities.
+            intensity_threshold = np.percentile(peak_coords, 90.0)
+            # Create a mask with True/False values for the threshold condition.
+            intensity_mask = peak_coords >= intensity_threshold
+            # Use the mask on the selected peak coordinates.
+            # Only Coordinates where the mask is set to "True" are considered.
+            peak_coords = selected_peak_coords[intensity_mask]
+        else:
+            # No peaks. Create an empty numpy array.
+            peak_coords = np.array([])
 
         if len(peak_coords) > 0:
             # 2. Remove peaks which are located near the spectrum boarders.
