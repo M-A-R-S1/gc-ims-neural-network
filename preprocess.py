@@ -6,7 +6,7 @@ import plot
 from multiprocessing import Pool
 import os
 import pandas as pd
-from skimage.morphology import max_tree_local_maxima
+from skimage.morphology import max_tree, h_maxima, area_opening
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -356,8 +356,9 @@ def peak_detection(spectrum: ims.Spectrum,
         #peak_coords = np.column_stack((spectrum.peak_table['y'].values, spectrum.peak_table['x'].values))
         """
 
+        """ PEAK LOCAL MAX FUNCTION
         # Define the min. peak threshold intensity [non normalized value].
-        peak_threshold = 25
+        peak_threshold = 75
         # How many intensity values are there in total?
         intensity_count_max = spectrum.values.shape[0] * spectrum.values.shape[1]
         # How many intensities values are over the peak_threshold?
@@ -367,17 +368,42 @@ def peak_detection(spectrum: ims.Spectrum,
         # Peak intensity detection threshold.
         intensity_threshold = np.percentile(spectrum.values, [threshold_percentile])
 
+        peak_coords = peak_local_max(spectrum.values,
+                                     threshold_abs=intensity_threshold,
+                                     min_distance=5,
+                                     exclude_border=False)
+        """
+
         # Create a max tree.
-        peak_tree = max_tree_local_maxima(spectrum.values, connectivity=2)
+        parent, tree_traverser = max_tree(spectrum.values, connectivity=2)
+        # Define the min. area threshold size in pixel.
+        area_threshold = 5
+        # Define the min. peak threshold intensity [non normalized value].
+        peak_threshold = 75
+        # How many intensity values are there in total?
+        intensity_count_max = spectrum.values.shape[0] * spectrum.values.shape[1]
+        # How many intensities values are over the peak_threshold?
+        threshold_intensity_count = len(np.where(values_non_normalized >= peak_threshold)[0])
+        # Calculate the % of intensity values which are below the peak_threshold.
+        threshold_percentile = 100 - (threshold_intensity_count / intensity_count_max) * 100
+        # Peak intensity detection threshold.
+        intensity_threshold = np.percentile(spectrum.values, [threshold_percentile])
 
-        # List of tuples with peak coordinates (Retention-index, Drift-index) which satisfy the selection conditions.
-        selected_peak_coords = np.column_stack(
-            np.where(
-                (peak_tree > 0) &
-                (spectrum.values > intensity_threshold)
-            )
-        )
+        # Remove small areas (peaks < area_threshold) to remove 'pseudo' local maxima within noise.
+        filtered_local_maxima = area_opening(spectrum.values,
+                                             area_threshold=area_threshold,
+                                             connectivity=2,
+                                             parent=parent,
+                                             tree_traverser=tree_traverser)
 
+        # Remove peaks which are to small (peak height < intensity_threshold)
+        peak_mask = h_maxima(filtered_local_maxima, h=intensity_threshold)
+        # Get the retention and drift indices of all detected peaks (Indices which are non-zero).
+        ret_idx, drift_idx = np.nonzero(peak_mask)
+        # List with peak coordinates as tuples [(Retention-index, Drift-index)].
+        peak_coords = np.column_stack((ret_idx, drift_idx))
+
+        """
         # Get all retention indices from the selected peak coordinates.
         ret_idx = selected_peak_coords[:, 0]
         # Get all drift indices from the selected peak coordinates.
@@ -398,6 +424,7 @@ def peak_detection(spectrum: ims.Spectrum,
         else:
             # No peaks. Create an empty numpy array.
             peak_coords = np.array([])
+        """
 
         if len(peak_coords) > 0:
             # 2. Remove peaks which are located near the spectrum boarders.
