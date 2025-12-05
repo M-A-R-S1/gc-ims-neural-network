@@ -1,5 +1,6 @@
 from pathlib import Path
 import preprocess
+import peak
 
 
 if __name__ == '__main__':
@@ -21,15 +22,15 @@ if __name__ == '__main__':
     # - Smoothing filter
     preprocessed_data, spectra_paths = preprocess.start(input_dir=input_dir,
                                                         output_dir=output_dir,
-                                                        create_plots="None",
+                                                        create_plots="None ",
                                                         load_existing=True)
 
     # Step 2: Calculate peaks on preprocessed data.
     try:
-        peak_dataframe = preprocess.get_all_peaks(preprocessed_data=preprocessed_data,
-                                                  neighbor_distance=5,
-                                                  spectra_paths=spectra_paths,
-                                                  create_heatmaps=False)
+        peak_dataframe = peak.get_all_peaks(preprocessed_data=preprocessed_data,
+                                            neighbor_distance=5,
+                                            spectra_paths=spectra_paths,
+                                            create_heatmaps=False)
 
         # Save peak data to csv file.
         csv_filename = output_dir / "All_peak_data.csv"
