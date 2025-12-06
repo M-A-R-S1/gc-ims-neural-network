@@ -11,10 +11,12 @@ import plot
 
 from PIL import Image, ImageDraw, ImageFont
 
+
 def get_all_peaks(preprocessed_data: list[ims.Spectrum],
                   neighbor_distance: int,
                   spectra_paths: list[Path],
-                  create_heatmaps: bool = True) -> pd.DataFrame:
+                  create_heatmaps: bool = True,
+                  create_npy: bool = True) -> pd.DataFrame:
     """
     This function forwards to the peak detection algorithm for preprocessed gc-ims spectra.
     It manages the multiprocessing task on multiple cpu cores (if available) and forwards spectra specific
@@ -27,7 +29,9 @@ def get_all_peaks(preprocessed_data: list[ims.Spectrum],
     windows surrounding this center peak. In this example, a total of 48 shifted peak windows + the center peak window
     would be created = total of 49 peak windows.]
     :param spectra_paths: Saving paths of the spectra.
-    :param create_heatmaps: Specifies if heatmaps are created. [0 = creates no heatmaps | 1 = creats heatmaps (default)]
+    :param create_heatmaps: Specifies if heatmaps are created [default = True].
+    :param create_npy: Specifies if npy files are created. These files are important for the consensus peak detection of
+    the next step [default = True].
 
     :return: Pandas dataframe with detected peak information.
     """
@@ -38,11 +42,10 @@ def get_all_peaks(preprocessed_data: list[ims.Spectrum],
     tasks = []
 
     print("=======================================================")
-    print("II. Peak detection started ...")
-    print("-------------------------------------------------------")
+    print("II. PEAK DETECTION")
     # Walk through each preprocessed spectrum and collect needed arguments for the peak finding computation.
     for idx, spectrum in enumerate(preprocessed_data):
-        task_args = (spectrum, idx, neighbor_distance, spectra_paths[idx], create_heatmaps)
+        task_args = (spectrum, neighbor_distance, spectra_paths[idx], create_heatmaps, create_npy)
         # Append the tuple of arguments to the tasks list.
         tasks.append(task_args)
 
@@ -62,10 +65,10 @@ def get_all_peaks(preprocessed_data: list[ims.Spectrum],
 
 
 def peak_detection(spectrum: ims.Spectrum,
-                   idx: int,
                    neighbor_distance: int,
                    output_dir: Path,
-                   create_heatmaps: bool) -> list[dict]:
+                   create_heatmaps: bool,
+                   create_npy: bool) -> list[dict]:
     """
     This function handels the peak detection for preprocessed gc-ims spectra in a series of steps.
     1. Normalization of the spectrum to values between 0 and 1.
@@ -84,19 +87,19 @@ def peak_detection(spectrum: ims.Spectrum,
         - 'npy_file' -> Saved npy file of this "peak window" which was created in step 6.
 
     :param spectrum: A single preprocessed gc-ims spectrum.
-    :param idx: The index of the spectrum inside the current dataset.
     :param neighbor_distance: Defines the radius around a detected peak within which neighbor peaks are created.
     [e.g. neighbor_distance = 3. In an area of (2*3 +1)² = 7² = 49 indices, neighbor peaks are created.
     By doing this, every detected peak is not just represented by a center peak window, but by slightly shifted peak
     windows surrounding this center peak. In this example, a total of 48 shifted peak windows + the center peak window
     would be created = total of 49 peak windows.]
     :param output_dir: Saving path for the plotting image.
-    :param create_heatmaps: Specifies if heatmaps are created. [0 = creates no heatmaps | 1 = creats heatmaps]
+    :param create_heatmaps: Specifies if heatmaps are created.
+    :param create_npy: Specifies if npy files are created.
 
     :return: List of dictionaries which contain peak_window information (as specified above in step 7).
     """
 
-    print(f"- Peak Detection Started on: Spectrum {idx + 1}")
+    print(f"\t- Peak Detection Started [{spectrum.name}]")
     # Keep the non normalized values for later use.
     values_non_normalized = spectrum.values.copy()
     # Normalize the spectrum [0-1].
@@ -163,7 +166,7 @@ def peak_detection(spectrum: ims.Spectrum,
         peak_mask = h_maxima(filtered_local_maxima, h=height_differenz)
         # label the found nodes.
         label_mask = label(peak_mask, connectivity=2)
-        # 3. Create regions from the original spectrum values of the labeled nodes.
+        # Create regions from the original spectrum values of the labeled nodes.
         regions = regionprops(label_mask, intensity_image=spectrum.values)
         # create a new empty array with the size of found regions (Each region = 1 peak).
         all_peak_coords = np.zeros((len(regions), 2), dtype=int)
@@ -250,7 +253,6 @@ def peak_detection(spectrum: ims.Spectrum,
                 constant_values=0
             )
 
-            print(f" - Creating npy-files and heatmaps: Spectrum {idx + 1} [{spectrum.name}]")
             # Walk through all peak coordinates.
             for ret_idx, drift_idx in peak_coords:
                 # Create the heatmap window.
@@ -273,18 +275,20 @@ def peak_detection(spectrum: ims.Spectrum,
 
                 # Check if the peak window has the correct shape. This should always be the case!
                 if peak_window.shape != (4*neighbor_distance + 1, 4*neighbor_distance + 1):
-                    raise ValueError(f"Peak Window has the wrong shape: {peak_window.shape}. "
+                    raise ValueError(f"\tPeak Window has the wrong shape: {peak_window.shape}. "
                                      f"Expected Shape: ({4*neighbor_distance + 1}, {4*neighbor_distance + 1})")
 
+
                 # Define the numpy filename and create the needed directories.
-                npy_dir = output_dir / "npy" / spectrum.name
-                if not npy_dir.exists():
-                    npy_dir.mkdir(parents=True, exist_ok=True)
+                if create_npy:
+                    npy_dir = output_dir / "npy" / spectrum.name
+                    if not npy_dir.exists():
+                        npy_dir.mkdir(parents=True, exist_ok=True)
 
-                npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4*neighbor_distance + 1}x{4*neighbor_distance + 1}.npy"
-
-                # Save numpy file.
-                # np.save(npy_filename, peak_window)
+                    npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4*neighbor_distance + 1}x{4*neighbor_distance + 1}.npy"
+                    np.save(npy_filename, peak_window)
+                else:
+                    npy_filename = "-"
 
                 # Dictionary with information about peaks.
                 peak_data = {
@@ -297,26 +301,24 @@ def peak_detection(spectrum: ims.Spectrum,
                 }
                 spectrum_peak_data.append(peak_data)
 
+            # Create an Excel file that contains the found peaks and their information (See peak_data dictionary above).
             table_dir = output_dir / "table"
             if not table_dir.exists():
                 table_dir.mkdir(parents=True, exist_ok=True)
 
             table_filename = table_dir / f"{spectrum.name}_peaks.xlsx"
-
-            # Save the peak data as a .xlsx file
             peaks_dataframe = pd.DataFrame(spectrum_peak_data)
             peaks_dataframe.to_excel(table_filename, index=False)
 
             # Notify that the peak detection on this spectrum is finished and print the number of peaks.
-            print(f"- {len(peak_coords)} Peaks saved - Spectrum {idx + 1} [{spectrum.name}]")
+            print(f"\t- {len(peak_coords)} Peaks saved [{spectrum.name}]")
 
         else:
             # Notify that the peak detection on this spectrum is finished and print the number of peaks.
-            print(f"- No Peaks saved - Spectrum {idx + 1} [{spectrum.name}]")
-
+            print(f"\t- No Peaks saved [{spectrum.name}]")
 
     except Exception as err:
-        print(f"Error - Spectrum {idx + 1} [{spectrum.name}] Skipped: {err=}, {type(err)=}")
+        print(f"\tError on {spectrum.name} - Skipped: {err=}, {type(err)=}")
         raise
 
     return spectrum_peak_data
