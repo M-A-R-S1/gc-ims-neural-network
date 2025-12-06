@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # - Smoothing filter
     preprocessed_data, spectra_paths = preprocess.start(input_dir=input_dir,
                                                         output_dir=output_dir,
-                                                        create_plots="None",
+                                                        create_plots="Single",
                                                         load_existing=True)
 
     # Step 2: Calculate peaks on preprocessed data.
@@ -30,16 +30,15 @@ if __name__ == '__main__':
         peak_dataframe = peak.get_all_peaks(preprocessed_data=preprocessed_data,
                                             neighbor_distance=5,
                                             spectra_paths=spectra_paths,
-                                            create_heatmaps=False)
+                                            create_heatmaps=False,
+                                            create_npy=False)
 
         # Save peak data to csv file.
         csv_filename = output_dir / "All_peak_data.csv"
         peak_dataframe.to_csv(csv_filename, index=False)
-        print(f"All peaks saved as .csv file")
         # Save peak date to Excel file.
         excel_filename = output_dir / "All_peak_data.xlsx"
         peak_dataframe.to_excel(excel_filename, index=False)
-        print(f"All peaks saved as .xlsx file")
     except Exception as err:
         print(f" Error during peak detection: {err=}, {type(err)=}")
         raise

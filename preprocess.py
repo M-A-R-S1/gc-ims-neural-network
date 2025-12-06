@@ -17,12 +17,11 @@ def start(input_dir: Path,
     """
     This function takes care of the preprocess steps for .mea files.
     All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as datasets.
-    Each dataset corresponds to one directory and is preprocessed by the following:
-    - 1. Interpolation to a common Reactant Ion Peaks (RIP)
+    Each dataset corresponds to one directory.
 
-    This functions forwards the interpolated spectra files to the "preprocess_spectra" function for parallel computation.
-    Each cpu core acts on one spectrum.
-    This function then returns all preprocessed spectra as a list and their output paths.
+    This functions forwards the interpolated spectra files to the "preprocess_spectra" function for parallel
+    computation. Each cpu core acts on one spectrum.
+    This function then returns all preprocessed spectra as a list and another list with their output paths.
 
     :param input_dir: The directory where the .mea files are located in.
     :param output_dir: Saving path of the plotting image.
@@ -39,8 +38,7 @@ def start(input_dir: Path,
     """
 
     print("=======================================================")
-    print(f"I: Preproccessing started")
-    print("-------------------------------------------------------")
+    print(f"I: PREPROCESSING")
 
     # List of processed spectra.
     preprocessed_data = []
@@ -62,7 +60,7 @@ def start(input_dir: Path,
 
     # If there are no .mea files at all report this to the user.
     if not dir_set:
-        print(f"No .mea files found in {input_dir} and sub directories.")
+        print(f"\tNo .mea files found in {input_dir} and sub directories.")
         return preprocessed_data, spectra_paths
 
     # Walk through all found subdirectories.
@@ -71,12 +69,11 @@ def start(input_dir: Path,
             # Create the dataset for all .mea files in the current subdirectory.
             dataset = ims.Dataset.read_mea(current_input_dir)
         except Exception as err:
-            print(f"ERROR: could not read files at {current_input_dir}: {err=} ---- Skipping.")
+            print(f"\tERROR: could not read files at {current_input_dir}: {err=} ---- Skipping.")
             print("-------------------------------------------------------")
             continue
 
-        print(f"Opening dataset: {current_input_dir.parent.name}/{dataset.name} ({len(dataset.data)} Spectra)")
-        print("-------------------------------------------------------")
+        print(f"\tOpening dataset: {current_input_dir.parent.name}/{dataset.name} ({len(dataset.data)} Spectra)")
 
         # Set the output directory.
         current_output_dir = output_dir / current_input_dir.relative_to(input_dir)
@@ -91,7 +88,7 @@ def start(input_dir: Path,
                     loaded_spectrum.rip_ms = 1
                     # Save the output directory of the spektrum
                     spectra_paths.append(current_output_dir)
-                    print(f"- Spectrum {idx + 1}/{len(dataset.data)} - Save file found [loaded]")
+                    print(f"\t- Spectrum {idx + 1}/{len(dataset.data)} - Save file found [loaded]")
 
         # Skip processing this folder if all dictionary spectra could be loaded from .hdf5 files.
         if len(loaded_data) == len(dataset.data):
@@ -106,8 +103,8 @@ def start(input_dir: Path,
         # Collect needed arguments for each spectrum.
         for idx, spectrum in enumerate(dataset.data):
             if spectrum.values.size == 0:
-                print(f"- Spectrum {idx + 1}/{len(dataset.data)}")
-                print(f"- Empty spectrum --> Skipping")
+                print(f"\t- Spectrum {idx + 1}/{len(dataset.data)}")
+                print(f"\t- Empty spectrum --> Skipping")
                 continue
 
             # Check if the spectrum has already a save file, if so skip the preprocessing step for this spectrum.
@@ -188,7 +185,7 @@ def preprocess_spectra(spectrum: ims.Spectrum,
     :return: preprocessed spectra.
     """
 
-    print(f"- Spectrum {idx + 1}/{dataset_length}")
+    print(f"\t- Spectrum {idx + 1}/{dataset_length}")
 
     # Plot the raw spectrum.
     if create_plots in ["all", "single"]:
