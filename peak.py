@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from skimage.morphology import max_tree, h_maxima, area_opening
+from skimage.measure import label, regionprops
 from multiprocessing import Pool
 import plot
 
@@ -104,7 +105,7 @@ def peak_detection(spectrum: ims.Spectrum,
     spectrum_peak_data = []
 
     try:
-        label = output_dir.name
+        label_name = output_dir.name
 
         """ DETECT_PEAKS FUNCTION
         # 1. Check for peaks and put the peak coordinates in a list with tuples (Retention , Drift).
@@ -144,10 +145,41 @@ def peak_detection(spectrum: ims.Spectrum,
                                      exclude_border=False)
         """
 
+        """ COMPONENT TREE FUNCTION """
         # Create a max tree.
         parent, tree_traverser = max_tree(spectrum.values, connectivity=2)
         # Define the min. area threshold size in pixel.
-        area_threshold = 1
+        area_threshold = 5
+        # Collapses nodes which are smaller than the area_threshold with their parents.
+        filtered_local_maxima = area_opening(spectrum.values,
+                                             area_threshold=area_threshold,
+                                             connectivity=2,
+                                             parent=parent,
+                                             tree_traverser=tree_traverser)
+
+        # What's the min. height differenz (normalized) for two nodes to be discriminated as 2 different peaks?
+        height_differenz = 0.02
+        # Remove nodes which are to small compared to their node neighbors (node height differenz < height_differenz)
+        peak_mask = h_maxima(filtered_local_maxima, h=height_differenz)
+        # label the found nodes.
+        label_mask = label(peak_mask, connectivity=2)
+        # 3. Create regions from the original spectrum values of the labeled nodes.
+        regions = regionprops(label_mask, intensity_image=spectrum.values)
+        # create a new empty array with the size of found regions (Each region = 1 peak).
+        all_peak_coords = np.zeros((len(regions), 2), dtype=int)
+
+        # Walk through all found regions, calculate the weighted center coordinates and save these as a peak.
+        for region_idx, region in enumerate(regions):
+            y, x = region.weighted_centroid
+            all_peak_coords[region_idx] = [int(round(y)), int(round(x))]
+
+        # Get all retention indices from the peak coordinates.
+        ret_idx = all_peak_coords[:, 0]
+        # Get all drift indices from the peak coordinates.
+        drift_idx = all_peak_coords[:, 1]
+        # List with normalized intensities which correlate to the coordinates of the "all_peak_coords" list.
+        peak_intensities = spectrum.values[ret_idx, drift_idx]
+
         # Define the min. peak threshold intensity [non normalized value].
         peak_threshold = 64
         # How many intensity values are there in total?
@@ -159,45 +191,19 @@ def peak_detection(spectrum: ims.Spectrum,
         # Peak intensity detection threshold.
         intensity_threshold = np.percentile(spectrum.values, [threshold_percentile])
 
-        # Remove small areas (peaks < area_threshold) to remove 'pseudo' local maxima within noise.
-        filtered_local_maxima = area_opening(spectrum.values,
-                                             area_threshold=area_threshold,
-                                             connectivity=2,
-                                             parent=parent,
-                                             tree_traverser=tree_traverser)
-
-        # Remove peaks which are to small (peak height < intensity_threshold)
-        peak_mask = h_maxima(filtered_local_maxima, h=intensity_threshold)
-        # Get the retention and drift indices of all detected peaks (Indices which are non-zero).
-        ret_idx, drift_idx = np.nonzero(peak_mask)
-        # List with peak coordinates as tuples [(Retention-index, Drift-index)].
-        peak_coords = np.column_stack((ret_idx, drift_idx))
-
-        """
-        # Get all retention indices from the selected peak coordinates.
-        ret_idx = selected_peak_coords[:, 0]
-        # Get all drift indices from the selected peak coordinates.
-        drift_idx = selected_peak_coords[:, 1]
-        # List of normalized intensities which correlate to the coordinates of the "selected_peak_coords" list.
-        peak_coords = spectrum.values[ret_idx, drift_idx]
-
         # Are there peaks?
-        # If so, select only peaks which belong to the strongest 10% intensities.
-        if len(peak_coords) > 0:
-            # Threshold value for the 10% strongest intensities.
-            intensity_threshold = np.percentile(peak_coords, 90.0)
-            # Create a mask with True/False values for the threshold condition.
-            intensity_mask = peak_coords >= intensity_threshold
-            # Use the mask on the selected peak coordinates.
-            # Only Coordinates where the mask is set to "True" are considered.
-            peak_coords = selected_peak_coords[intensity_mask]
+        # If so, select only peaks which are higher than the intensity threshold.
+        if len(peak_intensities) > 0:
+            intensity_mask = peak_intensities >= intensity_threshold
+            # Use the mask on the peak coordinates.
+            # Only Coordinates where the mask condition is satisfied are saved.
+            peak_coords = all_peak_coords[intensity_mask]
         else:
             # No peaks. Create an empty numpy array.
             peak_coords = np.array([])
-        """
 
         if len(peak_coords) > 0:
-            # 2. Remove peaks which are located near the spectrum boarders.
+            # Remove peaks which are located near the spectrum boarders.
             # list with all peak retention indices.
             peak_ret_idx_list = peak_coords[:, 0]
             # list with all peak drift indices.
@@ -282,7 +288,7 @@ def peak_detection(spectrum: ims.Spectrum,
 
                 # Dictionary with information about peaks.
                 peak_data = {
-                    'label': label,
+                    'label': label_name,
                     'spectrum': spectrum.name,
                     'ret_time': spectrum.ret_time[ret_idx],
                     'drift_time': spectrum.drift_time[drift_idx],
