@@ -255,18 +255,20 @@ def peak_detection(spectrum: ims.Spectrum,
 
             # Walk through all peak coordinates.
             for ret_idx, drift_idx in peak_coords:
-                # Create the heatmap window.
                 start_ret_idx = ret_idx - neighbor_distance
                 end_ret_idx = ret_idx + 3 * neighbor_distance + 1
                 start_drift_idx = drift_idx - neighbor_distance
                 end_drift_idx = drift_idx + 3 * neighbor_distance + 1
-                peak_window = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
-
+                peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+                peak_window_ret_times = spectrum.ret_time[start_ret_idx:end_ret_idx]
+                peak_window_drift_times = spectrum.drift_time[start_drift_idx:end_drift_idx]
+                ret_matrix, drift_matrix = np.meshgrid(peak_window_ret_times, peak_window_drift_times, indexing='ij')
+                peak_window = np.stack((peak_window_intensities, ret_matrix, drift_matrix), axis=-1)
 
                 # Plot the peak heatmaps.
                 if create_heatmaps:
                     plot.plot_peak_heatmap(spectrum=spectrum,
-                                           heatmap_window=peak_window,
+                                           heatmap_window=peak_window_intensities,
                                            ret_idx=ret_idx,
                                            drift_idx=drift_idx,
                                            window_size=neighbor_distance,
@@ -274,8 +276,8 @@ def peak_detection(spectrum: ims.Spectrum,
 
 
                 # Check if the peak window has the correct shape. This should always be the case!
-                if peak_window.shape != (4*neighbor_distance + 1, 4*neighbor_distance + 1):
-                    raise ValueError(f"\tPeak Window has the wrong shape: {peak_window.shape}. "
+                if peak_window_intensities.shape != (4*neighbor_distance + 1, 4*neighbor_distance + 1):
+                    raise ValueError(f"\tPeak Window has the wrong shape: {peak_window_intensities.shape}. "
                                      f"Expected Shape: ({4*neighbor_distance + 1}, {4*neighbor_distance + 1})")
 
 

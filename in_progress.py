@@ -1,12 +1,15 @@
 import os
 from pathlib import Path
+
+import numpy
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from matplotlib import pyplot as plt
 import networkx as nx
-from scipy.spatial import cKDTree
+from scipy.spatial import KDTree
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from collections import defaultdict
 
 
 def process_peaks_from_excel(excel_file: Path,
@@ -41,19 +44,22 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
                            output_dir: Path,
                            threshold: float) -> None:
 
+    # Normalize the retention and drifttime.
+    scaler = MinMaxScaler()
+    times_normalized = scaler.fit_transform(peak_dataframe[['ret_time', 'drift_time']].values)
+
     # Calculate connected components.
-    graph, components, peak_dataframe = calculate_connected_components(peak_dataframe,
-                                                                       output_dir,
-                                                                       threshold,
+    graph, components, peak_dataframe = calculate_connected_components(peak_dataframe=peak_dataframe,
+                                                                       output_dir=output_dir,
+                                                                       threshold=threshold,
+                                                                       times_normalized=times_normalized,
                                                                        batch_size=20000)
 
-    #############################################################################
-    # # Skalierung der Retentions- und Driftzeiten für spätere Zuweisung
-    scaler = MinMaxScaler()
-    scaled_times = scaler.fit_transform(peak_dataframe[['ret_time', 'drift_time']].values)
-
     # Berechnet die Honigtyp-Anteile pro Komponente
-    honey_stats = count_honey_type_proportions(components, peak_dataframe, scaled_times)
+    label_proportion_dictionary = calculate_label_proportions(graph=graph,
+                                                              components=components)
+
+    #############################################################################
 
     # Plottet und speichert das Ergebnis der Zusammenhangskomponenten
     plot_connected_components(graph, components, output_dir)
@@ -68,7 +74,7 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
 
     # Extrahiert die Honiganteile für jede Komponente
     component_honey_counts = [(honey['Linde_Count'], honey['Lavendel_Count'], honey['Eukalyptus_Count']) for honey in
-                              honey_stats.values()]
+                              label_proportion_dictionary.values()]
 
     # Plottet Durchschnittspunkte mit den gemischten Farben basierend auf den Honiganteilen
     plot_peaks_by_honey_type(avg_peaks, component_honey_counts, output_dir, filename_prefix="peaks_by_honey_type")
@@ -78,177 +84,112 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
 def calculate_connected_components(peak_dataframe: pd.DataFrame,
                                    output_dir: Path,
                                    threshold: float,
-                                   batch_size: int):
+                                   times_normalized: np.ndarray,
+                                   batch_size: int) -> tuple[nx.Graph, list[nx.components], pd.DataFrame]:
 
     # Initialize a graph.
     graph = nx.Graph()
 
-    # Extract retention- and drifttime.
-    ret_time_list = peak_dataframe['ret_time'].tolist()
-    drift_time_list = peak_dataframe['drift_time'].tolist()
-
-    # Combine the retention and drifttimes into one 2D array and normalize the values [0-1].
-    scaler = MinMaxScaler()
-    ret_and_drift_array = np.column_stack((ret_time_list, drift_time_list))
-    scaled_times = scaler.fit_transform(ret_and_drift_array).astype(np.float64)
-
     # TODO -> Each peak entry consists of 121 different neighbor peaks. Each of these peaks must be added as a node.
-    # Jeder Peaks wird als Knoten eingefügt
-    # Knoten-ID: die skalierte Koordinate (scaled_ret_time, scaled_drift_time).
-    # Knoten bekommen zusätzliche Informationen--> honey_type; npy_file und index
+
+    # Each peak is added as a node in the graph.
     for idx in range(len(peak_dataframe)):
-        node = tuple(scaled_times[idx])
+        node = tuple(times_normalized[idx])
         peak_data = peak_dataframe.iloc[idx]
-        graph.add_node(node_for_adding=node, label=peak_data['label'], npy_file=peak_data['npy_file'], index=idx)
-    # Nachbarschaften finden
-    # Erstellt einen cKDTree aus allen Punkten
-    tree = cKDTree(scaled_times)
-    n_points = len(scaled_times)
+        graph.add_node(node_for_adding=node, label=peak_data['label'], npy_file=peak_data['npy_file'], dataframe_idx=idx)
 
-    # Batchweise Kanten hinzufügen
-    # query_ball_point --> Findet alle Punkte innerhalb des Radius threshold (euklidische Distanz, p=2)
-    # Fügt eine Kante zwischen node1 und jedem Nachbarn hinzu
-    # Peaks, die nahe beieinander liegen, werden verbunden
-    for start in range(0, n_points, batch_size):
-        end = min(start + batch_size, n_points)
-        sub_points = scaled_times[start:end]
-        neighbors_list = tree.query_ball_point(sub_points, r=threshold, p=2)  # euklidische Distanz
+    # Create a nearest neighbor tree for fast lookup of neighbor nodes.
+    tree = KDTree(times_normalized)
+    # Number of nodes in the graph.
+    node_count = graph.number_of_nodes()
 
-        for i_sub, neighbors in enumerate(neighbors_list):
-            i_global = start + i_sub
-            node1 = tuple(scaled_times[i_global])
-            for j in neighbors:
-                if i_global != j:
-                    node2 = tuple(scaled_times[j])
-                    graph.add_edge(node1, node2)
+    # Create edges between all nodes within a defined radius. Create batches of nodes and walk through them.
+    # neighbor_nodes is a list with lists inside. The position of the list is the index of the node.
+    # The inner list contains the positions of nodes which are considered the nodes neighbors.
+    for start_node in range(0, node_count, batch_size):
+        end_node = min(start_node + batch_size, node_count)
+        sub_nodes = times_normalized[start_node:end_node]
+        neighbor_nodes = tree.query_ball_point(sub_nodes, r=threshold, p=2)
 
-    # Sucht alle Zusammenhangskomponenten
-    # Jede Komponente ist eine Menge von Knoten, die über Kanten verbunden sind
-    components = list(nx.connected_components(graph))
-    # Erstellt ein Dictionary, das jedem Peak-Index seine component_id zuordnet.
+        for sub_node_idx, neighbors in enumerate(neighbor_nodes):
+            global_idx = start_node + sub_node_idx
+            node_1 = tuple(times_normalized[global_idx])
+            for neighbor_idx in neighbors:
+                if global_idx != neighbor_idx:
+                    node_2 = tuple(times_normalized[neighbor_idx])
+                    graph.add_edge(node_1, node_2)
+
+    # Get connected components from the graph (connected nodes within the graph).
+    connected_components = list(nx.connected_components(graph))
+    # Mapping dictionary.
     component_mapping = {}
-    for component_id, component in enumerate(components):
+    # Create a list of dictionaries which contain peak component information.
+    peak_component_list = []
+    # Walk through all components and nodes and connect the component index to the dataframe index and save node
+    # information to a list of dictionaries.
+    for component_idx, component in enumerate(connected_components):
         for node in component:
-            index = graph.nodes[node]['index']
-            component_mapping[index] = component_id
-    # Fügt die component_id in den ursprünglichen DataFrame ein.
-    peak_dataframe['component_id'] = peak_dataframe.index.map(component_mapping)
-    # Baut eine Liste mit allen Peaks + ihren Attributen
-    # Verwendet skalierte Koordinaten (node[0], node[1]).
-    detailed_components = []
-    for component_id, component in enumerate(components):
-        for node in component:
-            peak_data = graph.nodes[node]
-            detailed_components.append({
-                'ret_time': node[0],
-                'drift_time': node[1],
-                'honey_type': peak_data['honey_type'],
-                'npy_file': peak_data['npy_file'],
-                'index': peak_data['index'],
-                'component_id': component_id
-            })
+            # Get node data.
+            node_data = graph.nodes[node]
+            component_mapping[node_data['dataframe_idx']] = component_idx
+            # Save node information as dictionary in list.
+            peak_component_list.append({'index': node_data['dataframe_idx'],
+                                        'label': node_data['label'],
+                                        'ret_time': node[0],
+                                        'drift_time': node[1],
+                                        'npy_file': node_data['npy_file'],
+                                        'component_idx': component_idx})
 
-    df_detailed_components = pd.DataFrame(detailed_components)
-    df_detailed_components.to_excel(os.path.join(output_dir, "detailed_components.xlsx"), index=False)
-    df_detailed_components.to_csv(os.path.join(output_dir, "detailed_components.csv"), index=False)
+    # insert a new colum to the peak_dataframe which contains the component index.
+    peak_dataframe['component_idx'] = peak_dataframe.index.map(component_mapping)
 
-    print("Excel-Datei gespeichert.")
+    peak_component_dataframe = pd.DataFrame(peak_component_list)
+    # Save peak component dataframe as Excel and csv file.
+    csv_filename = output_dir / "peak_components.csv"
+    peak_component_dataframe.to_csv(csv_filename, index=False)
+    excel_filename = output_dir / "peak_components.xlsx"
+    peak_component_dataframe.to_excel(excel_filename, index=False)
 
-    # Rückgabe
-    # G = der vollständige Graph (Knoten + Kanten + Attribute)
-    # components = Liste aller verbundenen Punktmengen
-    # all_peak_df = ursprünglicher DataFrame + component_id
-    return graph, components, peak_dataframe
+    return graph, connected_components, peak_dataframe
 
 
 # wird nach der Berechnung der Zusammenhangskomponenten verwendet, um zu zählen, welcher Honigtyp in welcher Komponente wie stark vertreten ist
 # components--> Liste der verbundenen Komponenten aus calculate_connected_components
 # all_peak_df--> Dataframe mit allen Peaks und deren Honigtyp
 # scaled_times--> 2D-Array der skalierten (ret_time, drift_time) Werte
-def count_honey_type_proportions(components, all_peak_df, scaled_times):
-    # component_honey_stats --> Wird am Ende das Ergebnis als Dictionary speichern.
-    component_honey_stats = {}
+def calculate_label_proportions(graph: nx.Graph,
+                                components: list[nx.components]) -> dict[dict, ...]:
 
-    print("\n Anteile der Honigtypen pro Komponente")
+    # List of dictionaries which is returned.
+    component_label_portion = {}
+
     # Iteration über alle Komponenten
     # valid_nodes --> Zählt, wie viele Knoten tatsächlich erfolgreich ausgewertet wurden
-    for i, component in enumerate(components):
-        linden_count = 0
-        lavender_count = 0
-        eucalyptus_count = 0
-        valid_nodes = 0
-        # Iteration über Knoten in der Komponente
+    for component_idx, component in enumerate(components):
+
+        # Create a label dictionary which counts the occurrences of each label for a component.
+        label_dictionary = defaultdict(int)
+        total_nodes = 0
+
+        # Walk through each node, check the label and increase the count in the label_dictionary.
         for node in component:
-            print(f"Node: {node} | Type of node: {type(node)}")
-            # Knotenkoordinaten extrahieren
-            # Falls Dict --> Werte aus Keys 'ret_time' und 'drift_time' ziehen.
-            # Falls Tuple oder Liste --> Werte direkt nehmen
-            # Falls Format unbekannt --> Überspringen
-            # Falls Konvertierung in Float fehlschlägt --> Überspringen
-            try:
-                # Extrahiere ret_time und drift_time
-                if isinstance(node, dict):
-                    node_ret_time = float(node['ret_time'])
-                    node_drift_time = float(node['drift_time'])
-                elif isinstance(node, (tuple, list)) and len(node) == 2:
-                    node_ret_time = float(node[0])
-                    node_drift_time = float(node[1])
-                else:
-                    print(f"Ungültiger Knoten wird übersprungen: {node}")
-                    continue
-            except (KeyError, ValueError, TypeError) as e:
-                print(f"Fehler beim Parsen von Knotenwerten: {node} – {e}")
-                continue
+            node_data = graph.nodes[node]
+            label = node_data['label']
+            label_dictionary[label] += 1
+            total_nodes += 1
 
-            # Findet den Index des Peak-Points im Original-DataFrame
-            # Berechnet den Index des am nächsten liegenden Punkts im skalierten Koordinatensystem:
-            # Es wird die Summe der absoluten Differenzen benutzt, nicht die echte euklidische Distanz
-            # Holt dann den honey_type aus all_peak_df
-            index = np.argmin(
-                np.abs(scaled_times[:, 0] - node_ret_time) +
-                np.abs(scaled_times[:, 1] - node_drift_time)
-            )
-            honey_type = all_peak_df.iloc[index]['honey_type']
+        # Create a new dictionary and fill it with label information.
+        new_label_dictionary = {}
+        for key, count in label_dictionary.items():
+            count_key = key + "_Count"
+            ratio_key = key + "_%"
+            new_label_dictionary[count_key] = count
+            new_label_dictionary[ratio_key] = round(((count / total_nodes) * 100 if total_nodes > 0 else 0), 2)
 
-            # Zählt den Peak im passenden Honigtyp.
-            # Erhöht die Anzahl gültiger Knoten
+        new_label_dictionary["Total_Count"] = total_nodes
+        component_label_portion[component_idx + 1] = new_label_dictionary
 
-            if 'Linde' in honey_type:
-                linden_count += 1
-            elif 'Lavendel' in honey_type:
-                lavender_count += 1
-            elif 'Eukalyptus' in honey_type:
-                eucalyptus_count += 1
-
-            valid_nodes += 1
-
-        # Berechnung der Anteile in Prozent
-        linden_ratio = (linden_count / valid_nodes) * 100 if valid_nodes > 0 else 0
-        lavender_ratio = (lavender_count / valid_nodes) * 100 if valid_nodes > 0 else 0
-        eucalyptus_ratio = (eucalyptus_count / valid_nodes) * 100 if valid_nodes > 0 else 0
-
-        # Ergebnisse speichern
-        # Speichert absolute und relative Werte für jede Komponente
-        # Komponente wird mit 1-basiertem Index (i+1) gespeichert
-
-        component_honey_stats[i + 1] = {
-            "Linde_Count": linden_count,
-            "Lavendel_Count": lavender_count,
-            "Eukalyptus_Count": eucalyptus_count,
-            "Linde_%": round(linden_ratio, 2),
-            "Lavendel_%": round(lavender_ratio, 2),
-            "Eukalyptus_%": round(eucalyptus_ratio, 2),
-            "Total_Peaks": valid_nodes
-        }
-
-        print(f"Komponente {i + 1}: "
-              f"Linde: {linden_count} Peaks ({linden_ratio:.2f}%), "
-              f"Lavendel: {lavender_count} Peaks ({lavender_ratio:.2f}%), "
-              f"Eukalyptus: {eucalyptus_count} Peaks ({eucalyptus_ratio:.2f}%), "
-              f"Gesamt: {valid_nodes} gültige Peaks")
-
-    return component_honey_stats
-    # Rückgabe-> eine Dictionary
+    return component_label_portion
 
 
 # Erstellung einer Netzwerkdarstellung der von calculate_connected_components() gefundenen Cluster

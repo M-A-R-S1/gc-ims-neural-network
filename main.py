@@ -30,7 +30,7 @@ if __name__ == '__main__':
                                             neighbor_distance=5,
                                             spectra_paths=spectra_paths,
                                             create_heatmaps=False,
-                                            create_npy=False)
+                                            create_npy=True)
 
         # Save peak data to csv file.
         csv_filename = output_dir / "All_peak_data.csv"
@@ -42,9 +42,11 @@ if __name__ == '__main__':
         print(f" Error during peak detection: {err=}, {type(err)=}")
         raise
 
+    """
     in_progress.process_peaks_from_excel(excel_file=excel_filename,
                                          output_dir=output_dir,
                                          threshold=0.002,
                                          filter_types=["Greece", "Italy", "Spain"])
+    """
 
 ###########################################################################################################################################################################
