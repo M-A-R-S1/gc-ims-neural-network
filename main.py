@@ -1,7 +1,7 @@
 from pathlib import Path
 import preprocess
 import peak
-
+import in_progress
 
 if __name__ == '__main__':
 
@@ -14,7 +14,6 @@ if __name__ == '__main__':
     # Check and create output if necessary.
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
-
 
     # Step 1: Preprocess the .mea files
     # - RIP Interpolation (for each dataset)
@@ -42,5 +41,10 @@ if __name__ == '__main__':
     except Exception as err:
         print(f" Error during peak detection: {err=}, {type(err)=}")
         raise
+
+    in_progress.process_peaks_from_excel(excel_file=excel_filename,
+                                         output_dir=output_dir,
+                                         threshold=0.002,
+                                         filter_types=["Greece", "Italy", "Spain"])
 
 ###########################################################################################################################################################################
