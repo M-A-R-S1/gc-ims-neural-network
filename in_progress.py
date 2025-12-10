@@ -1,7 +1,5 @@
 import os
 from pathlib import Path
-
-import numpy
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
@@ -11,6 +9,7 @@ from scipy.spatial import KDTree
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from collections import defaultdict
 
+import plot
 
 def process_peaks_from_excel(excel_file: Path,
                              output_dir: Path,
@@ -55,21 +54,24 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
                                                                        times_normalized=times_normalized,
                                                                        batch_size=20000)
 
-    # Berechnet die Honigtyp-Anteile pro Komponente
+    # Calculates the label proportions for all components.
     label_proportion_dictionary = calculate_label_proportions(graph=graph,
                                                               components=components)
 
+    # Plotting stuff here ...
+    plot.overview_connected_components_plot(graph=graph,
+                                            components=components,
+                                            output_dir=output_dir)
+    component = components[5]
+
+    plot.single_connected_components_plot(graph=graph,
+                                          component=component,
+                                          output_dir=output_dir)
+
+
     #############################################################################
-
-    # Plottet und speichert das Ergebnis der Zusammenhangskomponenten
-    plot_connected_components(graph, components, output_dir)
-    komponente = components[109]  # oder eine andere Komponente
-
-    plot_einzene_komponente(graph, komponente, output_dir, filename="komponente_drift_retention.png")
-
-    get_average_peaks(graph, peak_dataframe, components, output_dir, filename="scatter_peaks_with_components")
-
     # Berechnet die Durchschnittspunkte für jede Komponente
+    """
     avg_peaks = get_average_peaks(graph, peak_dataframe, components, output_dir, filename="scatter_peaks_with_components")
 
     # Extrahiert die Honiganteile für jede Komponente
@@ -78,7 +80,7 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
 
     # Plottet Durchschnittspunkte mit den gemischten Farben basierend auf den Honiganteilen
     plot_peaks_by_honey_type(avg_peaks, component_honey_counts, output_dir, filename_prefix="peaks_by_honey_type")
-
+    """
 
 # Funktion: baut einen Graphen aus den Peak-Daten und bildet Zusammenhangskomponenten
 def calculate_connected_components(peak_dataframe: pd.DataFrame,
@@ -153,20 +155,14 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
     return graph, connected_components, peak_dataframe
 
 
-# wird nach der Berechnung der Zusammenhangskomponenten verwendet, um zu zählen, welcher Honigtyp in welcher Komponente wie stark vertreten ist
-# components--> Liste der verbundenen Komponenten aus calculate_connected_components
-# all_peak_df--> Dataframe mit allen Peaks und deren Honigtyp
-# scaled_times--> 2D-Array der skalierten (ret_time, drift_time) Werte
 def calculate_label_proportions(graph: nx.Graph,
                                 components: list[nx.components]) -> dict[dict, ...]:
 
     # List of dictionaries which is returned.
     component_label_portion = {}
 
-    # Iteration über alle Komponenten
-    # valid_nodes --> Zählt, wie viele Knoten tatsächlich erfolgreich ausgewertet wurden
+    # Walk through each component.
     for component_idx, component in enumerate(components):
-
         # Create a label dictionary which counts the occurrences of each label for a component.
         label_dictionary = defaultdict(int)
         total_nodes = 0
@@ -191,93 +187,6 @@ def calculate_label_proportions(graph: nx.Graph,
 
     return component_label_portion
 
-
-# Erstellung einer Netzwerkdarstellung der von calculate_connected_components() gefundenen Cluster
-# Paramter:
-# G --> NetworkX-Graph mit Peaks als Knoten.
-# components --> Liste der Mengen von Knoten, jede Menge = eine Connected Component
-# filename --> Dateiname
-def plot_connected_components(G, components, output_dir, filename="connected_components.png"):
-    colors = plt.cm.hsv(np.linspace(0, 1, len(components)))
-
-    # Erstellt ein Dictionary, das jedem Knoten (node) eine Position zuweist
-    # node[1] = Driftzeit
-    # node[0] = Retentionszeit
-    pos = {node: (node[1], node[0]) for node in G.nodes()}  # Driftzeit, Retentionszei t
-    # Plot erstellen
-    plt.figure(figsize=(8, 6))
-    # X-Achse
-    plt.xlabel("Driftzeit")
-    # Y-Achse
-    plt.ylabel("Retentionszeit")
-    # Titel
-    plt.title("Zusammenhängende Peak-Komponenten")
-
-    print("\n Start des Plotten der Komponenten")
-
-    # Zeichnen jeder Komponente
-    # G.subgraph(node_tuples): Nimmt nur die Knoten dieser Komponente.
-    # pos: gleiche Positionierung wie oben
-    # node_size=10: Größe der Knoten
-    # node_color & edge_color: Gleiche Farbe für Knoten und Kanten einer Komponente.
-    # with_labels=False: Keine Beschriftungen
-
-    for i, component in enumerate(components):
-        node_tuples = list(component)  # Set von Knoten
-
-        print(f"Verarbeite Komponente {i + 1} mit {len(node_tuples)} Knoten.")
-
-        nx.draw_networkx(
-            G.subgraph(node_tuples),
-            pos,
-            node_size=10,
-            node_color=[colors[i]] * len(node_tuples),
-            edge_color=[colors[i]] * len(node_tuples),
-            with_labels=False
-        )
-
-    print("\n Plotten abgeschlossen. Speichern des Bildes.")
-    # Speichern der Abbildung
-    plt.savefig(os.path.join(output_dir, filename), dpi=300, bbox_inches="tight")
-    print(f"Bild gespeichert unter: {os.path.join(output_dir, filename)}")
-    plt.close()
-
-
-# G: ein networkx.Graph
-# komponente: eine Liste von Knoten, die zusammen eine Zusammenhangskomponente bilden
-# output_dir: Ordner, in dem die Plots gespeichert werden
-# filename: Dateiname für den Plot
-def plot_einzene_komponente(G, komponente, output_dir, filename="komponente_drift_retention.png"):
-    # Falls der Speicherordner nicht existiert, wird er angelegt
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Plot 1: Drift Time vs Retention Time
-    pos = {node: (node[1], node[0]) for node in komponente}  # (x=Drift, y=Retention)
-    plt.figure(figsize=(6, 5))
-    plt.xlabel("Driftzeit")
-    plt.ylabel("Retentionszeit")
-    plt.title("Zusammenhangskomponente 109 (NetworkX)")
-
-    # Erstellt einen subgraphen von G, der nur die Knoten aus komponente enthält.
-    # Zeichnet einen subgraphen
-    # blaue Punkte für Knoten
-    # hellgraue Linien für kanten
-    # keine Labels
-    subgraph = G.subgraph(komponente)
-    nx.draw_networkx(
-        subgraph,
-        pos,
-        node_size=20,
-        node_color="tab:blue",
-        edge_color="lightgray",
-        with_labels=False
-    )
-    # Speichert Plot 1 im angegebenen Pfad.
-    pfad1 = os.path.join(output_dir, filename)
-    plt.savefig(pfad1, dpi=300, bbox_inches="tight")
-    plt.close()
-    print(f"Plot 1 gespeichert unter: {pfad1}")
 
 
 def get_average_peaks(G, all_peak_df, detailed_components, output_dir, filename="scatter_peaks_with_components"):

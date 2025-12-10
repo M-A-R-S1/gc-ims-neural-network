@@ -1,16 +1,16 @@
-import numpy
+import numpy as np
 from matplotlib import pyplot as plt
 from pathlib import Path
 import seaborn as sns
 import math
 import ims
-
+import networkx as nx
 
 def single_gcims_plot(spectrum: ims.Spectrum,
                       plot_dir: Path,
                       condition: str,
                       size: tuple[int, int] = (10,6),
-                      peak_cords: numpy.ndarray[tuple[int, ...]] = None) -> None:
+                      peak_cords: np.ndarray[tuple[int, ...]] = None) -> None:
     """
     This function creates a plot for a given gc-ims spectrum and saves it at the "output_dir/condition" path.
     The created plot shows the spectrum of one .mea file.
@@ -117,7 +117,7 @@ def overview_gcims_plot(dataset: list[ims.Spectrum],
 
 
 def plot_peak_heatmap(spectrum: ims.Spectrum,
-                      heatmap_window: numpy.ndarray[tuple[int, ...]],
+                      heatmap_window: np.ndarray[tuple[int, ...]],
                       ret_idx: int,
                       drift_idx: int,
                       window_size: int,
@@ -162,4 +162,57 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
     plt.figtext(0.445, 0.04, fig_caption, ha="center", va="center", fontsize=10)
     # Save the heatmap image.
     plt.savefig(heatmap_file, bbox_inches="tight")
+    plt.close()
+
+
+def overview_connected_components_plot(graph: nx.Graph,
+                                       components: nx.components,
+                                       output_dir: Path) -> None:
+
+    colors = plt.colormaps["hsv"](np.linspace(0, 1, len(components)))
+    pos = {node: (node[1], node[0]) for node in graph.nodes()}
+
+    plt.figure(figsize=(10, 6))
+    plt.xlabel("Drifttime [ms]")
+    plt.ylabel("Retentiontime [s]")
+    plt.title("Connected components")
+
+    for component_idx, component in enumerate(components):
+        node_tuples = list(component)
+
+        nx.draw_networkx(G=graph.subgraph(node_tuples),
+                         pos=pos,
+                         node_size=5,
+                         node_color=[colors[component_idx]] * len(node_tuples),
+                         edge_color=[colors[component_idx]] * len(node_tuples),
+                         with_labels=False)
+
+    filename = output_dir / "overview_connected_components.png"
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def single_connected_components_plot(graph: nx.Graph,
+                                     component: nx.components,
+                                     output_dir: Path):
+
+    pos = {node: (node[1], node[0]) for node in component}
+
+    plt.figure(figsize=(10, 6))
+    plt.xlabel("Drifttime [ms]")
+    plt.ylabel("Retentiontime [s]")
+    plt.title("Single Connected Component")
+
+    subgraph = graph.subgraph(component)
+    nx.draw_networkx(
+        subgraph,
+        pos,
+        node_size=20,
+        node_color="tab:blue",
+        edge_color="lightgray",
+        with_labels=False
+    )
+
+    filename = output_dir / "single_connected_component.png"
+    plt.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close()
