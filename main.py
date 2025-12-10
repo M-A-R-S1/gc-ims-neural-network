@@ -42,11 +42,12 @@ if __name__ == '__main__':
         print(f" Error during peak detection: {err=}, {type(err)=}")
         raise
 
-    """
+
+    #excel_filename = output_dir / "All_peak_data.xlsx"
     in_progress.process_peaks_from_excel(excel_file=excel_filename,
                                          output_dir=output_dir,
                                          threshold=0.002,
-                                         filter_types=["Greece", "Italy", "Spain"])
-    """
+                                         filter_types=["Greece", "Italy", "Spain", "test"])
+
 
 ###########################################################################################################################################################################
