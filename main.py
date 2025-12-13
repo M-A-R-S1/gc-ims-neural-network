@@ -46,7 +46,7 @@ if __name__ == '__main__':
     #excel_filename = output_dir / "All_peak_data.xlsx"
     in_progress.process_peaks_from_excel(excel_file=excel_filename,
                                          output_dir=output_dir,
-                                         threshold=0.002,
+                                         threshold=0.004,
                                          filter_types=["Greece", "Italy", "Spain", "test"])
 
 
