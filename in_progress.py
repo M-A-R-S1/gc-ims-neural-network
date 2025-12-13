@@ -11,11 +11,11 @@ from collections import defaultdict
 
 import plot
 
+
 def process_peaks_from_excel(excel_file: Path,
                              output_dir: Path,
                              filter_types: list[str],
                              threshold: float = 0.001) -> pd.DataFrame:
-
     # Check if the Excel file exists.
     if not excel_file.exists():
         print(f"File not found: {excel_file}")
@@ -42,7 +42,6 @@ def process_peaks_from_excel(excel_file: Path,
 def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
                            output_dir: Path,
                            threshold: float) -> None:
-
     # Normalize the retention and drifttime.
     scaler = MinMaxScaler()
     times_normalized = scaler.fit_transform(peak_dataframe[['ret_time', 'drift_time']].values)
@@ -68,19 +67,21 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
                                           component=component,
                                           output_dir=output_dir)
 
+    # Calculate consensus peaks for each graph component.
+    consensus_peaks = calculate_consensus_peaks(graph=graph,
+                                                components=components,
+                                                output_dir=output_dir)
 
     #############################################################################
-    # Berechnet die Durchschnittspunkte für jede Komponente
     """
-    avg_peaks = get_average_peaks(graph, peak_dataframe, components, output_dir, filename="scatter_peaks_with_components")
-
     # Extrahiert die Honiganteile für jede Komponente
     component_honey_counts = [(honey['Linde_Count'], honey['Lavendel_Count'], honey['Eukalyptus_Count']) for honey in
                               label_proportion_dictionary.values()]
 
     # Plottet Durchschnittspunkte mit den gemischten Farben basierend auf den Honiganteilen
-    plot_peaks_by_honey_type(avg_peaks, component_honey_counts, output_dir, filename_prefix="peaks_by_honey_type")
+    plot_peaks_by_honey_type(consensus_peaks, component_honey_counts, output_dir, filename_prefix="peaks_by_honey_type")
     """
+
 
 # Funktion: baut einen Graphen aus den Peak-Daten und bildet Zusammenhangskomponenten
 def calculate_connected_components(peak_dataframe: pd.DataFrame,
@@ -88,7 +89,6 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
                                    threshold: float,
                                    times_normalized: np.ndarray,
                                    batch_size: int) -> tuple[nx.Graph, list[nx.components], pd.DataFrame]:
-
     # Initialize a graph.
     graph = nx.Graph()
 
@@ -98,7 +98,8 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
     for idx in range(len(peak_dataframe)):
         node = tuple(times_normalized[idx])
         peak_data = peak_dataframe.iloc[idx]
-        graph.add_node(node_for_adding=node, label=peak_data['label'], npy_file=peak_data['npy_file'], dataframe_idx=idx)
+        graph.add_node(node_for_adding=node, label=peak_data['label'], npy_file=peak_data['npy_file'],
+                       dataframe_idx=idx, ret_time=peak_data['ret_time'], drift_time=peak_data['drift_time'])
 
     # Create a nearest neighbor tree for fast lookup of neighbor nodes.
     tree = KDTree(times_normalized)
@@ -137,8 +138,8 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
             # Save node information as dictionary in list.
             peak_component_list.append({'index': node_data['dataframe_idx'],
                                         'label': node_data['label'],
-                                        'ret_time': node[0],
-                                        'drift_time': node[1],
+                                        'ret_time': node_data['ret_time'],
+                                        'drift_time': node_data['drift_time'],
                                         'npy_file': node_data['npy_file'],
                                         'component_idx': component_idx})
 
@@ -157,7 +158,6 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
 
 def calculate_label_proportions(graph: nx.Graph,
                                 components: list[nx.components]) -> dict[dict, ...]:
-
     # List of dictionaries which is returned.
     component_label_portion = {}
 
@@ -188,43 +188,35 @@ def calculate_label_proportions(graph: nx.Graph,
     return component_label_portion
 
 
+def calculate_consensus_peaks(graph: nx.Graph,
+                              components: list[nx.components],
+                              output_dir: Path) -> list[dict]:
 
-def get_average_peaks(G, all_peak_df, detailed_components, output_dir, filename="scatter_peaks_with_components"):
-    avg_peaks_with_attributes = []
+    # List of dictionaries (returned by this function).
+    consensus_peaks = []
 
-    # Falls `all_peak_df` noch keinen Index hat, setzen wir ihn explizit
-    if "index" in all_peak_df.columns:
-        all_peak_df = all_peak_df.set_index("index")
+    for component_idx, component in enumerate(components):
+        # Create lists with all retention and drift times for the current component.
+        ret_times = [graph.nodes[node]['ret_time'] for node in component]
+        drift_times = [graph.nodes[node]['drift_time'] for node in component]
 
-    for i, component in enumerate(detailed_components):
-        # Indizes der Peaks in dieser Komponente
-        component_indices = [G.nodes[peak]["index"] for peak in component if peak in G.nodes]
+        # Calculate the mean retention and drift time.
+        mean_ret_time = sum(ret_times) / len(ret_times)
+        mean_drift_time = sum(drift_times) / len(drift_times)
 
-        # Falls keine gültigen Indizes existieren, überspringen
-        if not component_indices:
-            continue
-
-        # Hol alle Peaks dieser Komponente
-        component_peaks = all_peak_df.loc[component_indices]
-
-        # Durchschnittswerte berechnen
-        avg_drift_time = component_peaks["drift_time"].mean()
-        avg_ret_time = component_peaks["ret_time"].mean()
-
-        avg_peaks_with_attributes.append({
-            'ret_time': avg_ret_time,
-            'drift_time': avg_drift_time,
-            'honeyType': component_peaks["honey_type"].iloc[0],
-            'npy_file': component_peaks["npy_file"].iloc[0],
-            'component_id': i
+        # Append a dictionary to the list.
+        consensus_peaks.append({
+            'mean_ret_time': mean_ret_time,
+            'mean_drift_time': mean_drift_time,
+            'component_idx': component_idx
         })
 
-    # Speichern der Durchschnittspeaks in einer Excel-Datei
-    avg_peaks_df = pd.DataFrame(avg_peaks_with_attributes)
-    output_excel_path = os.path.join(output_dir, f"{filename}_average_peaks.xlsx")
-    avg_peaks_df.to_excel(output_excel_path, index=False)
+    # Save consensus peaks.
+    consensus_peaks_dataframe = pd.DataFrame(consensus_peaks)
+    filename = output_dir / "consensus_peaks.xlsx"
+    consensus_peaks_dataframe.to_excel(filename, index=False)
 
-    return avg_peaks_with_attributes
+    return consensus_peaks
 
 
 # Diese Funktion erzeugt Scatterplots der Peaks für verschiedene Honigsorten, getrennt nach Einzeltypen und Mischungen
