@@ -33,10 +33,10 @@ if __name__ == '__main__':
                                             create_npy=True)
 
         # Save peak data to csv file.
-        csv_filename = output_dir / "All_peak_data.csv"
-        peak_dataframe.to_csv(csv_filename, index=False)
+        # csv_filename = output_dir / "01_peak_data.csv"
+        # peak_dataframe.to_csv(csv_filename, index=False)
         # Save peak date to Excel file.
-        excel_filename = output_dir / "All_peak_data.xlsx"
+        excel_filename = output_dir / "01_peak_data.xlsx"
         peak_dataframe.to_excel(excel_filename, index=False)
     except Exception as err:
         print(f" Error during peak detection: {err=}, {type(err)=}")
