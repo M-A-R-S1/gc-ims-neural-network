@@ -169,7 +169,7 @@ def overview_connected_components_plot(graph: nx.Graph,
                                        output_dir: Path) -> None:
 
     components = list(nx.connected_components(graph))
-    colors = plt.colormaps["hsv"](np.linspace(0, 1, len(components)))
+    colors = plt.colormaps["hsv"](np.linspace(0, 1, len(components)+1))
     pos = {node: (node[1], node[0]) for node in graph.nodes()}
 
     plt.figure(figsize=(10, 6))
@@ -194,6 +194,7 @@ def overview_connected_components_plot(graph: nx.Graph,
 
 def single_connected_components_plot(graph: nx.Graph,
                                      component: set,
+                                     component_idx: int,
                                      output_dir: Path):
 
     pos = {node: (node[1], node[0]) for node in component}
@@ -201,7 +202,7 @@ def single_connected_components_plot(graph: nx.Graph,
     plt.figure(figsize=(10, 6))
     plt.xlabel("Drifttime [ms]")
     plt.ylabel("Retentiontime [s]")
-    plt.title("Single Connected Component")
+    plt.title(f"Single Connected Component [ID: {component_idx}]")
 
     subgraph = graph.subgraph(component)
     nx.draw_networkx(

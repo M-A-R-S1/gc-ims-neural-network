@@ -49,7 +49,7 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
     times_normalized = scaler.fit_transform(peak_dataframe[['ret_time', 'drift_time']].values)
 
     # Create a list with all unique labels from inside the dataframe.
-    unique_labels = peak_dataframe['label'].unique()
+    unique_labels = peak_dataframe['label'].unique().tolist()
 
     # Calculate connected components.
     graph, peak_dataframe = calculate_connected_components(peak_dataframe=peak_dataframe,
@@ -63,31 +63,26 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
                                             output_dir=output_dir)
 
     components = list(nx.connected_components(graph))
-    component = components[5]
+    component_idx = 5
+    component = components[component_idx]
 
     plot.single_connected_components_plot(graph=graph,
                                           component=component,
+                                          component_idx=component_idx,
                                           output_dir=output_dir)
 
     # Calculate consensus peaks and label proportions for each component.
     consensus_peaks = calculate_consensus_peaks(graph=graph,
+                                                unique_labels=unique_labels,
                                                 output_dir=output_dir)
 
-    # Create list of tuples. One tuple for each component. Each tuple contains the count of Nodes for each unique label.
-    component_label_count = [tuple(value for key, value in peak_dictionary.items() if key.endswith('_Nodes'))
-                             for peak_dictionary in consensus_peaks]
-
-
-
-    """
     # Plottet Durchschnittspunkte mit den gemischten Farben basierend auf den Honiganteilen
     plot_consensus_peaks(consensus_peaks=consensus_peaks,
-                         component_label_count=component_label_count,
                          unique_labels=unique_labels,
                          output_dir=output_dir)
-    """
 
-# Funktion: baut einen Graphen aus den Peak-Daten und bildet Zusammenhangskomponenten
+
+
 def calculate_connected_components(peak_dataframe: pd.DataFrame,
                                    output_dir: Path,
                                    threshold: float,
@@ -161,6 +156,7 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
 
 
 def calculate_consensus_peaks(graph: nx.Graph,
+                              unique_labels: list[str],
                               output_dir: Path) -> list[dict]:
 
     components = list(nx.connected_components(graph))
@@ -196,9 +192,14 @@ def calculate_consensus_peaks(graph: nx.Graph,
         peak_dictionary["Nodes_Total"] = total_nodes
 
         # Insert Node information to the peak_dictionary.
-        for key, count in temp_dictionary.items():
-            count_key = key + "_Nodes"
-            peak_dictionary[count_key] = count
+        for label in unique_labels:
+            count_key = label + "_Nodes"
+
+            # Insert the node count for this label OR 0 if none node for this label was found.
+            if label in temp_dictionary:
+                peak_dictionary[count_key] = temp_dictionary[label]
+            else:
+                peak_dictionary[count_key] = 0
 
         # Append a dictionary to the list.
         consensus_peaks.append(peak_dictionary)
@@ -211,81 +212,47 @@ def calculate_consensus_peaks(graph: nx.Graph,
     return consensus_peaks
 
 
-# Diese Funktion erzeugt Scatterplots der Peaks für verschiedene Honigsorten, getrennt nach Einzeltypen und Mischungen
-# Paramter:
-# avg_peaks: Liste von Peaks
-# component_honey_counts: Zeigt die Anteile der einzelnen Honigsorten für jeden Peak
-# output_dir: Verzeichnis, in dem die Plots gespeichert werden.
 def plot_consensus_peaks(consensus_peaks: list[dict],
-                         component_label_count: list[tuple],
-                         unique_labels: np.ndarray[tuple[int], ...],
+                         unique_labels: list[str],
                          output_dir: Path) -> None:
 
-    # Maximalwert für Normalisierung
-    # Berechnet die maximale Gesamtmenge aller Honigkomponenten, um die Farbintensität zu normalisieren.
-    # Wird für color_single_type_2 verwendet
-    max_count = max([sum(label_counts) for label_counts in component_label_count])
+    # find the component with the highest node count and save this count values.
+    max_nodes = max(peak['Nodes_Total'] for peak in consensus_peaks)
 
-    # Erstelle die Scatterplots für 100% Lindeanteil, 100% Lavendelanteil, 100% Eukalyptusanteil und Mischverhältnisse
-    for label in unique_labels:
-        plt.figure(figsize=(10, 6), dpi=300)
-        plt.title(f"Consensus Peaks [{label}]")
+    # Define the different label marker colors.
+    colors = plt.colormaps["hsv"](np.linspace(0, 1, len(unique_labels)+1))
+
+    # Walk through all labels and create a scatter plot for each label.
+    for plot_label_idx, plot_label in enumerate(unique_labels):
+        plt.figure(figsize=(10, 6), dpi=300*len(unique_labels))
+        plt.title(f"Consensus Peaks [{plot_label}]")
         plt.xlabel("Drifttime [ms]")
         plt.ylabel("Retentiontime [s]")
 
-        # Filtert die Peaks je nach Typ (100% Linde, 100% Lavendel, 100% Eukalyptus, Mischung)
-        # Geht alle Peaks durch
-        for peak, current_label_count in zip(consensus_peaks, component_label_count):
+        for peak in consensus_peaks:
             ret_time = peak["mean_ret_time"]
             drift_time = peak["mean_drift_time"]
-            component_id = peak["component_idx"]
+            component_idx = peak["component_idx"]
+            total_node_count = peak["Nodes_Total"]
+            current_node_count = peak[plot_label + "_Nodes"]
 
-            total_current_count = sum(current_label_count)
+            # Check if this is a pure consensus peak (Pure = Consists of components from one unique label).
+            if total_node_count == current_node_count and current_node_count > 0:
+                plt.scatter(drift_time, ret_time, color=colors[plot_label_idx], marker='.', s=30)
+                # plt.text(drift_time, ret_time,f"{total_node_count}\n id-{component_idx}", fontsize=5, ha='center', va='center', color='black')
+            else:
+                all_node_counts = [peak[label + "_Nodes"] for label in unique_labels]
+                if not total_node_count in all_node_counts and current_node_count > 0:
+                    color = mixed_peak_color(unique_labels, peak)
+                    plt.scatter(drift_time, ret_time, color=color, marker='x', s=15)
+                    # plt.text(drift_time, ret_time, f"{total_node_count}\n id-{component_idx}", fontsize=5, ha='center', va='center', color='black')
 
-            # Bedingungen für Linde; Lavendel; Eukalyptus und Mischung
-            # honey_type == "Linde"--> Plot, welches Linde darstellen soll
-            # lavender_count == 0 and eucalyptus_count == 0--> Sicherstellen, dass dieser Peak wirklich nur Linde enthält, also keine Anteile von Lavendel oder Eukalyptus
-            # Farbe berechnen--> color = color_single_type_2(linden_count, max_count, "Linde")--> siehe Funktion "color_single_type_2"
-
-            if label == 'Linde' and lavender_count == 0 and eucalyptus_count == 0:  # Nur Linde
-                color = color_single_type_2(linden_count, max_count, "Linde")
-                plt.scatter(drift_time, ret_time, color=color, marker='o', s=40)
-                plt.text(drift_time, ret_time,
-                         f"{linden_count + lavender_count + eucalyptus_count}\nID: {component_id}", fontsize=5,
-                         ha='center', va='center', color='black')
-
-            # honey_type == "Lavendel"--> Plot, welches Lavendel darstellen soll
-
-            elif label == 'Lavendel' and linden_count == 0 and eucalyptus_count == 0:  # Nur Lavendel
-                color = color_single_type_2(lavender_count, max_count, "Lavendel")
-                plt.scatter(drift_time, ret_time, color=color, marker='o', s=20)
-                plt.text(drift_time, ret_time,
-                         f"{linden_count + lavender_count + eucalyptus_count}\nID: {component_id}", fontsize=5,
-                         ha='center', va='center', color='black')
-
-            # honey_type == "Eukalyptus"--> Plot, welches nur Eukalyptus darstellen soll
-
-            elif label == 'Eukalyptus' and linden_count == 0 and lavender_count == 0:  # Nur Eukalyptus
-                color = color_single_type_2(eucalyptus_count, max_count, "Eukalyptus")
-                plt.scatter(drift_time, ret_time, color=color, marker='o', s=20)
-                plt.text(drift_time, ret_time,
-                         f"{linden_count + lavender_count + eucalyptus_count}\nID: {component_id}", fontsize=5,
-                         ha='center', va='center', color='black')
-
-            # honey_type == 'Mischung'--> plot welches alle Mischungen darstellt
-            # linden_count > 0 and lavender_count > 0 and eucalyptus_count > 0--> Diese Mischung muss von allen drei Honigsorten Anteile haben; Keine 2er-Kombination, sondern wirklich alle drei im SpieKeine 2er-Kombination, sondern wirklich alle drei im Spie
-
-            elif label == 'Mischung' and linden_count > 0 and lavender_count > 0 and eucalyptus_count > 0:  # Mischung
-                color = mix_component_color(linden_count, lavender_count, eucalyptus_count)  # Mischfarbe
-                # Falls component_id == 109, wird das Symbol ein Kreuz ('x'),sonst ein Kreis ('o')
-                marker_style = 'x' if component_id == 109 else 'o'
-                plt.scatter(drift_time, ret_time, color=color, marker=marker_style, s=30)
-
-        # Speichern der Plots für jedes Szenario
-        filename_prefix = "peaks_by_honey_type"
-        plt.savefig(os.path.join(output_dir, f"{filename_prefix}_{label}.png"), dpi=300, bbox_inches="tight")
+        # Save plot as image.
+        filename = output_dir / f"consensus_peaks_{plot_label}.png"
+        plt.savefig(filename, dpi=300, bbox_inches="tight")
         plt.close()
 
+    """
     # Scatterplot für alle Peaks zusammen--> erstellt ein einziges großes Scatterplot für alle Peaks und hängt zusätzlich eine Farblegende in Form eines Dreiecks dran
     #
     fig, ax1 = plt.subplots(figsize=(12, 6))  # Erstelle das Haupt-Scatterplot
@@ -345,65 +312,30 @@ def plot_consensus_peaks(consensus_peaks: list[dict],
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, f"{filename_prefix}_Alle.png"), dpi=300, bbox_inches="tight")
     plt.close()
+    """
 
 
-# Paramter:
-# count = aktuelle Menge dieser Honigsorte
-# max_count = maximal mögliche Menge dieser Sorte
-# honey_type = Name der Honigsorte
-# Ziel: eine Farbe zurückgeben, deren Intensität vom Anteil abhängt
-def color_single_type_2(count, max_count, honey_type):
-    # Definiert die Colormaps für bekannte Honigtypen
-    # Je nach Honigsorte wird eine Colormap von Matplotlib gewählt
-    if honey_type == "Koriander":
-        cmap = plt.cm.Reds
-    elif honey_type == "Raps":
-        cmap = plt.cm.YlOrBr
-    elif honey_type == "Lavendel":
-        cmap = plt.cm.Purples
-    elif honey_type == "Linde":
-        cmap = plt.cm.Greens
-    elif honey_type == "Kleehonig":
-        cmap = plt.cm.Blues
-    else:
-        cmap = plt.cm.Greys  # für unbekannte Honigsorten
+def mixed_peak_color(unique_labels: list[str],
+                     peak: dict) -> tuple:
 
-    # Berechnet die Intensität auf Basis der Häufigkeit
-    # Normalisiert den aktuellen Wert auf einen Bereich von 0 bis 1
-    # 0 = hellste Farbe der Colormap, 1 = dunkelste/intensivste Farbe
-    intensity = count / max_count
-    return cmap(intensity)  # Rückgabe der entsprechenden Farbe basierend auf der Intensität
+    # The total number of nodes of this consensus peak.
+    total_node_count = peak["Nodes_Total"]
 
+    # Define the different label marker colors.
+    colors = plt.colormaps["hsv"](np.linspace(0, 1, len(unique_labels)+1))
 
-def mix_component_color(linden_count, lavender_count, eucalyptus_count):
-    # Gesamtsumme berechnen
-    # total ist die Summe aller Anteile.
-    # Wenn nichts da ist (total == 0), wird Schwarz zurückgegeben (0, 0, 0).
-    total = linden_count + lavender_count + eucalyptus_count
-    if total == 0:
-        return (0, 0, 0)  # Schwarz, wenn nichts vorhanden
+    # Check if there are nodes, if not return a black color.
+    if total_node_count == 0:
+        return (0, 0, 0)
 
-    # Definierte RGB-Farben für jede Sorte
-    colors = {
-        "Linde": np.array([1.0, 0.0, 0.0]),  # Rot
-        "Lavendel": np.array([1.0, 1.0, 0.0]),  # Gelb
-        "Eukalyptus": np.array([0.0, 0.0, 1.0])  # Blau
-    }
+    color_ratios = []
 
-    # Anteile berechnen
-    # Jeder Anteil wird durch Division durch die Gesamtsumme normalisiert
-    linden_ratio = linden_count / total
-    lavender_ratio = lavender_count / total
-    eucalyptus_ratio = eucalyptus_count / total
+    for label_idx, label in enumerate(unique_labels):
+        if peak[label + "_Nodes"] > 0:
+            color_ratios.append( (peak[label + "_Nodes"] / total_node_count) * colors[label_idx])
 
-    # Lineare Mischung
-    # Es wird eine gewichtete Mischung berechnet--> Jede Farbe wird mit ihrem Anteil multipliziert, und die Ergebnisse werden addiert
-    mixed_color = (
-            linden_ratio * colors["Linde"] +
-            lavender_ratio * colors["Lavendel"] +
-            eucalyptus_ratio * colors["Eukalyptus"]
-    )
-    # Rückgabe--> mixed_color wird in ein Tuple umgewandelt
+    mixed_color = sum(color_ratios)
+
     return tuple(mixed_color)
 
 
