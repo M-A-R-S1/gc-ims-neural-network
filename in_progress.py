@@ -16,6 +16,7 @@ def process_peaks_from_excel(excel_file: Path,
                              output_dir: Path,
                              filter_types: list[str],
                              threshold: float = 0.001) -> pd.DataFrame:
+
     # Check if the Excel file exists.
     if not excel_file.exists():
         print(f"File not found: {excel_file}")
@@ -42,57 +43,60 @@ def process_peaks_from_excel(excel_file: Path,
 def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
                            output_dir: Path,
                            threshold: float) -> None:
+
     # Normalize the retention and drifttime.
     scaler = MinMaxScaler()
     times_normalized = scaler.fit_transform(peak_dataframe[['ret_time', 'drift_time']].values)
 
-    # Calculate connected components.
-    graph, components, peak_dataframe = calculate_connected_components(peak_dataframe=peak_dataframe,
-                                                                       output_dir=output_dir,
-                                                                       threshold=threshold,
-                                                                       times_normalized=times_normalized,
-                                                                       batch_size=20000)
+    # Create a list with all unique labels from inside the dataframe.
+    unique_labels = peak_dataframe['label'].unique()
 
-    # Calculates the label proportions for all components.
-    label_proportion_dictionary = calculate_label_proportions(graph=graph,
-                                                              components=components)
+    # Calculate connected components.
+    graph, peak_dataframe = calculate_connected_components(peak_dataframe=peak_dataframe,
+                                                           output_dir=output_dir,
+                                                           threshold=threshold,
+                                                           times_normalized=times_normalized,
+                                                           batch_size=20000)
 
     # Plotting stuff here ...
     plot.overview_connected_components_plot(graph=graph,
-                                            components=components,
                                             output_dir=output_dir)
+
+    components = list(nx.connected_components(graph))
     component = components[5]
 
     plot.single_connected_components_plot(graph=graph,
                                           component=component,
                                           output_dir=output_dir)
 
-    # Calculate consensus peaks for each graph component.
+    # Calculate consensus peaks and label proportions for each component.
     consensus_peaks = calculate_consensus_peaks(graph=graph,
-                                                components=components,
                                                 output_dir=output_dir)
 
-    #############################################################################
-    """
-    # Extrahiert die Honiganteile für jede Komponente
-    component_honey_counts = [(honey['Linde_Count'], honey['Lavendel_Count'], honey['Eukalyptus_Count']) for honey in
-                              label_proportion_dictionary.values()]
+    # Create list of tuples. One tuple for each component. Each tuple contains the count of Nodes for each unique label.
+    component_label_count = [tuple(value for key, value in peak_dictionary.items() if key.endswith('_Nodes'))
+                             for peak_dictionary in consensus_peaks]
 
+
+
+    """
     # Plottet Durchschnittspunkte mit den gemischten Farben basierend auf den Honiganteilen
-    plot_peaks_by_honey_type(consensus_peaks, component_honey_counts, output_dir, filename_prefix="peaks_by_honey_type")
+    plot_consensus_peaks(consensus_peaks=consensus_peaks,
+                         component_label_count=component_label_count,
+                         unique_labels=unique_labels,
+                         output_dir=output_dir)
     """
-
 
 # Funktion: baut einen Graphen aus den Peak-Daten und bildet Zusammenhangskomponenten
 def calculate_connected_components(peak_dataframe: pd.DataFrame,
                                    output_dir: Path,
                                    threshold: float,
                                    times_normalized: np.ndarray,
-                                   batch_size: int) -> tuple[nx.Graph, list[nx.components], pd.DataFrame]:
+                                   batch_size: int) -> tuple[nx.Graph, pd.DataFrame]:
     # Initialize a graph.
     graph = nx.Graph()
 
-    # TODO -> Each peak entry consists of 121 different neighbor peaks. Each of these peaks must be added as a node.
+    # TODO -> Each peak entry consists of 121 different neighbor peaks. Each of these peaks must be added as a node?
 
     # Each peak is added as a node in the graph.
     for idx in range(len(peak_dataframe)):
@@ -148,72 +152,60 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
 
     peak_component_dataframe = pd.DataFrame(peak_component_list)
     # Save peak component dataframe as Excel and csv file.
-    csv_filename = output_dir / "peak_components.csv"
-    peak_component_dataframe.to_csv(csv_filename, index=False)
-    excel_filename = output_dir / "peak_components.xlsx"
+    # csv_filename = output_dir / "02_peak_components.csv"
+    # peak_component_dataframe.to_csv(csv_filename, index=False)
+    excel_filename = output_dir / "02_peak_components.xlsx"
     peak_component_dataframe.to_excel(excel_filename, index=False)
 
-    return graph, connected_components, peak_dataframe
-
-
-def calculate_label_proportions(graph: nx.Graph,
-                                components: list[nx.components]) -> dict[dict, ...]:
-    # List of dictionaries which is returned.
-    component_label_portion = {}
-
-    # Walk through each component.
-    for component_idx, component in enumerate(components):
-        # Create a label dictionary which counts the occurrences of each label for a component.
-        label_dictionary = defaultdict(int)
-        total_nodes = 0
-
-        # Walk through each node, check the label and increase the count in the label_dictionary.
-        for node in component:
-            node_data = graph.nodes[node]
-            label = node_data['label']
-            label_dictionary[label] += 1
-            total_nodes += 1
-
-        # Create a new dictionary and fill it with label information.
-        new_label_dictionary = {}
-        for key, count in label_dictionary.items():
-            count_key = key + "_Count"
-            ratio_key = key + "_%"
-            new_label_dictionary[count_key] = count
-            new_label_dictionary[ratio_key] = round(((count / total_nodes) * 100 if total_nodes > 0 else 0), 2)
-
-        new_label_dictionary["Total_Count"] = total_nodes
-        component_label_portion[component_idx + 1] = new_label_dictionary
-
-    return component_label_portion
+    return graph, peak_dataframe
 
 
 def calculate_consensus_peaks(graph: nx.Graph,
-                              components: list[nx.components],
                               output_dir: Path) -> list[dict]:
 
+    components = list(nx.connected_components(graph))
     # List of dictionaries (returned by this function).
     consensus_peaks = []
 
     for component_idx, component in enumerate(components):
+        # Create a temporary dictionary which counts the occurrences of each label per component.
+        temp_dictionary = defaultdict(int)
+        total_nodes = 0
+
+        # Create a peak dictionary and fill it with peak and label information.
+        peak_dictionary = {}
+
         # Create lists with all retention and drift times for the current component.
         ret_times = [graph.nodes[node]['ret_time'] for node in component]
         drift_times = [graph.nodes[node]['drift_time'] for node in component]
-
         # Calculate the mean retention and drift time.
         mean_ret_time = sum(ret_times) / len(ret_times)
         mean_drift_time = sum(drift_times) / len(drift_times)
 
+        # Walk through each node, check the label and increase the count in the dictionary.
+        for node in component:
+            node_data = graph.nodes[node]
+            label = node_data['label']
+            temp_dictionary[label] += 1
+            total_nodes += 1
+
+        # Insert peak information to the peak_dictionary.
+        peak_dictionary["mean_ret_time"] = mean_ret_time
+        peak_dictionary["mean_drift_time"] = mean_drift_time
+        peak_dictionary["component_idx"] = component_idx
+        peak_dictionary["Nodes_Total"] = total_nodes
+
+        # Insert Node information to the peak_dictionary.
+        for key, count in temp_dictionary.items():
+            count_key = key + "_Nodes"
+            peak_dictionary[count_key] = count
+
         # Append a dictionary to the list.
-        consensus_peaks.append({
-            'mean_ret_time': mean_ret_time,
-            'mean_drift_time': mean_drift_time,
-            'component_idx': component_idx
-        })
+        consensus_peaks.append(peak_dictionary)
 
     # Save consensus peaks.
     consensus_peaks_dataframe = pd.DataFrame(consensus_peaks)
-    filename = output_dir / "consensus_peaks.xlsx"
+    filename = output_dir / "03_consensus_peaks.xlsx"
     consensus_peaks_dataframe.to_excel(filename, index=False)
 
     return consensus_peaks
@@ -224,36 +216,38 @@ def calculate_consensus_peaks(graph: nx.Graph,
 # avg_peaks: Liste von Peaks
 # component_honey_counts: Zeigt die Anteile der einzelnen Honigsorten für jeden Peak
 # output_dir: Verzeichnis, in dem die Plots gespeichert werden.
-# filename_prefix: Präfix für die gespeicherten Dateien
-def plot_peaks_by_honey_type(avg_peaks, component_honey_counts, output_dir, filename_prefix="peaks_by_honey_type"):
+def plot_consensus_peaks(consensus_peaks: list[dict],
+                         component_label_count: list[tuple],
+                         unique_labels: np.ndarray[tuple[int], ...],
+                         output_dir: Path) -> None:
+
     # Maximalwert für Normalisierung
     # Berechnet die maximale Gesamtmenge aller Honigkomponenten, um die Farbintensität zu normalisieren.
     # Wird für color_single_type_2 verwendet
-    max_count = max(
-        [linden_count + lavender_count + eucalyptus_count for linden_count, lavender_count, eucalyptus_count in
-         component_honey_counts])
-    print(avg_peaks[:10])  # Zeigt die ersten 10 Peaks
+    max_count = max([sum(label_counts) for label_counts in component_label_count])
 
     # Erstelle die Scatterplots für 100% Lindeanteil, 100% Lavendelanteil, 100% Eukalyptusanteil und Mischverhältnisse
-    for honey_type in ['Linde', 'Lavendel', 'Eukalyptus', 'Mischung']:
-        plt.figure(figsize=(8, 6), dpi=1200)
-        plt.title(f"Scatterplot der Konsensus-Peaks für {honey_type}")
-        plt.xlabel("Driftzeit")
-        plt.ylabel("Retentionszeit")
+    for label in unique_labels:
+        plt.figure(figsize=(10, 6), dpi=300)
+        plt.title(f"Consensus Peaks [{label}]")
+        plt.xlabel("Drifttime [ms]")
+        plt.ylabel("Retentiontime [s]")
 
         # Filtert die Peaks je nach Typ (100% Linde, 100% Lavendel, 100% Eukalyptus, Mischung)
         # Geht alle Peaks durch
-        for peak, (linden_count, lavender_count, eucalyptus_count) in zip(avg_peaks, component_honey_counts):
-            ret_time = peak["ret_time"]
-            drift_time = peak["drift_time"]
-            component_id = peak["component_id"]
+        for peak, current_label_count in zip(consensus_peaks, component_label_count):
+            ret_time = peak["mean_ret_time"]
+            drift_time = peak["mean_drift_time"]
+            component_id = peak["component_idx"]
+
+            total_current_count = sum(current_label_count)
 
             # Bedingungen für Linde; Lavendel; Eukalyptus und Mischung
             # honey_type == "Linde"--> Plot, welches Linde darstellen soll
             # lavender_count == 0 and eucalyptus_count == 0--> Sicherstellen, dass dieser Peak wirklich nur Linde enthält, also keine Anteile von Lavendel oder Eukalyptus
             # Farbe berechnen--> color = color_single_type_2(linden_count, max_count, "Linde")--> siehe Funktion "color_single_type_2"
 
-            if honey_type == 'Linde' and lavender_count == 0 and eucalyptus_count == 0:  # Nur Linde
+            if label == 'Linde' and lavender_count == 0 and eucalyptus_count == 0:  # Nur Linde
                 color = color_single_type_2(linden_count, max_count, "Linde")
                 plt.scatter(drift_time, ret_time, color=color, marker='o', s=40)
                 plt.text(drift_time, ret_time,
@@ -262,7 +256,7 @@ def plot_peaks_by_honey_type(avg_peaks, component_honey_counts, output_dir, file
 
             # honey_type == "Lavendel"--> Plot, welches Lavendel darstellen soll
 
-            elif honey_type == 'Lavendel' and linden_count == 0 and eucalyptus_count == 0:  # Nur Lavendel
+            elif label == 'Lavendel' and linden_count == 0 and eucalyptus_count == 0:  # Nur Lavendel
                 color = color_single_type_2(lavender_count, max_count, "Lavendel")
                 plt.scatter(drift_time, ret_time, color=color, marker='o', s=20)
                 plt.text(drift_time, ret_time,
@@ -271,7 +265,7 @@ def plot_peaks_by_honey_type(avg_peaks, component_honey_counts, output_dir, file
 
             # honey_type == "Eukalyptus"--> Plot, welches nur Eukalyptus darstellen soll
 
-            elif honey_type == 'Eukalyptus' and linden_count == 0 and lavender_count == 0:  # Nur Eukalyptus
+            elif label == 'Eukalyptus' and linden_count == 0 and lavender_count == 0:  # Nur Eukalyptus
                 color = color_single_type_2(eucalyptus_count, max_count, "Eukalyptus")
                 plt.scatter(drift_time, ret_time, color=color, marker='o', s=20)
                 plt.text(drift_time, ret_time,
@@ -281,30 +275,15 @@ def plot_peaks_by_honey_type(avg_peaks, component_honey_counts, output_dir, file
             # honey_type == 'Mischung'--> plot welches alle Mischungen darstellt
             # linden_count > 0 and lavender_count > 0 and eucalyptus_count > 0--> Diese Mischung muss von allen drei Honigsorten Anteile haben; Keine 2er-Kombination, sondern wirklich alle drei im SpieKeine 2er-Kombination, sondern wirklich alle drei im Spie
 
-            elif honey_type == 'Mischung' and linden_count > 0 and lavender_count > 0 and eucalyptus_count > 0:  # Mischung
+            elif label == 'Mischung' and linden_count > 0 and lavender_count > 0 and eucalyptus_count > 0:  # Mischung
                 color = mix_component_color(linden_count, lavender_count, eucalyptus_count)  # Mischfarbe
                 # Falls component_id == 109, wird das Symbol ein Kreuz ('x'),sonst ein Kreis ('o')
                 marker_style = 'x' if component_id == 109 else 'o'
                 plt.scatter(drift_time, ret_time, color=color, marker=marker_style, s=30)
 
-        # Abbildungsunterschrift für den Plot basierend auf dem Honigtyp
-        if honey_type == 'Linde':
-            caption = (""
-
-                       )
-        elif honey_type == 'Lavendel':
-            caption = ("")
-        elif honey_type == 'Eukalyptus':
-            caption = (
-                ""
-            )
-        else:  # Mischung
-            caption = (
-                ""
-            )
-
         # Speichern der Plots für jedes Szenario
-        plt.savefig(os.path.join(output_dir, f"{filename_prefix}_{honey_type}.png"), dpi=300, bbox_inches="tight")
+        filename_prefix = "peaks_by_honey_type"
+        plt.savefig(os.path.join(output_dir, f"{filename_prefix}_{label}.png"), dpi=300, bbox_inches="tight")
         plt.close()
 
     # Scatterplot für alle Peaks zusammen--> erstellt ein einziges großes Scatterplot für alle Peaks und hängt zusätzlich eine Farblegende in Form eines Dreiecks dran
@@ -316,7 +295,7 @@ def plot_peaks_by_honey_type(avg_peaks, component_honey_counts, output_dir, file
     # avg_peaks: Liste mit Peak-Daten
     # component_honey_counts: Liste mit den Anteilen (Linde, Lavendel, Eukalyptus) für denselben Peak.
 
-    for peak, (linden_count, lavender_count, eucalyptus_count) in zip(avg_peaks, component_honey_counts):
+    for peak, (linden_count, lavender_count, eucalyptus_count) in zip(consensus_peaks, component_label_count):
         ret_time = peak["ret_time"]
         drift_time = peak["drift_time"]
         component_id = peak["component_id"]
@@ -430,7 +409,7 @@ def mix_component_color(linden_count, lavender_count, eucalyptus_count):
 
 # Die Funktion erzeugt ein Farbdreieck, welches die Mischunng von drei Farben für die entsprechenden Honigytypen visualisiert
 # ax: Die Haupt-Achse, auf der das Farbdreieck eingefügt wird
-# size: Größe des Farbdreiecks relativ zum Plot (z. B. 0.2 = 20% der Achse)
+# size: Größe des Farbdreiecks relativ zum Plot (z.B. 0.2 = 20% der Achse)
 def add_color_triangle(ax, size):
     # Farbdreieck-Daten
     # resolution--> bestimmt, wie fein das Farbdreieck aufgelöst wird)

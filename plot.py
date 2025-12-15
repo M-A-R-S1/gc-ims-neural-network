@@ -166,9 +166,9 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
 
 
 def overview_connected_components_plot(graph: nx.Graph,
-                                       components: nx.components,
                                        output_dir: Path) -> None:
 
+    components = list(nx.connected_components(graph))
     colors = plt.colormaps["hsv"](np.linspace(0, 1, len(components)))
     pos = {node: (node[1], node[0]) for node in graph.nodes()}
 
@@ -193,7 +193,7 @@ def overview_connected_components_plot(graph: nx.Graph,
 
 
 def single_connected_components_plot(graph: nx.Graph,
-                                     component: nx.components,
+                                     component: set,
                                      output_dir: Path):
 
     pos = {node: (node[1], node[0]) for node in component}
