@@ -202,7 +202,7 @@ def single_connected_components_plot(graph: nx.Graph,
     plt.figure(figsize=(10, 6))
     plt.xlabel("Drifttime [ms]")
     plt.ylabel("Retentiontime [s]")
-    plt.title(f"Single Connected Component [ID: {component_idx}]")
+    plt.title(f"Single Connected Component [ID: {component_idx} - Node Count: {len(component)}]")
 
     subgraph = graph.subgraph(component)
     nx.draw_networkx(
@@ -214,6 +214,6 @@ def single_connected_components_plot(graph: nx.Graph,
         with_labels=False
     )
 
-    filename = output_dir / "single_connected_component.png"
+    filename = output_dir / f"component_{component_idx}.png"
     plt.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close()

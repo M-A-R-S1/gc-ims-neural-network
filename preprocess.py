@@ -45,7 +45,7 @@ def start(input_dir: Path,
     # List of paths to the spectra directories.
     spectra_paths = []
     # List of loaded spectra [Spectra which were preprocessed earlier].
-    loaded_data = []
+    loaded_data_total = []
 
     # list of plotting strategies.
     plotting_strategy = ["none", "all", "single", "overview"]
@@ -78,20 +78,24 @@ def start(input_dir: Path,
         # Set the output directory.
         current_output_dir = output_dir / current_input_dir.relative_to(input_dir)
 
+        # Loaded data of the current subfolder.
+        loaded_data_current = []
+
         # Try to load .hdf5 files for each spectrum. An .hdf5 file indicates that a spectrum was already processed.
         if load_existing:
             for idx, spectrum in enumerate(dataset.data):
                 spectrum_path = current_output_dir / "hdf5" / f"{spectrum.name}.hdf5"
                 if spectrum_path.exists():
                     loaded_spectrum = ims.Spectrum.read_hdf5(spectrum_path)
-                    loaded_data.append(loaded_spectrum)
-                    loaded_spectrum.rip_ms = 1
+                    loaded_data_total.append(loaded_spectrum)
+                    loaded_data_current.append(loaded_spectrum)
+                    #loaded_spectrum.rip_ms = 1
                     # Save the output directory of the spektrum
                     spectra_paths.append(current_output_dir)
                     print(f"\t- Spectrum {idx + 1}/{len(dataset.data)} - Save file found [loaded]")
 
         # Skip processing this folder if all dictionary spectra could be loaded from .hdf5 files.
-        if len(loaded_data) == len(dataset.data):
+        if len(loaded_data_current) == len(dataset.data):
             continue
 
         # Interpolates all spectra to a common RIP (Reactant Ion Peaks)
@@ -141,7 +145,7 @@ def start(input_dir: Path,
         preprocessed_data.extend(dataset_data)
 
     # Add the loaded spectra to the newly preprocessed spectra.
-    preprocessed_data.extend(loaded_data)
+    preprocessed_data.extend(loaded_data_total)
 
     return preprocessed_data, spectra_paths
 
