@@ -63,6 +63,7 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
     plot.overview_connected_components_plot(graph=graph,
                                             output_dir=output_dir)
 
+    """
     # 2. Create a plot for each component.
     components = list(nx.connected_components(graph))
     component_plot_dir = output_dir / "components"
@@ -76,7 +77,7 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
                                               component_idx=component_idx,
                                               output_dir=component_plot_dir)
 
-
+    """
     # Calculate consensus peaks and label proportions for each component.
     consensus_peaks = calculate_consensus_peaks(graph=graph,
                                                 unique_labels=unique_labels,
@@ -97,7 +98,6 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
     # Initialize a graph.
     graph = nx.Graph()
 
-    # TODO -> Each peak entry consists of 121 different neighbor peaks. Each of these peaks must be added as a node?
     # Each peak is added as a node in the graph.
     for idx in range(len(peak_dataframe)):
         node = tuple(times_normalized[idx])
@@ -196,7 +196,7 @@ def calculate_consensus_peaks(graph: nx.Graph,
     for component_idx, component in enumerate(components):
         # Create a temporary dictionary which counts the occurrences of each label per component.
         temp_dictionary = defaultdict(int)
-        total_nodes = 0
+        total_peaks = 0
 
         # Create a peak dictionary and fill it with peak and label information.
         peak_dictionary = {}
@@ -214,7 +214,12 @@ def calculate_consensus_peaks(graph: nx.Graph,
                 ret_times.append(node_data['ret_time'])
                 drift_times.append(node_data['drift_time'])
                 temp_dictionary[label] += 1
-                total_nodes += 1
+                total_peaks += 1
+
+        # TODO - Experimental
+        # Skip a component, if it only consists of 1 peak.
+        if total_peaks <= 2:
+            continue
 
         mean_ret_time = sum(ret_times) / len(ret_times)
         mean_drift_time = sum(drift_times) / len(drift_times)
@@ -223,7 +228,7 @@ def calculate_consensus_peaks(graph: nx.Graph,
         peak_dictionary["mean_ret_time"] = mean_ret_time
         peak_dictionary["mean_drift_time"] = mean_drift_time
         peak_dictionary["component_idx"] = component_idx
-        peak_dictionary["Peaks_Total"] = total_nodes
+        peak_dictionary["Peaks_Total"] = total_peaks
 
         # Insert peak information to the peak_dictionary.
         for label in unique_labels:
