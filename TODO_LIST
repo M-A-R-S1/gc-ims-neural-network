@@ -1,3 +1,2 @@
 - Check again peak detection - The Spain Spectra produce many tailing peaks - can this be fixed?
 - Component radius - good value or bad value? Can this be generalized?
-- Adjust the .mea file loading. This is very ram consuming. Maybe trying to load one spectrum at a time?

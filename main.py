@@ -15,35 +15,26 @@ if __name__ == '__main__':
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    """
     # Step 1: Preprocess the .mea files
-    # - RIP Interpolation (for each dataset)
-    # - Background noise reduction
-    # - Smoothing filter
     preprocessed_data, spectra_paths = preprocess.start(input_dir=input_dir,
-                                                          output_dir=output_dir,
-                                                          create_plots="Single",
-                                                          load_existing=True)
+                                                        output_dir=output_dir,
+                                                        create_plots="Single",
+                                                        load_existing=True)
 
     # Step 2: Calculate peaks on preprocessed data.
     try:
-        peak_dataframe = peak.get_all_peaks(preprocessed_data=preprocessed_data,
-                                            neighbor_distance=5,
+        peak_dataframe = peak.get_all_peaks(preprocessed_spectra=preprocessed_data,
+                                            peak_radius=5,
                                             spectra_paths=spectra_paths,
                                             create_heatmaps=False,
                                             create_npy=True)
 
-        # Save peak data to csv file.
-        # csv_filename = output_dir / "01_peak_data.csv"
-        # peak_dataframe.to_csv(csv_filename, index=False)
-        # Save peak date to Excel file.
+        # Save peak data to Excel file.
         excel_filename = output_dir / "01_peak_data.xlsx"
         peak_dataframe.to_excel(excel_filename, index=False)
     except Exception as err:
         print(f" Error during peak detection: {err=}, {type(err)=}")
         raise
-
-    """
 
     # Step 3: Consensus peak calculation.
     excel_filename = output_dir / "01_peak_data.xlsx"

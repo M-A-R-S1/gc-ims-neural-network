@@ -10,7 +10,7 @@ def single_gcims_plot(spectrum: ims.Spectrum,
                       plot_dir: Path,
                       condition: str,
                       size: tuple[int, int] = (10,6),
-                      peak_cords: np.ndarray[tuple[int, ...]] = None) -> None:
+                      peak_cords: np.ndarray[tuple[int]] = None) -> None:
     """
     This function creates a plot for a given gc-ims spectrum and saves it at the "output_dir/condition" path.
     The created plot shows the spectrum of one .mea file.
@@ -117,7 +117,7 @@ def overview_gcims_plot(dataset: list[ims.Spectrum],
 
 
 def plot_peak_heatmap(spectrum: ims.Spectrum,
-                      heatmap_window: np.ndarray[tuple[int, ...]],
+                      heatmap_window: np.ndarray[tuple[int]],
                       ret_idx: int,
                       drift_idx: int,
                       window_size: int,

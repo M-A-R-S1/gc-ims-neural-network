@@ -10,16 +10,13 @@ def start(input_dir: Path,
           create_plots: str = "all",
           drift_cut: tuple[float, float] = (1.02, 2.5),
           retention_cut: tuple[int, int] = (80, 900),
-          percentile: float = 5.0,
-          uniform_filter_size: tuple[int, int] = (11, 11),
           load_existing: bool = True) -> tuple[list[ims.Spectrum], list[Path]]:
     """
     This function takes care of the preprocess steps for .mea files.
     All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as datasets.
-    Each dataset corresponds to one directory.
 
-    This functions forwards the interpolated spectra files to the "preprocess_spectra" function for parallel
-    computation. Each cpu core acts on one spectrum.
+    This functions computes a baseline correction for drift- and retention time and forwards the interpolated spectra
+    files to the "preprocess_spectra" function for parallel computation. Each cpu core acts on one spectrum.
     This function then returns all preprocessed spectra as a list and another list with their output paths.
 
     :param input_dir: The directory where the .mea files are located in.
@@ -28,8 +25,6 @@ def start(input_dir: Path,
     overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
     :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
     :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
-    :param percentile: Value for the background noise reduction. [e.g. percentile=5.0 removes the lowest 5% of the data from a spectrum]
-    :param uniform_filter_size: Tuple for the uniform filter size.
     :param load_existing: If set to True the algorithm trys to load an already preprocessed hdf5 spectrum file.
     This will then skip the preprocessing step for this spectrum.
 
@@ -104,9 +99,7 @@ def start(input_dir: Path,
                      len(dataset.data),
                      create_plots,
                      drift_cut,
-                     retention_cut,
-                     percentile,
-                     uniform_filter_size)
+                     retention_cut)
 
         tasks.append(task_args)
 
@@ -134,16 +127,14 @@ def preprocess_spectra(spectrum: ims.Spectrum,
                        dataset_length: int,
                        create_plots: str = "all",
                        drift_cut: tuple[float, float] = (1.02, 2.5),
-                       retention_cut: tuple[int, int] = (80, 900),
-                       percentile: float = 5.0,
-                       uniform_filter_size: tuple[int, int] = (11, 11)) -> ims.Spectrum:
+                       retention_cut: tuple[int, int] = (80, 900)) -> ims.Spectrum:
     """
     This function takes care of the parallel preprocessing of gc-ims spectra. Each cpu core acts on one spectrum.
-    All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as datasets.
+    All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as a dataset.
     Each spectrum is preprocessed by the following:
-    - 1. Baseline correction for drift- and retention time.
-    - 2. Background noise reduction (1) for each axis, computed with a given percentile.
-    - 3. Background noise reduction (2) smooth the spectrum by applying a uniform filter.
+    - 1. Smoothing the spectrum -> Savitzky–Golay filter.
+    - 2. Remove negative intensities by setting them to 0.
+    - 3. Saves the preprocessed data as a .hdf5 file.
 
     This function then returns the preprocessed spectrum.
 
@@ -161,8 +152,6 @@ def preprocess_spectra(spectrum: ims.Spectrum,
     overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
     :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
     :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
-    :param percentile: Value for the background noise reduction. [e.g. percentile=5.0 removes the lowest 5% of the data from a spectrum]
-    :param uniform_filter_size: Tuple for the uniform filter size.
 
     :return: preprocessed spectra.
     """
@@ -179,10 +168,6 @@ def preprocess_spectra(spectrum: ims.Spectrum,
     spectrum.sub_first_rows(50)
     spectrum.cut_dt(start=drift_cut[0], stop=drift_cut[1])
     spectrum.cut_rt(start=retention_cut[0], stop=retention_cut[1])
-
-    #spectrum.values = uniform_filter(input=spectrum.values, size=uniform_filter_size)
-    #from scipy.ndimage import gaussian_filter
-    #spectrum.values = gaussian_filter(spectrum.values, sigma=1.0)
 
     # Smoothing the spectrum with the Savitzky–Golay filter.
     spectrum.savgol(window_length=10, polyorder=4)
