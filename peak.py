@@ -1,4 +1,3 @@
-from scipy.ndimage import uniform_filter
 import ims
 import os
 import numpy as np
@@ -6,7 +5,11 @@ import pandas as pd
 from pathlib import Path
 from skimage.morphology import max_tree, h_maxima, area_opening
 from skimage.measure import label, regionprops
+from sklearn.preprocessing import MinMaxScaler
 from multiprocessing import Pool
+import networkx as nx
+from collections import defaultdict
+from scipy.spatial import KDTree
 import plot
 
 
@@ -278,3 +281,302 @@ def peak_detection(spectrum: ims.Spectrum,
         raise
 
     return spectrum_peak_data
+
+
+def extract_consensus_peaks(excel_file: Path,
+                            output_dir: Path,
+                            create_plots: str,
+                            filter_types: list[str] = None,
+                            max_node_distance: float = 0.004) -> None:
+    """
+    Not yet described ... TODO
+
+    :param excel_file: Excel file path which contains all the detected peaks.
+    :param output_dir: The output directory for plots and other files.
+    :param create_plots: Specifies which plots to create. [none = no plots | single = plots for each connected component
+    | overview = one overview plot for the connected components and one for each label |  all = combination of 'overview' + 'single']
+    :param filter_types: Can be used to filter for specific labels.
+    :param max_node_distance: The max. euclidean distance between nodes for the connected components calculation.
+
+    :return: None.
+    """
+
+    print("=======================================================")
+    print("III. CONSENSUS PEAK EXTRACTION")
+
+    # Check if the Excel file exists.
+    if not check_peak_excel_file(excel_file=excel_file, filter_types=filter_types):
+        print("Consensus peak extraction aborted")
+        return
+
+    # list of plotting strategies.
+    plotting_strategy = ["none", "all", "single", "overview"]
+    # check if the user plotting strategy exists. If not default to "all".
+    if not create_plots.lower() in plotting_strategy:
+        create_plots = "all"
+    else:
+        create_plots = create_plots.lower()
+
+    # Load the Excel file.
+    peak_dataframe = pd.read_excel(excel_file)
+
+    # Normalize the retention and drifttime.
+    scaler = MinMaxScaler()
+    times_normalized = scaler.fit_transform(peak_dataframe[['ret_time', 'drift_time']].values)
+
+    # Create a list with all unique labels from inside the dataframe.
+    unique_labels = peak_dataframe['label'].unique().tolist()
+
+    # Calculate connected components.
+    graph, peak_dataframe = calculate_connected_components(peak_dataframe=peak_dataframe,
+                                                           output_dir=output_dir,
+                                                           max_node_distance=max_node_distance,
+                                                           times_normalized=times_normalized)
+
+    # Overview plot with all components.
+    if create_plots in ['all' , 'overview']:
+        plot.plot_connected_component_overview(graph=graph,
+                                               output_dir=output_dir)
+
+    # Create a plot for each component.
+    if create_plots in ['all', 'single']:
+        components = list(nx.connected_components(graph))
+        component_plot_dir = output_dir / "components"
+        # Check and create the component directory.
+        if not component_plot_dir.exists():
+            component_plot_dir.mkdir(parents=True, exist_ok=True)
+
+        for component_idx, component in enumerate(components):
+            plot.plot_single_connected_component(graph=graph,
+                                                 component=component,
+                                                 component_idx=component_idx,
+                                                 output_dir=component_plot_dir)
+
+    # Calculate consensus peaks.
+    consensus_peaks = calculate_consensus_peaks(graph=graph,
+                                                unique_labels=unique_labels,
+                                                output_dir=output_dir)
+
+    # Plot the calculated consensus peaks.
+    if create_plots in ['all', 'overview']:
+        plot.plot_consensus_peaks(consensus_peaks=consensus_peaks,
+                                  unique_labels=unique_labels,
+                                  output_dir=output_dir)
+
+    print("Consensus peaks successfully extracted")
+
+
+def check_peak_excel_file(excel_file: Path,
+                          filter_types: list[str]) -> bool:
+    """
+    Not yet described ... TODO
+
+    :param excel_file: Excel file path which contains all the detected peaks.
+    :param filter_types: Can be used to filter for specific labels.
+
+    :return: True if the Excel file can be used | False if not.
+    """
+
+    # Check if the Excel file exists.
+    if not excel_file.exists():
+        print(f"File not found: {excel_file}")
+        return False
+
+    # Load the Excel file.
+    peak_dataframe = pd.read_excel(excel_file)
+    # Filter entries by type.
+    if filter_types:
+        peak_dataframe = peak_dataframe[peak_dataframe['label'].isin(filter_types)].reset_index(drop=True)
+
+    # Check if the Excel file has all required columns.
+    required_cols = {'ret_time', 'drift_time', 'label'}
+    if not required_cols.issubset(peak_dataframe.columns):
+        raise ValueError(f"Missing columns. Required: {required_cols}")
+
+    return True
+
+
+def calculate_connected_components(peak_dataframe: pd.DataFrame,
+                                   output_dir: Path,
+                                   max_node_distance: float,
+                                   times_normalized: np.ndarray,
+                                   batch_size: int = 20000) -> tuple[nx.Graph, pd.DataFrame]:
+    """
+    Not yet described ... TODO
+
+    :param peak_dataframe: Dataframe with all peak information.
+    :param output_dir: The output directory for plots and other files.
+    :param max_node_distance: The max. distance between nodes for the connected components calculation.
+    :param times_normalized: Min/Max normalized retention and drift times.
+    :param batch_size: Limits the number of nodes during computation [prevents ram overflow problems].
+
+    :return: Unidirected graph and a dataframe with connected components.
+    """
+
+    # Initialize a graph.
+    graph = nx.Graph()
+
+    # Each peak is added as a node to the graph.
+    for idx in range(len(peak_dataframe)):
+        # Each node coordinate is set to the normalized peak coordinate.
+        node = tuple(times_normalized[idx])
+        # Get the peak data of this index from the dataframe.
+        peak_data = peak_dataframe.iloc[idx]
+
+        # Calculate how often this peak was detected.
+        # This is important because nodes with the same drift & retention time are only saved as one node!
+        # By saving additional information the actual peaks count, labels and npy_files are not lost.
+        peak_count = peak_dataframe[(peak_dataframe['ret_time'] == peak_data['ret_time']) &
+                                    (peak_dataframe['drift_time'] == peak_data['drift_time'])]
+
+        # Save some peak information from the dataframe for later use.
+        labels = peak_count['label'].to_list()
+        npy_files = peak_count['npy_file'].to_list()
+        dataframe_indicies = peak_count.index.to_list()
+        spectrum_names = peak_count['spectrum'].to_list()
+        intensities = peak_count['intensity'].to_list()
+
+        # Add the node to the graph.
+        graph.add_node(node_for_adding=node, labels=labels, npy_files=npy_files, dataframe_idx=dataframe_indicies,
+                       ret_time=peak_data['ret_time'], drift_time=peak_data['drift_time'], peak_count=len(peak_count),
+                       spectrum_names=spectrum_names, intensities=intensities)
+
+    # Create a nearest neighbor tree for fast lookup of neighbor nodes.
+    tree = KDTree(times_normalized)
+    # Number of nodes in the graph.
+    node_count = graph.number_of_nodes()
+
+    # Create edges between all nodes within a defined radius. Create batches of nodes and walk through them.
+    # neighbor_nodes is a list with lists inside. The position of the list is the index of the node.
+    # The inner list contains the positions of nodes which are considered the nodes neighbors.
+    for start_node in range(0, node_count, batch_size):
+        end_node = min(start_node + batch_size, node_count)
+        sub_nodes = times_normalized[start_node:end_node]
+        neighbor_nodes = tree.query_ball_point(sub_nodes, r=max_node_distance, p=2)
+
+        for sub_node_idx, neighbors in enumerate(neighbor_nodes):
+            global_idx = start_node + sub_node_idx
+            node_1 = tuple(times_normalized[global_idx])
+            for neighbor_idx in neighbors:
+                node_2 = tuple(times_normalized[neighbor_idx])
+                if not node_1 == node_2:
+                    graph.add_edge(node_1, node_2)
+
+    # Get connected components from the graph (connected nodes within the graph).
+    # Each connected component will be identified as one consensus peak.
+    connected_components = list(nx.connected_components(graph))
+    # Create a list of dictionaries which contain peak component information.
+    peak_component_list = []
+    # Walk through all components and nodes and connect the component index to the dataframe index and save node
+    # information to a list of dictionaries.
+    for component_idx, component in enumerate(connected_components):
+        for node in component:
+            # Get node data.
+            node_data = graph.nodes[node]
+
+            # Load node information from previously created lists.
+            indicies = node_data['dataframe_idx']
+            labels = node_data['labels']
+            npy_files = node_data['npy_files']
+            spectrum_names = node_data['spectrum_names']
+            intensities = node_data['intensities']
+
+            # Save node information as a dictionary and append it to a list.
+            for index in range(len(indicies)):
+                peak_component_list.append({'index': indicies[index],
+                                            'label': labels[index],
+                                            'spectrum': spectrum_names[index],
+                                            'ret_time': node_data['ret_time'],
+                                            'drift_time': node_data['drift_time'],
+                                            'intensity': intensities[index],
+                                            'npy_file': npy_files[index],
+                                            'component_idx': component_idx})
+
+    # Create a new dataframe which contains the new component information.
+    peak_component_dataframe = pd.DataFrame(peak_component_list)
+    # Save peak component dataframe as Excel file.
+    excel_filename = output_dir / "02_peak_components.xlsx"
+    peak_component_dataframe.to_excel(excel_filename, index=False)
+
+    return graph, peak_component_dataframe
+
+
+def calculate_consensus_peaks(graph: nx.Graph,
+                              unique_labels: list[str],
+                              output_dir: Path) -> list[dict]:
+    """
+    Not yet described ... TODO
+
+    :param graph: Unidirected graph with all peaks as nodes.
+    :param unique_labels: List of unique labels.
+    :param output_dir: The output directory for plots and other files.
+
+    :return: List with consensus peak dictionaries [One dictionary per consensus peak].
+    """
+
+    # List of all connected components.
+    components = list(nx.connected_components(graph))
+    # List of dictionaries with consensus peak information (returned by this function).
+    consensus_peaks = []
+
+    # Walk through all components.
+    for component_idx, component in enumerate(components):
+        # Create a temporary dictionary which counts the occurrences of each label per component.
+        temp_dictionary = defaultdict(int)
+        total_peaks = 0
+
+        # Create a peak dictionary and fill it with peak and label information.
+        peak_dictionary = {}
+
+        # Create lists with all retention and drift times for the current component.
+        ret_times = []
+        drift_times = []
+
+        # Walk through each node.
+        for node in component:
+            # Get all labels of this node
+            # If multiple labels are there, it means that this node consists of multiple peaks.
+            node_data = graph.nodes[node]
+            labels = node_data['labels']
+
+            # Each label represents one peak of this node. This loop makes sure that each peak of a node is
+            # considered for the consensus peak calculation.
+            for label in labels:
+                ret_times.append(node_data['ret_time'])
+                drift_times.append(node_data['drift_time'])
+                temp_dictionary[label] += 1
+                total_peaks += 1
+
+        # TODO - Experimental
+        # Skip a component, if it only consists of x peak. This removes rare encountered peaks.
+        if total_peaks <= 5:
+            continue
+
+        # Calculate the consensus peak retention and drift time.
+        mean_ret_time = sum(ret_times) / len(ret_times)
+        mean_drift_time = sum(drift_times) / len(drift_times)
+
+        # Insert consensus peak information to the peak_dictionary.
+        peak_dictionary["mean_ret_time"] = mean_ret_time
+        peak_dictionary["mean_drift_time"] = mean_drift_time
+        peak_dictionary["component_idx"] = component_idx
+        peak_dictionary["Peaks_Total"] = total_peaks
+
+        for label in unique_labels:
+            count_key = label + "_Peaks"
+
+            # Insert the node count for this label OR 0 if none node for this label was found.
+            if label in temp_dictionary:
+                peak_dictionary[count_key] = temp_dictionary[label]
+            else:
+                peak_dictionary[count_key] = 0
+
+        # Append a dictionary to the list.
+        consensus_peaks.append(peak_dictionary)
+
+    # Save consensus peaks.
+    consensus_peaks_dataframe = pd.DataFrame(consensus_peaks)
+    filename = output_dir / "03_consensus_peaks.xlsx"
+    consensus_peaks_dataframe.to_excel(filename, index=False)
+
+    return consensus_peaks

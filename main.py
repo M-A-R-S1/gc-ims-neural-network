@@ -1,7 +1,6 @@
 from pathlib import Path
 import preprocess
 import peak
-import in_progress
 
 if __name__ == '__main__':
 
@@ -35,11 +34,11 @@ if __name__ == '__main__':
     except Exception as err:
         print(f" Error during peak detection: {err=}, {type(err)=}")
         raise
-
+  
     # Step 3: Consensus peak calculation.
     excel_filename = output_dir / "01_peak_data.xlsx"
-    in_progress.process_peaks_from_excel(excel_file=excel_filename,
-                                         output_dir=output_dir,
-                                         threshold=0.006)   # was 0.004
+    peak.extract_consensus_peaks(excel_file=excel_filename,
+                                 output_dir=output_dir,
+                                 create_plots="overview",
+                                 max_node_distance=0.006)
 
-###########################################################################################################################################################################
