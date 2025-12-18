@@ -14,8 +14,8 @@ import plot
 
 def process_peaks_from_excel(excel_file: Path,
                              output_dir: Path,
-                             filter_types: list[str],
-                             threshold: float = 0.001) -> pd.DataFrame:
+                             filter_types: list[str] = None,
+                             threshold: float = 0.004) -> pd.DataFrame:
 
     # Check if the Excel file exists.
     if not excel_file.exists():
@@ -59,18 +59,25 @@ def process_peaks_and_plot(peak_dataframe: pd.DataFrame,
                                                            batch_size=20000)
 
     # Plotting stuff here ...
+    # 1. Overview plot with all components.
     plot.overview_connected_components_plot(graph=graph,
                                             output_dir=output_dir)
 
+    """
+    # 2. Create a plot for each component.
     components = list(nx.connected_components(graph))
-    component_idx = 5
-    component = components[component_idx]
+    component_plot_dir = output_dir / "components"
+    # Check and create the component directory.
+    if not component_plot_dir.exists():
+        component_plot_dir.mkdir(parents=True, exist_ok=True)
 
-    plot.single_connected_components_plot(graph=graph,
-                                          component=component,
-                                          component_idx=component_idx,
-                                          output_dir=output_dir)
+    for component_idx, component in enumerate(components):
+        plot.single_connected_components_plot(graph=graph,
+                                              component=component,
+                                              component_idx=component_idx,
+                                              output_dir=component_plot_dir)
 
+    """
     # Calculate consensus peaks and label proportions for each component.
     consensus_peaks = calculate_consensus_peaks(graph=graph,
                                                 unique_labels=unique_labels,
@@ -91,14 +98,26 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
     # Initialize a graph.
     graph = nx.Graph()
 
-    # TODO -> Each peak entry consists of 121 different neighbor peaks. Each of these peaks must be added as a node?
-
     # Each peak is added as a node in the graph.
     for idx in range(len(peak_dataframe)):
         node = tuple(times_normalized[idx])
         peak_data = peak_dataframe.iloc[idx]
-        graph.add_node(node_for_adding=node, label=peak_data['label'], npy_file=peak_data['npy_file'],
-                       dataframe_idx=idx, ret_time=peak_data['ret_time'], drift_time=peak_data['drift_time'])
+
+        # Calculate how often this peak was detected.
+        # This is important because nodes with the same drift & retention time are only saved as one node!
+        # By saving additional information the actual peaks count, labels and npy_files are not lost.
+        peak_count = peak_dataframe[(peak_dataframe['ret_time'] == peak_data['ret_time']) &
+                                    (peak_dataframe['drift_time'] == peak_data['drift_time'])]
+
+        labels = peak_count['label'].to_list()
+        npy_files = peak_count['npy_file'].to_list()
+        dataframe_indicies = peak_count.index.to_list()
+        spectrum_names = peak_count['spectrum'].to_list()
+        intensities = peak_count['intensity'].to_list()
+
+        graph.add_node(node_for_adding=node, labels=labels, npy_files=npy_files, dataframe_idx=dataframe_indicies,
+                       ret_time=peak_data['ret_time'], drift_time=peak_data['drift_time'], peak_count=len(peak_count),
+                       spectrum_names=spectrum_names, intensities=intensities)
 
     # Create a nearest neighbor tree for fast lookup of neighbor nodes.
     tree = KDTree(times_normalized)
@@ -117,8 +136,8 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
             global_idx = start_node + sub_node_idx
             node_1 = tuple(times_normalized[global_idx])
             for neighbor_idx in neighbors:
-                if global_idx != neighbor_idx:
-                    node_2 = tuple(times_normalized[neighbor_idx])
+                node_2 = tuple(times_normalized[neighbor_idx])
+                if not node_1 == node_2:
                     graph.add_edge(node_1, node_2)
 
     # Get connected components from the graph (connected nodes within the graph).
@@ -133,17 +152,28 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
         for node in component:
             # Get node data.
             node_data = graph.nodes[node]
-            component_mapping[node_data['dataframe_idx']] = component_idx
+
+            # component_mapping[node_data['dataframe_idx']] = component_idx
             # Save node information as dictionary in list.
-            peak_component_list.append({'index': node_data['dataframe_idx'],
-                                        'label': node_data['label'],
-                                        'ret_time': node_data['ret_time'],
-                                        'drift_time': node_data['drift_time'],
-                                        'npy_file': node_data['npy_file'],
-                                        'component_idx': component_idx})
+
+            indicies = node_data['dataframe_idx']
+            labels = node_data['labels']
+            npy_files = node_data['npy_files']
+            spectrum_names = node_data['spectrum_names']
+            intensities = node_data['intensities']
+
+            for index in range(len(indicies)):
+                peak_component_list.append({'index': indicies[index],
+                                            'label': labels[index],
+                                            'spectrum': spectrum_names[index],
+                                            'ret_time': node_data['ret_time'],
+                                            'drift_time': node_data['drift_time'],
+                                            'intensity': intensities[index],
+                                            'npy_file': npy_files[index],
+                                            'component_idx': component_idx})
 
     # insert a new colum to the peak_dataframe which contains the component index.
-    peak_dataframe['component_idx'] = peak_dataframe.index.map(component_mapping)
+    #peak_dataframe['component_idx'] = peak_dataframe.index.map(component_mapping)
 
     peak_component_dataframe = pd.DataFrame(peak_component_list)
     # Save peak component dataframe as Excel and csv file.
@@ -152,7 +182,7 @@ def calculate_connected_components(peak_dataframe: pd.DataFrame,
     excel_filename = output_dir / "02_peak_components.xlsx"
     peak_component_dataframe.to_excel(excel_filename, index=False)
 
-    return graph, peak_dataframe
+    return graph, peak_component_dataframe
 
 
 def calculate_consensus_peaks(graph: nx.Graph,
@@ -166,34 +196,43 @@ def calculate_consensus_peaks(graph: nx.Graph,
     for component_idx, component in enumerate(components):
         # Create a temporary dictionary which counts the occurrences of each label per component.
         temp_dictionary = defaultdict(int)
-        total_nodes = 0
+        total_peaks = 0
 
         # Create a peak dictionary and fill it with peak and label information.
         peak_dictionary = {}
 
         # Create lists with all retention and drift times for the current component.
-        ret_times = [graph.nodes[node]['ret_time'] for node in component]
-        drift_times = [graph.nodes[node]['drift_time'] for node in component]
-        # Calculate the mean retention and drift time.
-        mean_ret_time = sum(ret_times) / len(ret_times)
-        mean_drift_time = sum(drift_times) / len(drift_times)
+        ret_times = []
+        drift_times = []
 
         # Walk through each node, check the label and increase the count in the dictionary.
         for node in component:
             node_data = graph.nodes[node]
-            label = node_data['label']
-            temp_dictionary[label] += 1
-            total_nodes += 1
+            labels = node_data['labels']
+
+            for label in labels:
+                ret_times.append(node_data['ret_time'])
+                drift_times.append(node_data['drift_time'])
+                temp_dictionary[label] += 1
+                total_peaks += 1
+
+        # TODO - Experimental
+        # Skip a component, if it only consists of 1 peak.
+        if total_peaks <= 2:
+            continue
+
+        mean_ret_time = sum(ret_times) / len(ret_times)
+        mean_drift_time = sum(drift_times) / len(drift_times)
 
         # Insert peak information to the peak_dictionary.
         peak_dictionary["mean_ret_time"] = mean_ret_time
         peak_dictionary["mean_drift_time"] = mean_drift_time
         peak_dictionary["component_idx"] = component_idx
-        peak_dictionary["Nodes_Total"] = total_nodes
+        peak_dictionary["Peaks_Total"] = total_peaks
 
-        # Insert Node information to the peak_dictionary.
+        # Insert peak information to the peak_dictionary.
         for label in unique_labels:
-            count_key = label + "_Nodes"
+            count_key = label + "_Peaks"
 
             # Insert the node count for this label OR 0 if none node for this label was found.
             if label in temp_dictionary:
@@ -217,7 +256,7 @@ def plot_consensus_peaks(consensus_peaks: list[dict],
                          output_dir: Path) -> None:
 
     # find the component with the highest node count and save this count values.
-    max_nodes = max(peak['Nodes_Total'] for peak in consensus_peaks)
+    max_nodes = max(peak['Peaks_Total'] for peak in consensus_peaks)
 
     # Define the different label marker colors.
     colors = plt.colormaps["hsv"](np.linspace(0, 1, len(unique_labels)+1))
@@ -233,19 +272,19 @@ def plot_consensus_peaks(consensus_peaks: list[dict],
             ret_time = peak["mean_ret_time"]
             drift_time = peak["mean_drift_time"]
             component_idx = peak["component_idx"]
-            total_node_count = peak["Nodes_Total"]
-            current_node_count = peak[plot_label + "_Nodes"]
+            total_node_count = peak["Peaks_Total"]
+            current_node_count = peak[plot_label + "_Peaks"]
 
             # Check if this is a pure consensus peak (Pure = Consists of components from one unique label).
             if total_node_count == current_node_count and current_node_count > 0:
                 plt.scatter(drift_time, ret_time, color=colors[plot_label_idx], marker='.', s=30)
-                # plt.text(drift_time, ret_time,f"{total_node_count}\n id-{component_idx}", fontsize=5, ha='center', va='center', color='black')
+                plt.text(drift_time, ret_time,f"{component_idx}", fontsize=5, ha='right', va='center', color='black')
             else:
-                all_node_counts = [peak[label + "_Nodes"] for label in unique_labels]
+                all_node_counts = [peak[label + "_Peaks"] for label in unique_labels]
                 if not total_node_count in all_node_counts and current_node_count > 0:
                     color = mixed_peak_color(unique_labels, peak)
                     plt.scatter(drift_time, ret_time, color=color, marker='x', s=15)
-                    # plt.text(drift_time, ret_time, f"{total_node_count}\n id-{component_idx}", fontsize=5, ha='center', va='center', color='black')
+                    plt.text(drift_time, ret_time, f"{component_idx}", fontsize=5, ha='right', va='center', color='black')
 
         # Save plot as image.
         filename = output_dir / f"consensus_peaks_{plot_label}.png"
@@ -319,7 +358,7 @@ def mixed_peak_color(unique_labels: list[str],
                      peak: dict) -> tuple:
 
     # The total number of nodes of this consensus peak.
-    total_node_count = peak["Nodes_Total"]
+    total_node_count = peak["Peaks_Total"]
 
     # Define the different label marker colors.
     colors = plt.colormaps["hsv"](np.linspace(0, 1, len(unique_labels)+1))
@@ -331,8 +370,8 @@ def mixed_peak_color(unique_labels: list[str],
     color_ratios = []
 
     for label_idx, label in enumerate(unique_labels):
-        if peak[label + "_Nodes"] > 0:
-            color_ratios.append( (peak[label + "_Nodes"] / total_node_count) * colors[label_idx])
+        if peak[label + "_Peaks"] > 0:
+            color_ratios.append( (peak[label + "_Peaks"] / total_node_count) * colors[label_idx])
 
     mixed_color = sum(color_ratios)
 
