@@ -5,7 +5,6 @@ from multiprocessing import Pool
 import os
 
 
-# Overhauled function. Original function = preprocess_and_visualize_spectra
 def start(input_dir: Path,
           output_dir: Path,
           create_plots: str = "all",
@@ -45,7 +44,7 @@ def start(input_dir: Path,
     # List of paths to the spectra directories.
     spectra_paths = []
     # List of loaded spectra [Spectra which were preprocessed earlier].
-    loaded_data_total = []
+    loaded_spectra = []
 
     # list of plotting strategies.
     plotting_strategy = ["none", "all", "single", "overview"]
@@ -55,99 +54,78 @@ def start(input_dir: Path,
     else:
         create_plots = create_plots.lower()
 
-    # Create a set of all subdirectories of the given input_dir which have .mea files in them.
-    dir_set = set(p.parent for p in input_dir.rglob('*.mea'))
+    dataset = ims.Dataset.read_mea(path=str(input_dir),
+                                   subfolders=True,
+                                   sequential=True,
+                                   compr="binning")
 
-    # If there are no .mea files at all report this to the user.
-    if not dir_set:
-        print(f"\tNo .mea files found in {input_dir} and sub directories.")
-        return preprocessed_data, spectra_paths
-
-    # Walk through all found subdirectories.
-    for current_input_dir in sorted(list(dir_set)):
-        try:
-            # Create the dataset for all .mea files in the current subdirectory.
-            dataset = ims.Dataset.read_mea(current_input_dir)
-        except Exception as err:
-            print(f"\tERROR: could not read files at {current_input_dir}: {err=} ---- Skipping.")
-            print("-------------------------------------------------------")
-            continue
-
-        print(f"\tOpening dataset: {current_input_dir.parent.name}/{dataset.name} ({len(dataset.data)} Spectra)")
-
-        # Set the output directory.
-        current_output_dir = output_dir / current_input_dir.relative_to(input_dir)
-
-        # Loaded data of the current subfolder.
-        loaded_data_current = []
-
-        # Try to load .hdf5 files for each spectrum. An .hdf5 file indicates that a spectrum was already processed.
-        if load_existing:
-            for idx, spectrum in enumerate(dataset.data):
-                spectrum_path = current_output_dir / "hdf5" / f"{spectrum.name}.hdf5"
-                if spectrum_path.exists():
-                    loaded_spectrum = ims.Spectrum.read_hdf5(spectrum_path)
-                    loaded_data_total.append(loaded_spectrum)
-                    loaded_data_current.append(loaded_spectrum)
-                    #loaded_spectrum.rip_ms = 1
-                    # Save the output directory of the spektrum
-                    spectra_paths.append(current_output_dir)
-                    print(f"\t- Spectrum {idx + 1}/{len(dataset.data)} - Save file found [loaded]")
-
-        # Skip processing this folder if all dictionary spectra could be loaded from .hdf5 files.
-        if len(loaded_data_current) == len(dataset.data):
-            continue
-
-        # Interpolates all spectra to a common RIP (Reactant Ion Peaks)
-        dataset.interp_riprel()
-        # Check how many cpu cores are available.
-        cpu_cores = os.cpu_count()
-        tasks = []
-
-        # Collect needed arguments for each spectrum.
+    # Try to load .hdf5 files for each spectrum. An .hdf5 file indicates that a spectrum was already processed.
+    if load_existing:
         for idx, spectrum in enumerate(dataset.data):
-            if spectrum.values.size == 0:
-                print(f"\t- Spectrum {idx + 1}/{len(dataset.data)}")
-                print(f"\t- Empty spectrum --> Skipping")
+            spectrum_path = output_dir / dataset.labels[idx] / "hdf5" / f"{spectrum.name}.hdf5"
+            if spectrum_path.exists():
+                loaded_spectrum = ims.Spectrum.read_hdf5(spectrum_path)
+                loaded_spectra.append(loaded_spectrum)
+                # Save the output directory of the spektrum
+                spectra_paths.append(output_dir / dataset.labels[idx])
+                print(f"\t- Spectrum {idx + 1}/{len(dataset.data)} - Save file found [loaded]")
+
+    # Skip processing this folder if all dictionary spectra could be loaded from .hdf5 files.
+    if len(loaded_spectra) == len(dataset.data):
+        return loaded_spectra, spectra_paths
+
+    # Interpolates all spectra to a common RIP (Reactant Ion Peaks)
+    dataset.interp_riprel()
+    # Check how many cpu cores are available.
+    cpu_cores = os.cpu_count()
+    tasks = []
+
+    # Collect needed arguments for each spectrum.
+    for idx, spectrum in enumerate(dataset.data):
+        if spectrum.values.size == 0:
+            print(f"\t- Spectrum {idx + 1}/{len(dataset.data)}")
+            print(f"\t- Empty spectrum --> Skipping")
+            continue
+
+        spectrum_path = output_dir / dataset.labels[idx]
+
+        # Check if the spectrum has already a save file, if so skip the preprocessing step for this spectrum.
+        if load_existing:
+            hdf5_path = spectrum_path / "hdf5" / f"{spectrum.name}.hdf5"
+            if hdf5_path.exists():
                 continue
 
-            # Check if the spectrum has already a save file, if so skip the preprocessing step for this spectrum.
-            if load_existing:
-                spectrum_path = current_output_dir / "hdf5" / f"{spectrum.name}.hdf5"
-                if spectrum_path.exists():
-                    continue
+        # Save the spektrum path.
+        spectra_paths.append(spectrum_path)
 
-            # Save the spektrum path.
-            spectra_paths.append(current_output_dir)
+        task_args = (spectrum,
+                     spectrum_path,
+                     idx,
+                     len(dataset.data),
+                     create_plots,
+                     drift_cut,
+                     retention_cut,
+                     percentile,
+                     uniform_filter_size)
 
-            task_args = (spectrum,
-                         current_output_dir,
-                         idx,
-                         len(dataset.data),
-                         create_plots,
-                         drift_cut,
-                         retention_cut,
-                         percentile,
-                         uniform_filter_size)
+        tasks.append(task_args)
 
-            tasks.append(task_args)
+    # Start parallel processing. One cpu core handels one spectrum.
+    with Pool(cpu_cores) as p:
+        dataset_data = p.starmap(preprocess_spectra, tasks)
 
-        # Start parallel processing. One cpu core handels one spectrum.
-        with Pool(cpu_cores) as p:
-            dataset_data = p.starmap(preprocess_spectra, tasks)
+    # Plot overview of all spectra inside the current subdirectory.
+    if create_plots in ["all", "overview"]:
+        plot.overview_gcims_plot(dataset=dataset_data,
+                                 plot_dir=output_dir,
+                                 condition="processed")
 
-        # Plot overview of all spectra inside the current subdirectory.
-        if create_plots in ["all", "overview"]:
-            plot.overview_gcims_plot(dataset=dataset_data,
-                                     plot_dir=current_output_dir,
-                                     condition="processed")
-
-        preprocessed_data.extend(dataset_data)
-
+    preprocessed_data.extend(dataset_data)
     # Add the loaded spectra to the newly preprocessed spectra.
-    preprocessed_data.extend(loaded_data_total)
+    preprocessed_data.extend(loaded_spectra)
 
     return preprocessed_data, spectra_paths
+
 
 
 def preprocess_spectra(spectrum: ims.Spectrum,
@@ -197,7 +175,6 @@ def preprocess_spectra(spectrum: ims.Spectrum,
                                plot_dir=output_dir,
                                condition="raw")
 
-    spectrum.rip_ms = 1
     # Baseline correction - removing the noisy background by subtracting the mean of an empty area.
     spectrum.sub_first_rows(50)
     spectrum.cut_dt(start=drift_cut[0], stop=drift_cut[1])

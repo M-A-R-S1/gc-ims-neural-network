@@ -218,7 +218,7 @@ def calculate_consensus_peaks(graph: nx.Graph,
 
         # TODO - Experimental
         # Skip a component, if it only consists of 1 peak.
-        if total_peaks <= 2:
+        if total_peaks <= 5:
             continue
 
         mean_ret_time = sum(ret_times) / len(ret_times)
