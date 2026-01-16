@@ -1474,7 +1474,7 @@ process_peaks_from_excel(
 )
 
 
-# ######exakte_Peakextraktion#####
+# ######exakte_Peakextraktion##############################################################################################################################################################################################################
 
 
 def preprocess_and_visualize_spectra_exact(input_dir, output_plot_dir):
@@ -2063,7 +2063,7 @@ def parallel_process_spectra_exact(filtered_data, window_size, output_dir, plot_
 #     print("Alle Peak-Daten gespeichert.")
 
 
-#####Autoencoder#####
+#####Autoencoder###############################################################################################################################################################################################################################
 
 def random_sampling_tensor(data_tensor, sample_size=None):
     indices = torch.randperm(len(data_tensor))[:sample_size]

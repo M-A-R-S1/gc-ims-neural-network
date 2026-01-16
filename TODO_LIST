@@ -1,3 +1,6 @@
 - Check again peak detection - The Spain Spectra produce many tailing peaks - can this be fixed?
 - Component radius - good value or bad value? Can this be generalized?
 - Check if the peak detection was already calculated, if so skip it.
+- 2 Autoencoder networks for data reduction.
+    - 1. Trained with raw peak data.
+    - 2. Trained with consensus peak data.
