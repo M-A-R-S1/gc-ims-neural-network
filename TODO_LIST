@@ -4,3 +4,6 @@
 - 2 Autoencoder networks for data reduction.
     - 1. Trained with raw peak data.
     - 2. Trained with consensus peak data.
+
+- Change peak window dimension to 28x28 or more?
+    - the current dimension is to small for a CNN to work properly.

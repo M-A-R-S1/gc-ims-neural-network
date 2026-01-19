@@ -50,7 +50,7 @@ class VariationalAutoencoderV1(nn.Module):
             nn.Unflatten(1, (hidden_layers, self.flatten_height, self.flatten_width)),
 
             # Reverse of second Conv-Block
-            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=2, stride=2, output_padding=1),
             nn.ReLU(),
             nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
             nn.ReLU(),
@@ -58,7 +58,7 @@ class VariationalAutoencoderV1(nn.Module):
             nn.ReLU(),
 
             # Reverse of the first Conv-Block
-            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=2, stride=2, output_padding=1),
             nn.ReLU(),
             nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
             nn.ReLU(),
