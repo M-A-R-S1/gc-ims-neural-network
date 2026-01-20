@@ -1,5 +1,3 @@
-- Check again peak detection - The Spain Spectra produce many tailing peaks - can this be fixed?
-- Component radius - good value or bad value? Can this be generalized?
 - Check if the peak detection was already calculated, if so skip it.
 - 2 Autoencoder networks for data reduction.
     - 1. Trained with raw peak data.
@@ -7,3 +5,8 @@
 
 - Change peak window dimension to 28x28 or more?
     - the current dimension is to small for a CNN to work properly.
+
+- BUG found! If the peak window is to big (>5) then the npy files are not saved.
+    - Looks like there is an error while saving the drift and retention times inside the npy. file.
+        - Are these necessary? Can I remove them? ...
+        - Testing ... removed them for now.

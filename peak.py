@@ -217,10 +217,11 @@ def peak_detection(spectrum: ims.Spectrum,
                 start_drift_idx = drift_idx - peak_radius
                 end_drift_idx = drift_idx + 3 * peak_radius + 1
                 peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
-                peak_window_ret_times = spectrum.ret_time[start_ret_idx:end_ret_idx]
-                peak_window_drift_times = spectrum.drift_time[start_drift_idx:end_drift_idx]
-                ret_matrix, drift_matrix = np.meshgrid(peak_window_ret_times, peak_window_drift_times, indexing='ij')
-                peak_window = np.stack((peak_window_intensities, ret_matrix, drift_matrix), axis=-1)
+                # peak_window_ret_times = spectrum.ret_time[start_ret_idx:end_ret_idx]
+                # peak_window_drift_times = spectrum.drift_time[start_drift_idx:end_drift_idx]
+                # ret_matrix, drift_matrix = np.meshgrid(peak_window_ret_times, peak_window_drift_times, indexing='ij')
+                # peak_window = np.stack((peak_window_intensities, ret_matrix, drift_matrix), axis=-1)
+                peak_window = peak_window_intensities
 
                 # Plot the peak heatmaps.
                 if create_heatmaps:
@@ -548,7 +549,7 @@ def calculate_consensus_peaks(graph: nx.Graph,
                 total_peaks += 1
 
         # TODO - Experimental
-        # Skip a component, if it only consists of x peak. This removes rare encountered peaks.
+        # Skip a component, if it only consists of x peaks. This removes rare encountered peaks.
         if total_peaks <= 5:
             continue
 

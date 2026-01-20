@@ -6,9 +6,9 @@ if __name__ == '__main__':
 
     # Step 0: Define all necessary directories.
     # The root input dir.
-    input_dir = Path("./data/IMS_Olive_Oil_Geography")
+    input_dir = Path("./data/IMS_Olive_Oil_Geography_small")
     # The root output dir.
-    output_dir = Path("./output/IMS_Olive_Oil_Geography")
+    output_dir = Path("./output/IMS_Olive_Oil_Geography_small")
 
     # Check and create output if necessary.
     if not output_dir.exists():
@@ -20,12 +20,13 @@ if __name__ == '__main__':
                                                         create_plots="Single",
                                                         load_existing=True)
 
+
     # Step 2: Calculate peaks on preprocessed data.
     try:
         peak_dataframe = peak.get_all_peaks(preprocessed_spectra=preprocessed_data,
-                                            peak_radius=5,
+                                            peak_radius=7,
                                             spectra_paths=spectra_paths,
-                                            create_heatmaps=False,
+                                            create_heatmaps=True,
                                             create_npy=True)
 
         # Save peak data to Excel file.
@@ -34,11 +35,13 @@ if __name__ == '__main__':
     except Exception as err:
         print(f" Error during peak detection: {err=}, {type(err)=}")
         raise
-  
+
+    """
     # Step 3: Consensus peak calculation.
     excel_filename = output_dir / "01_peak_data.xlsx"
     peak.extract_consensus_peaks(excel_file=excel_filename,
                                  output_dir=output_dir,
                                  create_plots="overview",
                                  max_node_distance=0.006)
+    """
 

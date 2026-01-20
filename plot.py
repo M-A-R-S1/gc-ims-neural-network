@@ -146,7 +146,7 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
     plt.figure(figsize=(10, 10))
     sns.heatmap(
         heatmap_window,
-        annot=True,
+        annot=False,
         fmt=".1f",
         cmap="RdBu_r",
         cbar=True,
