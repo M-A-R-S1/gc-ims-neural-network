@@ -6,6 +6,11 @@ def reparameterize(mean: torch.Tensor, log_variance: torch.Tensor) -> torch.Tens
     random_multiplicator = torch.randn_like(standard_deviation)
     return mean + random_multiplicator * standard_deviation
 
+def vae_loss(feature, feature_constructed, mean, log_variance, beta=1.5):
+    #recon = nn.functional.mse_loss(label_prediction, feature, reduction='sum')
+    recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
+    kld = -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp())
+    return recon + beta * kld
 
 class VariationalAutoencoderV1(nn.Module):
     def __init__(self, input_layers: int, hidden_layers: int, latent_dimension: int) -> None:
@@ -13,61 +18,44 @@ class VariationalAutoencoderV1(nn.Module):
 
         # Set Convolution layer hyperparameters.
         self.kernel = 3
-        self.stride = 1
+        self.stride = 2
         self.padding = 1
-        self.pooling_kernel = 2
 
-        # Calculate the flatten layer dimension.
-        self.flatten_height = 11
-        self.flatten_width = 11
-        self.flatten_dimension = self.flatten_height * self.flatten_width * hidden_layers
-
-        # TinyVGG model inspired CNN encoder.
         self.encoder = nn.Sequential(
             # First Conv-Block
             nn.Conv2d(in_channels=input_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=self.pooling_kernel),
+            nn.LeakyReLU(0.2),
+            nn.BatchNorm2d(hidden_layers),
 
             # Second Conv-Block
-            nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=self.pooling_kernel),
+            nn.Conv2d(in_channels=hidden_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.LeakyReLU(0.2),
+            nn.BatchNorm2d(2*hidden_layers),
 
             nn.Flatten()
         )
 
+        self.flatten_dimension = 2*hidden_layers * 7 * 7
         self.latent_mean = nn.Linear(self.flatten_dimension, latent_dimension)
         self.latent_log_variance = nn.Linear(self.flatten_dimension, latent_dimension)
 
-        # TinyVGG model inspired CNN decoder.
         self.decoder = nn.Sequential(
             nn.Linear(latent_dimension, self.flatten_dimension),
-            nn.Unflatten(1, (hidden_layers, self.flatten_height, self.flatten_width)),
+            nn.Unflatten(1, (2*hidden_layers, 7, 7)),
 
             # Reverse of second Conv-Block
-            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=2, stride=2, output_padding=1),
-            nn.ReLU(),
-            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
-            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels=2*hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding, output_padding=1),
+            nn.LeakyReLU(0.2),
 
             # Reverse of the first Conv-Block
-            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=2, stride=2, output_padding=1),
-            nn.ReLU(),
-            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
             nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=input_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
             nn.Sigmoid()
         )
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         bottleneck_layer = self.encoder(x)
+
+        print(f"bottleneck_layer: {bottleneck_layer.shape}")
 
         mean = self.latent_mean(bottleneck_layer)
         log_variance = self.latent_log_variance(bottleneck_layer)
