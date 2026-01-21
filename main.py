@@ -4,10 +4,8 @@ import peak
 import model
 import dataloader
 import torch
-import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 
 if __name__ == '__main__':
 

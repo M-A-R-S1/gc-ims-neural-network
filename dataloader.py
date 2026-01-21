@@ -1,10 +1,7 @@
 import numpy as np
 import torch
-import os
 from torch.utils.data import Dataset
 from torchvision.transforms import v2 as transform
-from sklearn.model_selection import train_test_split
-from pathlib import Path
 
 class VaeDataset(Dataset):
     def __init__(self, npy_paths: list, class_dict: dict):
