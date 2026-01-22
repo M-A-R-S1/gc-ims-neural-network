@@ -6,9 +6,9 @@ def reparameterize(mean: torch.Tensor, log_variance: torch.Tensor) -> torch.Tens
     random_multiplicator = torch.randn_like(standard_deviation)
     return mean + random_multiplicator * standard_deviation
 
-def vae_loss(feature, feature_constructed, mean, log_variance, beta=1.5):
-    recon = nn.functional.mse_loss(feature_constructed, feature, reduction='sum')
-    #recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
+def vae_loss(feature, feature_constructed, mean, log_variance, beta=1.0):
+    #recon = nn.functional.mse_loss(feature_constructed, feature, reduction='sum')
+    recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
     kld = -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp())
     return recon + beta * kld
 
@@ -18,45 +18,50 @@ class VariationalAutoencoderV1(nn.Module):
 
         # Set Convolution layer hyperparameters.
         self.kernel = 3
-        self.stride = 2
+        self.stride = 1
         self.padding = 1
+        self.pooling_kernel = 2
 
         self.encoder = nn.Sequential(
             # First Conv-Block
-            nn.Conv2d(in_channels=input_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=1),
-            nn.LeakyReLU(0.2),
-            nn.BatchNorm2d(hidden_layers),
+            nn.Conv2d(in_channels=input_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=2*hidden_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.ReLU(),
+            nn.BatchNorm2d(2*hidden_layers),
+            nn.MaxPool2d(kernel_size=self.pooling_kernel),
 
             # Second Conv-Block
-            nn.Conv2d(in_channels=hidden_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(in_channels=2*hidden_layers, out_channels=2*hidden_layers, kernel_size=1),
-            nn.LeakyReLU(0.2),
-            nn.BatchNorm2d(2*hidden_layers),
+            nn.Conv2d(in_channels=2*hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.ReLU(),
+            nn.BatchNorm2d(hidden_layers),
+            nn.MaxPool2d(kernel_size=self.pooling_kernel),
 
             nn.Flatten()
         )
 
-        self.flatten_dimension = 2*hidden_layers * 8 * 8
+        self.flatten_dimension = hidden_layers * 5 * 5
         self.latent_mean = nn.Linear(self.flatten_dimension, latent_dimension)
         self.latent_log_variance = nn.Linear(self.flatten_dimension, latent_dimension)
 
         self.decoder = nn.Sequential(
             nn.Linear(latent_dimension, self.flatten_dimension),
-            nn.Unflatten(1, (2*hidden_layers, 8, 8)),
+            nn.Unflatten(1, (hidden_layers, 5, 5)),
 
             # Reverse of second Conv-Block
-            nn.Conv2d(in_channels=2*hidden_layers, out_channels=2*hidden_layers, kernel_size=1),
-            nn.LeakyReLU(0.2),
-            nn.ConvTranspose2d(in_channels=2*hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.LeakyReLU(0.2),
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=hidden_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.ReLU(),
 
             # Reverse of the first Conv-Block
-            nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=1),
-            nn.LeakyReLU(0.2),
-            nn.ConvTranspose2d(in_channels=hidden_layers, out_channels=input_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.Upsample(size=(21, 21), mode='nearest'),
+            nn.Conv2d(in_channels=2*hidden_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=2*hidden_layers, out_channels=input_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
             nn.Sigmoid()
         )
 
