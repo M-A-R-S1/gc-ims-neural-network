@@ -2,10 +2,13 @@ from pathlib import Path
 import preprocess
 import peak
 import model
+from model import vae_loss
 import dataloader
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
+
+import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
@@ -14,10 +17,15 @@ if __name__ == '__main__':
     input_dir = Path("./data/IMS_Olive_Oil_Geography_small")
     # The root output dir.
     output_dir = Path("./output/IMS_Olive_Oil_Geography_small")
+    # Plot dir for original and reconstructed peak heatmaps.
+    plot_dir = Path("./output/IMS_Olive_Oil_Geography_small/vae_results")
 
     # Check and create output if necessary.
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
+
+    if not plot_dir.exists():
+        plot_dir.mkdir(parents=True, exist_ok=True)
 
     """
     # Step 1: Preprocess the .mea files
@@ -51,12 +59,11 @@ if __name__ == '__main__':
                                  max_node_distance=0.006)
     """
 
-    epochs = 50
+    epochs = 25
     latent_dim = 16
     batch_size = 128
-    lr = 1e-3
-    x_dim = 1
-    hidden_dim = 32
+    lr = 0.001
+    hidden_dim = 300
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     root_dir = output_dir
@@ -76,19 +83,24 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    model = model.VariationalAutoencoderV1(input_layers=x_dim,
+    model = model.VariationalAutoencoderV2(hidden_layers=hidden_dim,
+                                           latent_dimension=latent_dim).to(device)
+    """
+    model = model.VariationalAutoencoderV1(input_layers=1,
                                            hidden_layers=hidden_dim,
                                            latent_dimension=latent_dim).to(device)
+    """
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(epochs):
         model.train()
         train_loss = 0
+
         for feature, label in train_loader:
             feature = feature.to(device)
             label_prediction, mean, log_variance = model(feature)
-            loss = model.vae_loss(feature, label_prediction, mean, log_variance)
+            loss = vae_loss(feature, label_prediction, mean, log_variance)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -100,8 +112,32 @@ if __name__ == '__main__':
             for feature, label in test_loader:
                 feature = feature.to(device)
                 label_prediction, mean, log_variance = model(feature)
-                loss = model.vae_loss(feature, label_prediction, mean, log_variance)
+                loss = vae_loss(feature, label_prediction, mean, log_variance)
                 test_loss += loss.item()
+
+
+                n_images = 5
+                origs = feature[:n_images].cpu().numpy()
+                recons = label_prediction[:n_images].cpu().numpy()
+
+                fig, axes = plt.subplots(2, n_images, figsize=(15, 6))
+                for i in range(n_images):
+                    ax_orig = axes[0, i]
+                    im_orig = ax_orig.imshow(origs[i].squeeze(), cmap='viridis')
+                    ax_orig.set_title(f"Orig {i + 1}")
+                    ax_orig.axis('off')
+
+                    # Rekonstruktion
+                    ax_recon = axes[1, i]
+                    im_recon = ax_recon.imshow(recons[i].squeeze(), cmap='viridis')
+                    ax_recon.set_title(f"Recon {i + 1}")
+                    ax_recon.axis('off')
+
+                filename = plot_dir / f"epoch_{epoch + 1}.png"
+                plt.tight_layout()
+                plt.savefig(filename)
+                plt.close()
+
 
         print(
             f"Epoch {epoch + 1}: Train Loss = {train_loss / len(train_dataset):.4f}, Test Loss = {test_loss / len(test_dataset):.4f}")
