@@ -69,12 +69,10 @@ if __name__ == '__main__':
     class_dict = {class_name: idx for idx, class_name in enumerate(classes)}
 
     # Split the data into training and test data.
-    train_paths, test_paths = train_test_split(
-        npy_paths,
-        test_size=0.20,
-        random_state=42,
-        shuffle=True
-    )
+    train_paths, test_paths = train_test_split(npy_paths,
+                                                test_size=0.20,
+                                                random_state=42,
+                                                shuffle=True)
 
     # Create the datasets and dataloaders.
     train_dataset = dataloader.VaeDataset(train_paths, class_dict)
@@ -83,8 +81,9 @@ if __name__ == '__main__':
     test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     # Initialize the model.
-    model = model.VariationalAutoencoderV1(input_layers=1, hidden_layers=HIDDEN_DIM, latent_dimension=LATENT_DIM).to(device)
-    #model = model.VariationalAutoencoderV2(hidden_layers=HIDDEN_DIM, latent_dimension=LATENT_DIM).to(device)
+    model = model.VariationalAutoencoderCNN(input_layers=1,
+                                            hidden_layers=HIDDEN_DIM,
+                                            latent_dimension=LATENT_DIM).to(device)
 
     # Define the optimizer.
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)

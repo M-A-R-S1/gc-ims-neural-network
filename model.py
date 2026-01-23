@@ -3,6 +3,17 @@ from torch import nn
 
 def reparameterize(mean: torch.Tensor,
                    log_variance: torch.Tensor) -> torch.Tensor:
+    """
+    This function uses the mean and the logarithmic variance to calculate a distinct latent space representation.
+    The logarithmic variance is transformed to the standard deviation which is then fitted to a gaussian normal
+    distribution. This yields a "randomly" picked standard deviation which is finally added to the mean and returned as
+    a distinct latent space representation.
+
+    :param mean: torch tensor with the mean of the latent space.
+    :param log_variance: torch tensor with the logarithmic variance of the latent space.
+
+    :return: torch tensor with a "randomly" picked latent space vector.
+    """
 
     standard_deviation = torch.exp(0.5 * log_variance)
     random_multiplicator = torch.randn_like(standard_deviation)
@@ -13,13 +24,29 @@ def vae_loss(feature: torch.Tensor,
              mean: torch.Tensor,
              log_variance: torch.Tensor,
              beta: float = 1.0) -> torch.Tensor:
+    """
+    This function calculates the loss for given feature, feature reconstruction and the latent space mean and
+    logarithmic variance. The "Kullback–Leibler divergence" (kld) is used to determine how the latent space variables
+    are distributed. The loss is determined by the "correctness" of the reconstruction and the Kullback–Leibler
+    divergence multiplied with the beta multiplicator. A high beta multiplicator is in favor of a cleaner latent
+    space organization, while a lower beta multiplicator is in favor of a better reconstruction.
 
-    #recon = nn.functional.mse_loss(feature_constructed, feature, reduction='sum')
-    recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
+    :param feature: torch Tensor with the original feature.
+    :param feature_constructed: torch Tensor with the constructed feature.
+    :param mean: torch Tensor with the mean latent space.
+    :param log_variance: torch Tensor with the logarithmic variance of the latent space.
+    :param beta: Return multiplicator which helps to shift the loss towards a better latent space representation
+    (beta > 1.0) or a more accurate reconstruction (beta < 1.0).
+
+    :return: torch tensor with the calculated loss.
+    """
+
+    recon = nn.functional.mse_loss(feature_constructed, feature, reduction='sum')
+    #recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
     kld = -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp())
     return recon + beta * kld
 
-class VariationalAutoencoderV1(nn.Module):
+class VariationalAutoencoderCNN(nn.Module):
     def __init__(self, input_layers: int, hidden_layers: int, latent_dimension: int) -> None:
         super().__init__()
 
@@ -70,51 +97,6 @@ class VariationalAutoencoderV1(nn.Module):
             nn.ReLU(),
             nn.Conv2d(in_channels=2*hidden_layers, out_channels=input_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
             nn.Sigmoid()
-        )
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        bottleneck_layer = self.encoder(x)
-
-        mean = self.latent_mean(bottleneck_layer)
-        log_variance = self.latent_log_variance(bottleneck_layer)
-
-        x = reparameterize(mean, log_variance)
-        return self.decoder(x), mean, log_variance
-
-
-
-class VariationalAutoencoderV2(nn.Module):
-    def __init__(self, hidden_layers: int, latent_dimension: int) -> None:
-        super().__init__()
-
-        self.flatten_dimension = 29 * 29
-
-        self.encoder = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(in_features=self.flatten_dimension, out_features=hidden_layers),
-            nn.LeakyReLU(0.2),
-            nn.Linear(in_features=hidden_layers, out_features=hidden_layers),
-            nn.LeakyReLU(0.2),
-            nn.Linear(in_features=hidden_layers, out_features=hidden_layers),
-            nn.LeakyReLU(0.2),
-            nn.Linear(in_features=hidden_layers, out_features=16),
-            nn.LeakyReLU(0.2)
-        )
-
-        self.latent_mean = nn.Linear(16, latent_dimension)
-        self.latent_log_variance = nn.Linear(16, latent_dimension)
-
-        self.decoder = nn.Sequential(
-            nn.Linear(in_features=latent_dimension, out_features=16),
-            nn.LeakyReLU(0.2),
-            nn.Linear(in_features=16, out_features=hidden_layers),
-            nn.LeakyReLU(0.2),
-            nn.Linear(in_features=hidden_layers, out_features=hidden_layers),
-            nn.LeakyReLU(0.2),
-            nn.Linear(in_features=hidden_layers, out_features=hidden_layers),
-            nn.LeakyReLU(0.2),
-            nn.Linear(in_features=hidden_layers, out_features=self.flatten_dimension),
-            nn.Unflatten(1, (1,29,29))
         )
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

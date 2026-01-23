@@ -4,7 +4,6 @@ import plot
 from multiprocessing import Pool
 import os
 
-
 def start(input_dir: Path,
           output_dir: Path,
           create_plots: str = "all",

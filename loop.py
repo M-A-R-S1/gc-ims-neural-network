@@ -37,7 +37,7 @@ def print_passed_time(start: float,
 def train_model(model: torch.nn.Module,
                 dataloader: torch.utils.data.DataLoader,
                 loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
-                optimizer: torch.optim,
+                optimizer: torch.optim.Optimizer,
                 device: torch.device) -> float:
     """
     Trains a given model and dataloader and returns the calculated loss.
@@ -78,7 +78,7 @@ def train_model(model: torch.nn.Module,
 
 
 def eval_model(model: torch.nn.Module,
-               dataloader: torch.utils.data.dataloader,
+               dataloader: torch.utils.data.DataLoader,
                loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
                device: torch.device,
                current_epoch: int,
@@ -135,7 +135,7 @@ def start_loop(model: torch.nn.Module,
                train_dataloader: torch.utils.data.DataLoader,
                test_dataloader: torch.utils.data.DataLoader,
                loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
-               optimizer: torch.optim,
+               optimizer: torch.optim.Optimizer,
                device: torch.device,
                epochs: int,
                plot_dir: Path) -> None:
@@ -189,9 +189,7 @@ def start_loop(model: torch.nn.Module,
                            epoch=epoch,
                            plot_dir=plot_dir)
 
-        print(f"Epoch: {epoch + 1}/{epochs}")
-        print(f"- Train loss: {train_loss:.4f} | Test loss: {test_loss:.4f}")
-        print("################################################")
+        print(f"Epoch: {epoch + 1}/{epochs} - Train loss: {train_loss:.4f} | Test loss: {test_loss:.4f}")
 
     # Print the needed training Time
     train_end_time = timer()
