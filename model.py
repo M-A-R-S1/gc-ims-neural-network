@@ -1,12 +1,19 @@
 import torch
 from torch import nn
 
-def reparameterize(mean: torch.Tensor, log_variance: torch.Tensor) -> torch.Tensor:
+def reparameterize(mean: torch.Tensor,
+                   log_variance: torch.Tensor) -> torch.Tensor:
+
     standard_deviation = torch.exp(0.5 * log_variance)
     random_multiplicator = torch.randn_like(standard_deviation)
     return mean + random_multiplicator * standard_deviation
 
-def vae_loss(feature, feature_constructed, mean, log_variance, beta=1.0):
+def vae_loss(feature: torch.Tensor,
+             feature_constructed: torch.Tensor,
+             mean: torch.Tensor,
+             log_variance: torch.Tensor,
+             beta: float = 1.0) -> torch.Tensor:
+
     #recon = nn.functional.mse_loss(feature_constructed, feature, reduction='sum')
     recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
     kld = -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp())

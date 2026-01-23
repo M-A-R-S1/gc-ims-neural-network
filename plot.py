@@ -1,10 +1,12 @@
 import numpy as np
+import torch
 from matplotlib import pyplot as plt
 from pathlib import Path
 import seaborn as sns
 import math
 import ims
 import networkx as nx
+from sklearn.manifold import TSNE
 
 def single_gcims_plot(spectrum: ims.Spectrum,
                       plot_dir: Path,
@@ -293,69 +295,6 @@ def plot_consensus_peaks(consensus_peaks: list[dict],
         plt.close()
 
 
-    """
-    # Scatterplot für alle Peaks zusammen--> erstellt ein einziges großes Scatterplot für alle Peaks und hängt zusätzlich eine Farblegende in Form eines Dreiecks dran
-    #
-    fig, ax1 = plt.subplots(figsize=(12, 6))  # Erstelle das Haupt-Scatterplot
-    ax1.set_title("Scatterplot der Konsensus-Peaks für alle Honigarten")
-    ax1.set_xlabel("Driftzeit")
-    ax1.set_ylabel("Retentionszeit")
-    # avg_peaks: Liste mit Peak-Daten
-    # component_honey_counts: Liste mit den Anteilen (Linde, Lavendel, Eukalyptus) für denselben Peak.
-
-    for peak, (linden_count, lavender_count, eucalyptus_count) in zip(consensus_peaks, component_label_count):
-        ret_time = peak["ret_time"]
-        drift_time = peak["drift_time"]
-        component_id = peak["component_id"]
-
-        # Beispiel: Linde
-        # Bedingungen für Linde; Lavendel; Eukalyptus und Mischung
-        # honey_type == "Linde"--> Plot, welches Linde darstellen soll
-        # lavender_count == 0 and eucalyptus_count == 0--> Sicherstellen, dass dieser Peak wirklich nur Linde enthält, also keine Anteile von Lavendel oder Eukalyptus
-        # Farbe berechnen--> color = color_single_type_2(linden_count, max_count, "Linde")--> siehe Funktion "color_single_type_2"
-        # mix_component_color wird aufgerufen, um aus den Anteilen eine Mischfarbe zu berechnen
-
-        if linden_count == 0 and lavender_count == 0 and eucalyptus_count == 0:  # Nur Linde
-            color = color_single_type_2(linden_count, max_count, "Linde")
-        elif lavender_count == 0 and linden_count == 0 and eucalyptus_count == 0:  # Nur Lavendel
-            color = color_single_type_2(lavender_count, max_count, "Lavendel")
-        elif eucalyptus_count == 0 and linden_count == 0 and lavender_count == 0:  # Nur Eukalyptus
-            color = color_single_type_2(eucalyptus_count, max_count, "Eukalyptus")
-        else:  # Mischung
-            color = mix_component_color(linden_count, lavender_count, eucalyptus_count)
-
-        # Peak is Diagramm einfügen
-        # x-Achse = drift_time
-        # y-Achse = ret_time
-        # color = vorher berechnete Farbe
-        # marker='o' = Kreissymbol
-        # s=30 = Punktgröße
-        ax1.scatter(drift_time, ret_time, color=color, marker='o', s=30)
-
-    # Positioniert das Farbdreieck für alle Peaks neben dem Hauptplot
-    bbox = ax1.get_position()  # Holen der Bounding Box des Hauptplots
-    ax_triangle = fig.add_axes([
-        bbox.x1 + 0.30,  # Rechts daneben, mit etwas Abstand
-        bbox.y0 + (bbox.height - 0.1) / 2,  # Vertikal mittig zum Hauptplot
-        0.1,  # Breite des Farbdreiecks
-        0.1 * (3 ** 0.5) / 2  # Höhe des Farbdreiecks so skalieren, dass es gleichseitig aussieht
-    ])  # Hinzufügen des Farbdreiecks als separates Axes-Objekt
-
-    ax_triangle.set_axis_off()
-    # Dreieck mit Farben füllen
-    # Achsen werden ausgeblendet (keine Skalen)
-    # zeichnet ein Farbdreieck,
-    # wobei jede Ecke eine reine Honigsorte darstellt (z.B. Linde, Lavendel, Eukalyptus).
-    # Die Farben im Inneren sind Mischungen der drei.
-    add_color_triangle(ax_triangle, size=3.0)  # Hinzufügen des Farbdreiecks
-
-    # Speichern des Gesamtplots mit der Farbdreieck-Legende
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f"{filename_prefix}_Alle.png"), dpi=300, bbox_inches="tight")
-    plt.close()
-    """
-
-
 def mixed_peak_color(unique_labels: list[str],
                      peak: dict) -> tuple:
     """
@@ -389,57 +328,66 @@ def mixed_peak_color(unique_labels: list[str],
     return tuple(mixed_color)
 
 
-# Die Funktion erzeugt ein Farbdreieck, welches die Mischunng von drei Farben für die entsprechenden Honigytypen visualisiert
-# ax: Die Haupt-Achse, auf der das Farbdreieck eingefügt wird
-# size: Größe des Farbdreiecks relativ zum Plot (z.B. 0.2 = 20% der Achse)
-def add_color_triangle(ax, size):
-    # Farbdreieck-Daten
-    # resolution--> bestimmt, wie fein das Farbdreieck aufgelöst wird)
-    resolution = 100
-    # Farben definieren
-    # Jede Honigsorte wird einer RGB-Farbe zugeordnet
-    # Rot=Linde
-    # Gelb=Lavendel
-    # Blau= Eukalyptus
-    # RGB-Werte sind als NumPy-Arrays
-    colors = {
-        "Linde": np.array([1.0, 0.0, 0.0]),  # Rot
-        "Lavendel": np.array([1.0, 1.0, 0.0]),  # Gelb
-        "Eukalyptus": np.array([0.0, 0.0, 1.0])  # Blau
-    }
-    img = np.ones((resolution, resolution, 3))
-    # Farbmischung für jedes Pixel
-    # i --> horizontale Achse, j --> vertikale Achse.
-    for i in range(resolution):
-        for j in range(resolution):
-            linde = 1 - (i / (resolution - 1)) - (j / (resolution - 1))
-            lavendel = i / (resolution - 1)
-            eucalyptus = j / (resolution - 1)
-            # Liegt das Pixel innerhalb des Farbdreiecks --> RGB-Wert berechnen: Lineare Mischung der drei Grundfarben.
-            # Sonst --> Weiß--> So entsteht das klassische baryzentrische Farbdreieck
-            if linde >= 0 and lavendel >= 0 and eucalyptus >= 0:
-                color = (
-                        linde * colors["Linde"] +
-                        lavendel * colors["Lavendel"] +
-                        eucalyptus * colors["Eukalyptus"]
-                )
-                img[j, i, :] = color
-            else:
-                img[j, i, :] = [1, 1, 1]
+def plot_feature_and_reconstruction(feature: torch.Tensor,
+                                    label_prediction: torch.Tensor,
+                                    epoch: int,
+                                    plot_dir: Path,
+                                    image_number: int = 20):
 
-    # Inset-Achse erstellen
-    # inset_axes legt eine kleine Achse innerhalb der Haupt-Achse an
-    # extent=(0,1,0,1) legt die Koordinaten des Bildes fest.
+    num_to_plot = min(feature.size(0), image_number)
 
-    axins = inset_axes(ax, width=f"{size * 100}%", height=f"{size * 100}%", loc='upper right', borderpad=1)
-    axins.imshow(img, origin='lower', extent=(0, 1, 0, 1))
-    axins.plot([0, 1, 0, 0], [0, 0, 1, 0], color='black', lw=1)
+    original_image = feature[:image_number].detach().cpu().numpy()
+    reconstructed_image = label_prediction[:image_number].detach().cpu().numpy()
 
-    # Labels
-    axins.text(-0.05, -0.05, "Linde", color=colors["Linde"], fontsize=5, ha='right', va='top')
-    axins.text(1.05, -0.05, "Lavendel", color=colors["Lavendel"], fontsize=5, ha='left', va='top')
-    axins.text(0.5, 1.05, "Eukalyptus", color=colors["Eukalyptus"], fontsize=5, ha='center', va='bottom')
-    # Versteckt Achsenlinien und Tickmarks – nur das Farbdreieck ist sichtbar
-    axins.axis('off')
+    fig, axes = plt.subplots(2, image_number, figsize=(num_to_plot * 1.5, 6))
+    for i in range(image_number):
+        # Original image.
+        ax_orig = axes[0, i]
+        ax_orig.imshow(original_image[i].squeeze(), cmap='RdBu_r')
+        ax_orig.set_title(f"Original {i + 1}")
+        ax_orig.axis('off')
 
-    # mix_component_color mischt Farben basierend auf den Anteilen von drei Honigsorten: Linde, Lavendel und Eukalyptus
+        # Reconstructed image.
+        ax_recon = axes[1, i]
+        ax_recon.imshow(reconstructed_image[i].squeeze(), cmap='RdBu_r')
+        ax_recon.set_title(f"Recon. {i + 1}")
+        ax_recon.axis('off')
+
+    filename = plot_dir / f"epoch_{epoch + 1}.png"
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+
+
+def plot_tsne(latents: torch.Tensor,
+              labels: torch.Tensor,
+              epoch: int,
+              plot_dir: Path) -> None:
+    """
+    This function creats and saves a T-SNE plot for a given epoch and their latent space vectors.
+    A T-SNE plot visualizes how the latent space is distributed. E.g. are similar peak forms saved in proximity?
+
+    :param latents: Tensor with all laten space vectors of the current epoch.
+    :param labels: Tensor with all labels for the given latents.
+    :param epoch: Current training/testing epoch.
+    :param plot_dir: Saving path for the .png file.
+
+    :return: None.
+    """
+
+    # Initialize TSNE.
+    tsne = TSNE(n_components=2, random_state=42, perplexity=30, max_iter=300)
+    latents_2d = tsne.fit_transform(latents)
+    labels = labels.cpu().numpy()
+
+    # Create the plot.
+    plt.figure(figsize=(8, 6))
+    scatter = plt.scatter(latents_2d[:, 0], latents_2d[:, 1], c=labels, cmap="tab10", alpha=0.5, s=5)
+    plt.colorbar(scatter, ticks=np.unique(labels), label='Class')
+    plt.title(f"Latent Space t-SNE Visualization (Epoch {epoch+1})")
+    plt.xlabel("t-SNE Dimension 1")
+    plt.ylabel("t-SNE Dimension 2")
+
+    # Save the plot.
+    plt.savefig(f"{plot_dir}/tsne_epoch_{epoch+1}.png", dpi=300)
+    plt.close()
