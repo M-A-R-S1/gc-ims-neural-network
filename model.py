@@ -23,7 +23,7 @@ def vae_loss(feature: torch.Tensor,
              feature_constructed: torch.Tensor,
              mean: torch.Tensor,
              log_variance: torch.Tensor,
-             beta: float = 1.0) -> torch.Tensor:
+             beta: float = 0.5) -> torch.Tensor:
     """
     This function calculates the loss for given feature, feature reconstruction and the latent space mean and
     logarithmic variance. The "Kullback–Leibler divergence" (kld) is used to determine how the latent space variables
@@ -59,17 +59,17 @@ class VariationalAutoencoderCNN(nn.Module):
         self.encoder = nn.Sequential(
             # First Conv-Block
             nn.Conv2d(in_channels=input_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.Conv2d(in_channels=2*hidden_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.BatchNorm2d(2*hidden_layers),
             nn.MaxPool2d(kernel_size=self.pooling_kernel),
 
             # Second Conv-Block
             nn.Conv2d(in_channels=2*hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.BatchNorm2d(hidden_layers),
             nn.MaxPool2d(kernel_size=self.pooling_kernel),
 
@@ -87,14 +87,14 @@ class VariationalAutoencoderCNN(nn.Module):
             # Reverse of second Conv-Block
             nn.Upsample(scale_factor=2, mode='nearest'),
             nn.Conv2d(in_channels=hidden_layers, out_channels=hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.Conv2d(in_channels=hidden_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
 
             # Reverse of the first Conv-Block
             nn.Upsample(size=(21, 21), mode='nearest'),
             nn.Conv2d(in_channels=2*hidden_layers, out_channels=2*hidden_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
-            nn.ReLU(),
+            nn.LeakyReLU(0.1),
             nn.Conv2d(in_channels=2*hidden_layers, out_channels=input_layers, kernel_size=self.kernel, stride=self.stride, padding=self.padding),
             nn.Sigmoid()
         )

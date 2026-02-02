@@ -14,11 +14,11 @@ if __name__ == '__main__':
 
     # Step 0: Define all necessary directories.
     # The root input dir.
-    input_dir = Path("./data/IMS_Olive_Oil_Geography_small")
+    input_dir = Path("./data/IMS_Olive_Oil_Geography")
     # The root output dir.
-    output_dir = Path("./output/IMS_Olive_Oil_Geography_small")
+    output_dir = Path("./output/IMS_Olive_Oil_Geography")
     # Plot dir for original and reconstructed peak heatmaps.
-    plot_dir = Path("./output/IMS_Olive_Oil_Geography_small/vae_results")
+    plot_dir = Path("./output/IMS_Olive_Oil_Geography/vae_results")
 
     # Check and create output if necessary.
     if not output_dir.exists():
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         peak_dataframe = peak.get_all_peaks(preprocessed_spectra=preprocessed_data,
                                             peak_radius=5,
                                             spectra_paths=spectra_paths,
-                                            create_heatmaps=True,
+                                            create_heatmaps=False,
                                             create_npy=True)
 
         # Save peak data to Excel file.

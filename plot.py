@@ -336,11 +336,11 @@ def plot_feature_and_reconstruction(feature: torch.Tensor,
 
     num_to_plot = min(feature.size(0), image_number)
 
-    original_image = feature[:image_number].detach().cpu().numpy()
-    reconstructed_image = label_prediction[:image_number].detach().cpu().numpy()
+    original_image = feature[:num_to_plot].detach().cpu().numpy()
+    reconstructed_image = label_prediction[:num_to_plot].detach().cpu().numpy()
 
-    fig, axes = plt.subplots(2, image_number, figsize=(num_to_plot * 1.5, 6))
-    for i in range(image_number):
+    fig, axes = plt.subplots(2, num_to_plot, figsize=(num_to_plot * 1.5, 6))
+    for i in range(num_to_plot):
         # Original image.
         ax_orig = axes[0, i]
         ax_orig.imshow(original_image[i].squeeze(), cmap='RdBu_r')
