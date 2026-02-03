@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from pathlib import Path
 
 def reparameterize(mean: torch.Tensor,
                    log_variance: torch.Tensor) -> torch.Tensor:
@@ -18,6 +19,7 @@ def reparameterize(mean: torch.Tensor,
     standard_deviation = torch.exp(0.5 * log_variance)
     random_multiplicator = torch.randn_like(standard_deviation)
     return mean + random_multiplicator * standard_deviation
+
 
 def vae_loss(feature: torch.Tensor,
              feature_constructed: torch.Tensor,
@@ -45,6 +47,7 @@ def vae_loss(feature: torch.Tensor,
     #recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
     kld = -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp())
     return recon + beta * kld
+
 
 class VariationalAutoencoderCNN(nn.Module):
     def __init__(self, input_layers: int, hidden_layers: int, latent_dimension: int) -> None:
@@ -107,3 +110,47 @@ class VariationalAutoencoderCNN(nn.Module):
 
         x = reparameterize(mean, log_variance)
         return self.decoder(x), mean, log_variance
+
+
+    def save_model(self, model_dir: str, file_name: str) -> None:
+        """
+        Save the state dict of this model to a specified directory and filename.
+
+        :param model_dir: the relative path where the models are saved.
+        :param file_name: the name of the saved model
+
+        :return: None.
+        """
+
+        # Create the directory if not already there.
+        model_path = Path(model_dir)
+        model_path.mkdir(parents=True, exist_ok=True)
+
+        # Creat the relative path to the file.
+        model_save_path = model_path / file_name
+
+        # Save the state dict of this model.
+        torch.save(obj=self.state_dict(), f=model_save_path)
+        print(f"Model saved at {model_save_path}")
+
+
+    def load_model(self, model_dir: str, file_name: str) -> None:
+        """
+        Load the state dict of this model from the specified directory and filename
+
+        :param model_dir: the relative path where the models are saved.
+        :param file_name: the name of the saved model
+
+        :return: None.
+        """
+
+        # Create the directory if not already there.
+        model_path = Path(model_dir)
+        model_path.mkdir(parents=True, exist_ok=True)
+
+        # Creat the relative path to the file.
+        model_load_path = model_path / file_name
+
+        # Load the model if it exists.
+        if model_load_path.exists():
+            self.load_state_dict(torch.load(f=model_load_path))

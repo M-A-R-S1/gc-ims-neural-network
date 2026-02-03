@@ -391,3 +391,30 @@ def plot_tsne(latents: torch.Tensor,
     # Save the plot.
     plt.savefig(f"{plot_dir}/tsne_epoch_{epoch+1}.png", dpi=300)
     plt.close()
+
+
+def plot_loss_curve(train_losses: list[float],
+                    test_losses: list[float],
+                    plot_dir: Path) -> None:
+    """
+    This function plots the train and test losses over time.
+
+    :param train_losses: List with all training losses as floats collected during training.
+    :param test_losses: List with all test losses as floats collected during evaluation.
+
+    :return: None
+    """
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(train_losses, label="Train Loss", color="blue", lw=2)
+    plt.plot(test_losses, label="Test Loss", color="red", lw=2)
+
+    plt.title("Model loss curve")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    # Save the plot.
+    plt.savefig(f"{plot_dir}/loss_curve.png", dpi=300)
+    plt.close()

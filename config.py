@@ -13,3 +13,12 @@ HIDDEN_DIM = 64
 # HIDDEN_DIM = 64       3.42 | 3.58 ***
 # HIDDEN_DIM = 256      3.49 | 3.67
 # HIDDEN_DIM = 128      3.41 | 3.58 ***
+
+# What should the main script do?
+DO_TRAINING = True              # Train the model?
+DO_TESTING = False              # Test the model?
+SAVING = True                   # Save the model?
+
+# Directory and filename for saving and loading.
+SAVE_DIR = "models"
+FILE_NAME = "GC-IMS-CNN-VAE.pt"

@@ -134,14 +134,14 @@ def eval_model(model: torch.nn.Module,
     return test_loss, mean_latents, labels
 
 
-def start_loop(model: torch.nn.Module,
-               train_dataloader: torch.utils.data.DataLoader,
-               test_dataloader: torch.utils.data.DataLoader,
-               loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
-               optimizer: torch.optim.Optimizer,
-               device: torch.device,
-               epochs: int,
-               plot_dir: Path) -> None:
+def training_loop(model: torch.nn.Module,
+                  train_dataloader: torch.utils.data.DataLoader,
+                  test_dataloader: torch.utils.data.DataLoader,
+                  loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
+                  optimizer: torch.optim.Optimizer,
+                  device: torch.device,
+                  epochs: int,
+                  plot_dir: Path) -> None:
     """
     Loops through the given number of epochs and performs training and evaluation steps on the given model and data.
 
@@ -162,6 +162,10 @@ def start_loop(model: torch.nn.Module,
     # After how many epochs should a T-SNE and comparison plot be created?
     plot_interval = 50
 
+    # Lists in which all training and test losses are saved (This is used later for the train/test loss plot)
+    train_losses = []
+    test_losses = []
+
     print(f"Starting the model training process for {epochs} epochs... Please wait")
     # walk through all epochs.
     for epoch in range(epochs):
@@ -180,6 +184,10 @@ def start_loop(model: torch.nn.Module,
                                                      current_epoch=epoch,
                                                      plot_interval=plot_interval,
                                                      plot_dir=plot_dir)
+
+        # Add the train and test loss to lists and save them for later.
+        train_losses.append(train_loss)
+        test_losses.append(test_loss)
 
         # Concatenate latents and labels for the epoch
         latents_tensor = torch.cat(mean_latents)
@@ -201,9 +209,65 @@ def start_loop(model: torch.nn.Module,
 
         print(f"Epoch: {epoch + 1}/{epochs} - Train loss: {train_loss:.4f} | Test loss: {test_loss:.4f}")
 
+    # Plot the train/test loss curve after looping through all epoches.
+    plot.plot_loss_curve(train_losses=train_losses,
+                         test_losses=test_losses,
+                         plot_dir=plot_dir)
+
     # Print the needed training Time
     train_end_time = timer()
     print_passed_time(start=train_start_time, end=train_end_time,  device=device, decimal_places=5)
+
+
+def testing_loop(model: torch.nn.Module,
+                 dataloader: torch.utils.data.DataLoader,
+                 loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
+                 device: torch.device,
+                 epoches_trained: int,
+                 plot_dir: Path) -> None:
+    """
+    Evaluates a given model and dataloader on unseen test data.
+
+    :param model: The model to evaluate.
+    :param dataloader: The dataloader to evaluate.
+    :param loss_fn: the loss function which is used to calculate the loss.
+    :param device: the device where the model and tensors are running.
+    :param epoches_trained: The number of epoches the model was trained.
+    :param plot_dir: Saving directory for comparison plots.
+
+    :return: Model loss as float value, a list with all mean latents and another list with associated labels.
+    """
+
+    print(f"Starting the model testing process... Please wait")
+    test_loss = 0
+    mean_latents = []
+    labels = []
+
+    model.eval()
+    with torch.inference_mode():
+        for feature, label in dataloader:
+            # Put features and labels on the device.
+            feature, label = feature.to(device), label.to(device)
+            # 1. Forward pass.
+            label_prediction, mean, log_variance = model(feature)
+            # 2. Calculate the test loss.
+            loss = loss_fn(feature, label_prediction, mean, log_variance)
+            test_loss += loss.item()
+
+            # Collect means and labels for T-SNE plot.
+            mean_latents.append(mean.detach().cpu())
+            labels.append(label)
+
+    # Normalize the values to Loss per epoch.
+    test_loss = test_loss / len(dataloader.dataset)
+    print(f"Test loss: {test_loss:.4f}")
+
+    # Create a plot and compare the original with the reconstructed image.
+    plot.plot_feature_and_reconstruction(feature=feature,
+                                         label_prediction=label_prediction,
+                                         epoch=epoches_trained,
+                                         plot_dir=plot_dir,
+                                         image_number=20)
 
 
 def discover_clusters(model: torch.nn.Module,

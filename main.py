@@ -1,4 +1,6 @@
 from pathlib import Path
+
+import config
 import preprocess
 import peak
 import model
@@ -85,15 +87,32 @@ if __name__ == '__main__':
                                             hidden_layers=HIDDEN_DIM,
                                             latent_dimension=LATENT_DIM).to(device)
 
+    # Check if there is already a saved model matching the filename and directory and load it.
+    model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
+
     # Define the optimizer.
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    # Start training and testing.
-    loop.start_loop(model=model,
-                    train_dataloader=train_dataloader,
-                    test_dataloader=test_dataloader,
-                    loss_fn=vae_loss,
-                    optimizer=optimizer,
-                    device=device,
-                    epochs=EPOCHS,
-                    plot_dir=plot_dir)
+    # Start training and testing if training is active.
+    if config.DO_TRAINING:
+        loop.training_loop(model=model,
+                           train_dataloader=train_dataloader,
+                           test_dataloader=test_dataloader,
+                           loss_fn=vae_loss,
+                           optimizer=optimizer,
+                           device=device,
+                           epochs=EPOCHS,
+                           plot_dir=plot_dir)
+
+    # Start testing unseen data to evaluate the model.
+    if config.DO_TESTING:
+        loop.testing_loop(model=model,
+                          dataloader=test_dataloader,
+                          loss_fn=vae_loss,
+                          device=device,
+                          epoches_trained=EPOCHS,
+                          plot_dir=plot_dir)
+
+    # Save the model.
+    if config.SAVING:
+        model.save_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
