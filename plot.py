@@ -7,6 +7,7 @@ import math
 import ims
 import networkx as nx
 from sklearn.manifold import TSNE
+from matplotlib.ticker import MaxNLocator
 
 def single_gcims_plot(spectrum: ims.Spectrum,
                       plot_dir: Path,
@@ -405,15 +406,21 @@ def plot_loss_curve(train_losses: list[float],
     :return: None
     """
 
+    # Define the epoch lenght for the x-axis.
+    epochs_range = range(1, len(train_losses) + 1)
+
     plt.figure(figsize=(10, 6))
-    plt.plot(train_losses, label="Train Loss", color="blue", lw=2)
-    plt.plot(test_losses, label="Test Loss", color="red", lw=2)
+    plt.plot(epochs_range, train_losses, label="Train Loss", color="blue", lw=2)
+    plt.plot(epochs_range, test_losses, label="Test Loss", color="red", lw=2)
 
     plt.title("Model loss curve")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.legend()
     plt.grid(True, alpha=0.3)
+
+    # Set the x-Axis to integer values.
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
 
     # Save the plot.
     plt.savefig(f"{plot_dir}/loss_curve.png", dpi=300)

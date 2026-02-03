@@ -1,7 +1,7 @@
 # Define training hyperparameters here.
 BATCH_SIZE = 16
 LEARNING_RATE = 0.0001
-EPOCHS = 100
+EPOCHS = 5
 LATENT_DIM = 6
 # LATENT_DIM = 6        3.42 | 3.53
 # LATENT_DIM = 4        3.41 | 3.63
