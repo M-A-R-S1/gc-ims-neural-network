@@ -329,16 +329,28 @@ def mixed_peak_color(unique_labels: list[str],
     return tuple(mixed_color)
 
 
-def plot_feature_and_reconstruction(feature: torch.Tensor,
-                                    label_prediction: torch.Tensor,
-                                    epoch: int,
-                                    plot_dir: Path,
-                                    image_number: int = 20):
+def plot_original_and_reconstruction(feature: torch.Tensor,
+                                     feature_reconstructed: torch.Tensor,
+                                     epoch: int,
+                                     plot_dir: Path,
+                                     image_number: int = 20) -> None:
+    """
+    This function is called during the testing of a pretrained model and creates plots which compares the original
+    feature image with the reconstructed image created from the variational autoencoder.
+
+    :param feature: The original feature image.
+    :param feature_reconstructed: The reconstructed feature image of the variational autoencoder.
+    :param epoch: The number of epochs the model was trained on.
+    :param plot_dir: Directory to save the plots.
+    :param image_number: Number of images to plot.
+
+    :return: None
+    """
 
     num_to_plot = min(feature.size(0), image_number)
 
     original_image = feature[:num_to_plot].detach().cpu().numpy()
-    reconstructed_image = label_prediction[:num_to_plot].detach().cpu().numpy()
+    reconstructed_image = feature_reconstructed[:num_to_plot].detach().cpu().numpy()
 
     fig, axes = plt.subplots(2, num_to_plot, figsize=(num_to_plot * 1.5, 6))
     for i in range(num_to_plot):

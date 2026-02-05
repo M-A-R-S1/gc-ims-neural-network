@@ -265,11 +265,11 @@ def testing_loop(model: torch.nn.Module,
     print(f"Test loss: {test_loss:.4f}")
 
     # Create a plot and compare the original with the reconstructed image.
-    plot.plot_feature_and_reconstruction(feature=feature,
-                                         label_prediction=label_prediction,
-                                         epoch=epoches_trained,
-                                         plot_dir=plot_dir,
-                                         image_number=20)
+    plot.plot_original_and_reconstruction(feature=feature,
+                                          feature_reconstructed=label_prediction,
+                                          epoch=epoches_trained,
+                                          plot_dir=plot_dir,
+                                          image_number=20)
 
 
 def discover_clusters(model: torch.nn.Module,
