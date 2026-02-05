@@ -65,10 +65,12 @@ def train_model(model: torch.nn.Module,
         label_prediction, mean, log_variance = model(feature)
         # 2. Calculate the loss.
         loss = loss_fn(feature, label_prediction, mean, log_variance)
+        # Divide the loss with the bach size.
+        normalized_loss = loss / feature.size(0)
         # 3 Clear the gardient.
         optimizer.zero_grad()
         # 4. Backpropagation.
-        loss.backward()
+        normalized_loss.backward()
         # 5. Adjust parameters through gradient decent.
         optimizer.step()
 
