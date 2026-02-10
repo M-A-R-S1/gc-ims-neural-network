@@ -127,11 +127,11 @@ def eval_model(model: torch.nn.Module,
 
     # Every X epochs create a plot and compare the original with the reconstructed image.
     if (current_epoch + 1) % plot_interval == 0 or current_epoch == 0:
-        plot.plot_feature_and_reconstruction(feature=feature,
-                                             label_prediction=label_prediction,
-                                             epoch=current_epoch,
-                                             plot_dir=plot_dir,
-                                             image_number=20)
+        plot.plot_original_and_reconstruction(feature=feature,
+                                              feature_reconstructed=label_prediction,
+                                              plot_dir=plot_dir,
+                                              epoch=current_epoch,
+                                              image_number=20)
 
     return test_loss, mean_latents, labels
 

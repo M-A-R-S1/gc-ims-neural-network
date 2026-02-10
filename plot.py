@@ -332,7 +332,8 @@ def mixed_peak_color(unique_labels: list[str],
 def plot_original_and_reconstruction(feature: torch.Tensor,
                                      feature_reconstructed: torch.Tensor,
                                      plot_dir: Path,
-                                     test_loss: float,
+                                     test_loss: float = None,
+                                     epoch: int = None,
                                      image_number: int = 20) -> None:
     """
     This function is called during the testing of a pretrained model and creates plots which compares the original
@@ -342,6 +343,7 @@ def plot_original_and_reconstruction(feature: torch.Tensor,
     :param feature_reconstructed: The reconstructed feature image of the variational autoencoder.
     :param plot_dir: Directory to save the plots.
     :param test_loss: The test loss after testing the pretrained model.
+    :param epoch: The current epoch.
     :param image_number: Number of images to plot.
 
     :return: None
@@ -366,7 +368,10 @@ def plot_original_and_reconstruction(feature: torch.Tensor,
         ax_recon.set_title(f"Recon. {i + 1}")
         ax_recon.axis('off')
 
-    filename = plot_dir / f"tested_loss-{test_loss:.4f}.png"
+    if test_loss is not None:
+        filename = plot_dir / f"tested_loss-{test_loss:.4f}.png"
+    else:
+        filename = plot_dir / f"epoch_{epoch+1}.png"
     plt.tight_layout()
     plt.savefig(filename)
     plt.close()

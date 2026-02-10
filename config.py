@@ -1,9 +1,9 @@
 # OLIVE DATA [https://doi.org/10.1016/j.dib.2022.108730]
-#DRIFT_CUT = (1.02, 2.5)
-#RETENTION_CUT = (80, 900)
-#INPUT_DIR = "./data/IMS_Olive_Oil_Geography"
-#OUTPUT_DIR = "./output/IMS_Olive_Oil_Geography"
-#PLOT_DIR = "./output/IMS_Olive_Oil_Geography/vae_results"
+DRIFT_CUT = (1.02, 2.5)
+RETENTION_CUT = (80, 900)
+INPUT_DIR = "./data/IMS_Olive_Oil_Geography"
+OUTPUT_DIR = "./output/IMS_Olive_Oil_Geography"
+PLOT_DIR = "./output/IMS_Olive_Oil_Geography/vae_results"
 
 # HONEY DATA [http://dx.doi.org/10.1016/j.foodres.2022.111779]
 #DRIFT_CUT = (1.02, 2.5)
