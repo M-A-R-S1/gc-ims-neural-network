@@ -1,5 +1,6 @@
 import torch
 import plot
+import config
 from timeit import default_timer as timer
 from pathlib import Path
 from typing import Callable
@@ -162,7 +163,7 @@ def training_loop(model: torch.nn.Module,
     # Set the start time.
     train_start_time = timer()
     # After how many epochs should a T-SNE and comparison plot be created?
-    plot_interval = 50
+    plot_interval = config.PLOT_INTERVAL
 
     # Lists in which all training and test losses are saved (This is used later for the train/test loss plot)
     train_losses = []

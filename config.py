@@ -22,6 +22,7 @@ LEARNING_RATE = 0.00005
 EPOCHS = 1500
 LATENT_DIM = 6
 HIDDEN_DIM = 64
+PLOT_INTERVAL = 100
 
 # What should the main neural network do?
 DO_TRAINING = True              # Train the model?
