@@ -43,8 +43,8 @@ def vae_loss(feature: torch.Tensor,
     :return: torch tensor with the calculated loss.
     """
 
-    recon = nn.functional.mse_loss(feature_constructed, feature, reduction='sum')
-    #recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
+    #recon = nn.functional.mse_loss(feature_constructed, feature, reduction='sum')
+    recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
     kld = -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp())
     return recon + beta * kld
 

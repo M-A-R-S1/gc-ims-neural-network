@@ -288,7 +288,7 @@ def extract_consensus_peaks(excel_file: Path,
                             output_dir: Path,
                             create_plots: str,
                             filter_types: list[str] = None,
-                            max_node_distance: float = 0.004) -> None:
+                            max_node_distance: float = 0.006) -> None:
     """
     Not yet described ... TODO
 

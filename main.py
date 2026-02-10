@@ -16,11 +16,11 @@ if __name__ == '__main__':
 
     # Step 0: Define all necessary directories.
     # The root input dir.
-    input_dir = Path("./data/IMS_Olive_Oil_Geography")
+    input_dir = Path(config.INPUT_DIR)
     # The root output dir.
-    output_dir = Path("./output/IMS_Olive_Oil_Geography")
+    output_dir = Path(config.OUTPUT_DIR)
     # Plot dir for original and reconstructed peak heatmaps.
-    plot_dir = Path("./output/IMS_Olive_Oil_Geography/vae_results")
+    plot_dir = Path(config.PLOT_DIR)
 
     # Check and create output if necessary.
     if not output_dir.exists():
@@ -34,13 +34,15 @@ if __name__ == '__main__':
     preprocessed_data, spectra_paths = preprocess.start(input_dir=input_dir,
                                                         output_dir=output_dir,
                                                         create_plots="Single",
+                                                        drift_cut=config.DRIFT_CUT,
+                                                        retention_cut=config.RETENTION_CUT,
                                                         load_existing=True)
 
-    
+
     # Step 2: Calculate peaks on preprocessed data.
     try:
         peak_dataframe = peak.get_all_peaks(preprocessed_spectra=preprocessed_data,
-                                            peak_radius=5,
+                                            peak_radius=config.PEAK_RADIUS,
                                             spectra_paths=spectra_paths,
                                             create_heatmaps=False,
                                             create_npy=True)
@@ -58,9 +60,10 @@ if __name__ == '__main__':
     peak.extract_consensus_peaks(excel_file=excel_filename,
                                  output_dir=output_dir,
                                  create_plots="overview",
-                                 max_node_distance=0.006)
-    """
+                                 max_node_distance=config.MAX_NODE_DISTANCE)
 
+    """
+    # Step 4: Training the VAE.
     # Device agnostic code.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -78,7 +81,12 @@ if __name__ == '__main__':
 
     # Create the datasets and dataloaders.
     train_dataset = dataloader.VaeDataset(train_paths, class_dict)
-    test_dataset = dataloader.VaeDataset(test_paths, class_dict)
+    # Create the test dataset. Use all the data or split it.
+    if config.TEST_WITH_ALL_DATA:
+        test_dataset = dataloader.VaeDataset(npy_paths, class_dict)
+    else :
+        test_dataset = dataloader.VaeDataset(test_paths, class_dict)
+
     train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
@@ -110,7 +118,6 @@ if __name__ == '__main__':
                           dataloader=test_dataloader,
                           loss_fn=vae_loss,
                           device=device,
-                          epoches_trained=EPOCHS,
                           plot_dir=plot_dir)
 
     # Save the model.

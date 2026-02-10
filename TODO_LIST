@@ -17,6 +17,8 @@
 ----------------------------------------------------------------------------------------------------------------------
 - Use the olive oil trained model, and insert the honey peaks (and later breathing air peaks).
 - Question: Can the model reconstruct these new peaks? Are there new peak forms different from the olive ones?
+    - Answer: Yes, the model can reconstruct peaks. But the test loss is higher, because there are new peak forms which
+              the model did not learn with the olive data.
 - Question 2: Can we train a model with both datasets? What are the results for such a model?
 ----------------------------------------------------------------------------------------------------------------------
 - Can we change the labeling for the peaks? Instead of labeling them "Greece", "Italy", and "Spain", can we label the peaks

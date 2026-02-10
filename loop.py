@@ -225,7 +225,6 @@ def testing_loop(model: torch.nn.Module,
                  dataloader: torch.utils.data.DataLoader,
                  loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
                  device: torch.device,
-                 epoches_trained: int,
                  plot_dir: Path) -> None:
     """
     Evaluates a given model and dataloader on unseen test data.
@@ -234,7 +233,6 @@ def testing_loop(model: torch.nn.Module,
     :param dataloader: The dataloader to evaluate.
     :param loss_fn: the loss function which is used to calculate the loss.
     :param device: the device where the model and tensors are running.
-    :param epoches_trained: The number of epoches the model was trained.
     :param plot_dir: Saving directory for comparison plots.
 
     :return: Model loss as float value, a list with all mean latents and another list with associated labels.
@@ -267,8 +265,8 @@ def testing_loop(model: torch.nn.Module,
     # Create a plot and compare the original with the reconstructed image.
     plot.plot_original_and_reconstruction(feature=feature,
                                           feature_reconstructed=label_prediction,
-                                          epoch=epoches_trained,
                                           plot_dir=plot_dir,
+                                          test_loss=test_loss,
                                           image_number=20)
 
 
