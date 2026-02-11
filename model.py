@@ -25,7 +25,7 @@ def vae_loss(feature: torch.Tensor,
              feature_constructed: torch.Tensor,
              mean: torch.Tensor,
              log_variance: torch.Tensor,
-             beta: float = 0.5) -> torch.Tensor:
+             beta: float = 1.5) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     This function calculates the loss for given feature, feature reconstruction and the latent space mean and
     logarithmic variance. The "Kullback–Leibler divergence" (kld) is used to determine how the latent space variables
@@ -46,7 +46,7 @@ def vae_loss(feature: torch.Tensor,
     #recon = nn.functional.mse_loss(feature_constructed, feature, reduction='sum')
     recon = nn.functional.binary_cross_entropy(feature_constructed, feature, reduction='sum')
     kld = -0.5 * torch.sum(1 + log_variance - mean.pow(2) - log_variance.exp())
-    return recon + beta * kld
+    return recon + beta * kld, recon, kld
 
 
 class VariationalAutoencoderCNN(nn.Module):

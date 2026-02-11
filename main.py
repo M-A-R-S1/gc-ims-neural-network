@@ -44,7 +44,7 @@ if __name__ == '__main__':
         peak_dataframe = peak.get_all_peaks(preprocessed_spectra=preprocessed_data,
                                             peak_radius=config.PEAK_RADIUS,
                                             spectra_paths=spectra_paths,
-                                            create_heatmaps=False,
+                                            create_heatmaps=True,
                                             create_npy=True)
 
         # Save peak data to Excel file.

@@ -412,7 +412,11 @@ def plot_tsne(latents: torch.Tensor,
 
 
 def plot_loss_curve(train_losses: list[float],
+                    train_bcl_losses: list[float],
+                    train_kdl_losses: list[float],
                     test_losses: list[float],
+                    test_bcl_losses: list[float],
+                    test_kdl_losses: list[float],
                     plot_dir: Path) -> None:
     """
     This function plots the train and test losses over time.
@@ -426,6 +430,7 @@ def plot_loss_curve(train_losses: list[float],
     # Define the epoch lenght for the x-axis.
     epochs_range = range(1, len(train_losses) + 1)
 
+    """
     plt.figure(figsize=(10, 6))
     plt.plot(epochs_range, train_losses, label="Train Loss", color="blue", lw=2)
     plt.plot(epochs_range, test_losses, label="Test Loss", color="red", lw=2)
@@ -442,3 +447,33 @@ def plot_loss_curve(train_losses: list[float],
     # Save the plot.
     plt.savefig(f"{plot_dir}/loss_curve.png", dpi=300)
     plt.close()
+    """
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 15), sharex=True)
+
+    # 1. Total Loss
+    ax1.plot(epochs_range, train_losses, color="blue", label="Train Total")
+    ax1.plot(epochs_range, test_losses, color="red", linestyle="--", label="Test Total")
+    ax1.set_title("Total VAE Loss (BCE + beta * KLD)")
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+
+    # 2. BCE Loss (Reconstruction)
+    ax2.plot(epochs_range, train_bcl_losses, color="blue", label="Train BCE")
+    ax2.plot(epochs_range, test_bcl_losses, color="red", linestyle="--", label="Test BCE")
+    ax2.set_title("BCE Loss (Reconstruction Quality)")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    # 3. KLD Loss (Regularisation)
+    ax3.plot(epochs_range, train_kdl_losses, color="green", label="Train KLD")
+    ax3.plot(epochs_range, test_kdl_losses, color="orange", linestyle="--", label="Test KLD")
+    ax3.set_title("KLD Loss (Latent Space Regularization)")
+    ax3.set_xlabel("Epoch")
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(plot_dir / "detailed_loss_curves.png", dpi=300)
+    plt.close()
+
