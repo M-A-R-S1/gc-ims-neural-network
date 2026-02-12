@@ -19,19 +19,19 @@ MAX_NODE_DISTANCE = 0.006
 # Define training hyperparameters here.
 BATCH_SIZE = 16
 LEARNING_RATE = 0.00005
-EPOCHS = 300
+EPOCHS = 1500
 LATENT_DIM = 6
 HIDDEN_DIM = 64
-PLOT_INTERVAL = 100
+PLOT_INTERVAL = 300
 TARGET_BETA = 1.0
-BETA_WARMUP = 100
+BETA_WARMUP = 300
 
 # What should the main neural network do?
 DO_TRAINING = True                # Train the model?
 DO_TESTING = False                # Test the model?
-TEST_WITH_ALL_DATA = False        # Do you want to test the modell with all the available data? [No Splitting].
-SAVING = False                    # Save the model?
+TEST_WITH_ALL_DATA = False        # Do you want to test the model with all the available data? [No Splitting].
+SAVING = True                     # Save the model?
 
 # Directory and filename for saving and loading.
 SAVE_DIR = "models"
-FILE_NAME = "GC-IMS-CNN-VAE-OLIVES-BCE-LOSS-TEST.pt"
+FILE_NAME = "GC-IMS-CNN-VAE-OLIVES-BCE-1500.pt"
