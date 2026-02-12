@@ -43,7 +43,7 @@ def train_model(model: torch.nn.Module,
                 loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
                 optimizer: torch.optim.Optimizer,
                 beta: float,
-                device: torch.device) -> tuple[float, float, float]:
+                device: torch.device) -> dict[str, float]:
     """
     Trains a given model and dataloader and returns the calculated loss.
 
@@ -51,15 +51,16 @@ def train_model(model: torch.nn.Module,
     :param dataloader: The dataloader to train with.
     :param loss_fn: the loss function which is used to calculate the loss.
     :param optimizer: the optimizer function which is used for backpropagation.
+    :param beta: Beta value for the loss function.
     :param device: the device where the model and tensors are running.
 
-    :return: Model loss as float value.
+    :return: Dictionary with total, reconstruction and Kullback–Leibler divergence loss.
     """
 
     model.train()
-    train_loss = 0
-    train_bce = 0
-    train_kld = 0
+    loss = {'total' : 0,
+            'recon' : 0,
+            'kld' : 0 }
 
     for feature, label in dataloader:
         # Put image and label on the device.
@@ -68,9 +69,9 @@ def train_model(model: torch.nn.Module,
         # 1. Forward pass.
         label_prediction, mean, log_variance = model(feature)
         # 2. Calculate the loss.
-        loss, bce_loss, kld_loss = loss_fn(feature, label_prediction, mean, log_variance, beta)
+        total_loss, recon_loss, kld_loss = loss_fn(feature, label_prediction, mean, log_variance, beta)
         # Divide the loss with the bach size.
-        normalized_loss = loss / feature.size(0)
+        normalized_loss = total_loss / feature.size(0)
         # 3 Clear the gardient.
         optimizer.zero_grad()
         # 4. Backpropagation.
@@ -78,16 +79,16 @@ def train_model(model: torch.nn.Module,
         # 5. Adjust parameters through gradient decent.
         optimizer.step()
 
-        train_loss += loss.item()
-        train_bce += bce_loss.item()
-        train_kld += kld_loss.item()
+        loss['total'] += total_loss.item()
+        loss['recon'] += recon_loss.item()
+        loss['kld'] += kld_loss.item()
 
     # Normalize the values to Loss per epoch.
-    train_loss = train_loss / len(dataloader.dataset)
-    train_bce = train_bce / len(dataloader.dataset)
-    train_kld = train_kld / len(dataloader.dataset)
+    loss['total'] = loss['total'] / len(dataloader.dataset)
+    loss['recon'] = loss['recon'] / len(dataloader.dataset)
+    loss['kld'] = loss['kld'] / len(dataloader.dataset)
 
-    return train_loss, train_bce, train_kld
+    return loss
 
 
 def eval_model(model: torch.nn.Module,
@@ -95,8 +96,9 @@ def eval_model(model: torch.nn.Module,
                loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
                device: torch.device,
                current_epoch: int,
+               beta: float,
                plot_interval: int,
-               plot_dir: Path) -> tuple[float, float, float, list, list]:
+               plot_dir: Path) -> tuple[dict[str, float], list, list]:
     """
     Evaluates a given model and dataloader by calculating the loss.
 
@@ -105,15 +107,17 @@ def eval_model(model: torch.nn.Module,
     :param loss_fn: the loss function which is used to calculate the loss.
     :param device: the device where the model and tensors are running.
     :param current_epoch: The current evaluation epoch.
+    :param: beta: Beta value for the loss function.
     :param plot_interval: Defines after how many epochs a comparison plot is created.
     :param plot_dir: Saving directory for comparison plots.
 
     :return: Model loss as float value, a list with all mean latents and another list with associated labels.
     """
 
-    test_loss = 0
-    test_bcl = 0
-    test_kdl = 0
+    loss = {'total' : 0,
+            'recon' : 0,
+            'kld' : 0 }
+
     mean_latents = []
     labels = []
 
@@ -125,20 +129,20 @@ def eval_model(model: torch.nn.Module,
             # 1. Forward pass.
             label_prediction, mean, log_variance = model(feature)
             # 2. Calculate the test loss.
-            loss, bcl_loss, kdl_loss = loss_fn(feature, label_prediction, mean, log_variance)
+            total_loss, recon_loss, kld_loss = loss_fn(feature, label_prediction, mean, log_variance, beta)
 
-            test_loss += loss.item()
-            test_bcl += bcl_loss.item()
-            test_kdl += kdl_loss.item()
+            loss['total'] += total_loss.item()
+            loss['recon'] += recon_loss.item()
+            loss['kld'] += kld_loss.item()
 
             # Collect means and labels for T-SNE plot.
             mean_latents.append(mean.detach().cpu())
             labels.append(label)
 
     # Normalize the values to Loss per epoch.
-    test_loss = test_loss / len(dataloader.dataset)
-    test_bcl = test_bcl / len(dataloader.dataset)
-    test_kdl = test_kdl / len(dataloader.dataset)
+    loss['total'] = loss['total'] / len(dataloader.dataset)
+    loss['recon'] = loss['recon'] / len(dataloader.dataset)
+    loss['kld'] = loss['kld'] / len(dataloader.dataset)
 
     # Every X epochs create a plot and compare the original with the reconstructed image.
     if (current_epoch + 1) % plot_interval == 0 or current_epoch == 0:
@@ -148,13 +152,13 @@ def eval_model(model: torch.nn.Module,
                                               epoch=current_epoch,
                                               image_number=20)
 
-    return test_loss, test_bcl, test_kdl, mean_latents, labels
+    return loss, mean_latents, labels
 
 
 def training_loop(model: torch.nn.Module,
                   train_dataloader: torch.utils.data.DataLoader,
                   test_dataloader: torch.utils.data.DataLoader,
-                  loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
+                  loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
                   optimizer: torch.optim.Optimizer,
                   device: torch.device,
                   epochs: int,
@@ -179,51 +183,52 @@ def training_loop(model: torch.nn.Module,
     # After how many epochs should a T-SNE and comparison plot be created?
     plot_interval = config.PLOT_INTERVAL
 
-    # Lists in which all training and test losses are saved (This is used later for the train/test loss plot)
-    train_losses = []
-    train_bcl_losses = []
-    train_kdl_losses = []
-    test_losses = []
-    test_bcl_losses = []
-    test_kdl_losses = []
+    # Dictionary with lists in which all training and test losses are saved.
+    loss_dict = {'train_total': [],
+                 'train_recon': [],
+                 'train_kld': [],
+                 'test_total' : [],
+                 'test_recon': [],
+                 'test_kld': [] }
 
-    beta_start_epoche = 100
-    target_beta = 1.5
+    beta_warmup = config.BETA_WARMUP
+    target_beta = config.TARGET_BETA
 
     print(f"Starting the model training process for {epochs} epochs... Please wait")
     # walk through all epochs.
     for epoch in range(epochs):
 
-        # Calculate the current beta value.
-        if epoch < beta_start_epoche:
-            current_beta =  target_beta * (epoch / beta_start_epoche)
+        # Calculate the current beta value [Beta annealing].
+        if epoch < beta_warmup:
+            current_beta =  target_beta * (epoch / beta_warmup)
         else:
             current_beta = target_beta
 
         # Train the model
-        train_loss, bcl_loss, kdl_loss = train_model(model=model,
-                                         dataloader=train_dataloader,
-                                         loss_fn=loss_fn,
-                                         optimizer=optimizer,
-                                         beta=current_beta,
-                                         device=device)
+        train_loss = train_model(model=model,
+                                 dataloader=train_dataloader,
+                                 loss_fn=loss_fn,
+                                 optimizer=optimizer,
+                                 beta=current_beta,
+                                 device=device)
 
         # Evaluates the model
-        test_loss, test_bcl, test_kdl, mean_latents, labels = eval_model(model=model,
-                                                                         dataloader=test_dataloader,
-                                                                         loss_fn=loss_fn,
-                                                                         device=device,
-                                                                         current_epoch=epoch,
-                                                                         plot_interval=plot_interval,
-                                                                         plot_dir=plot_dir)
+        test_loss, mean_latents, labels = eval_model(model=model,
+                                                     dataloader=test_dataloader,
+                                                     loss_fn=loss_fn,
+                                                     device=device,
+                                                     current_epoch=epoch,
+                                                     beta=current_beta,
+                                                     plot_interval=plot_interval,
+                                                     plot_dir=plot_dir)
 
         # Add the losses to lists and save them for later.
-        train_losses.append(train_loss)
-        train_bcl_losses.append(bcl_loss)
-        train_kdl_losses.append(kdl_loss)
-        test_losses.append(test_loss)
-        test_bcl_losses.append(test_bcl)
-        test_kdl_losses.append(test_kdl)
+        loss_dict['train_total'].append(train_loss['total'])
+        loss_dict['train_recon'].append(train_loss['recon'])
+        loss_dict['train_kld'].append(train_loss['kld'])
+        loss_dict['test_total'].append(test_loss['total'])
+        loss_dict['test_recon'].append(test_loss['recon'])
+        loss_dict['test_kld'].append(test_loss['kld'])
 
         # Concatenate latents and labels for the epoch
         latents_tensor = torch.cat(mean_latents)
@@ -243,15 +248,10 @@ def training_loop(model: torch.nn.Module,
                               plot_dir=plot_dir,
                               n_clusters=20)
 
-        print(f"Epoch: {epoch + 1}/{epochs} - Train loss: {train_loss:.4f} | Test loss: {test_loss:.4f}")
+        print(f"Epoch: {epoch + 1}/{epochs} - Train loss: {train_loss['total']:.4f} | Test loss: {test_loss['total']:.4f}")
 
     # Plot the train/test loss curve after looping through all epoches.
-    plot.plot_loss_curve(train_losses=train_losses,
-                         train_bcl_losses=train_bcl_losses,
-                         train_kdl_losses=train_kdl_losses,
-                         test_losses=test_losses,
-                         test_bcl_losses=test_bcl_losses,
-                         test_kdl_losses=test_kdl_losses,
+    plot.plot_loss_curve(losses=loss_dict,
                          plot_dir=plot_dir)
 
     # Print the needed training Time
@@ -261,7 +261,7 @@ def training_loop(model: torch.nn.Module,
 
 def testing_loop(model: torch.nn.Module,
                  dataloader: torch.utils.data.DataLoader,
-                 loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], torch.Tensor],
+                 loss_fn: Callable[[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, float], tuple[torch.Tensor, torch.Tensor, torch.Tensor]],
                  device: torch.device,
                  plot_dir: Path) -> None:
     """
@@ -289,7 +289,7 @@ def testing_loop(model: torch.nn.Module,
             # 1. Forward pass.
             label_prediction, mean, log_variance = model(feature)
             # 2. Calculate the test loss.
-            loss = loss_fn(feature, label_prediction, mean, log_variance)
+            loss, _, _ = loss_fn(feature, label_prediction, mean, log_variance, config.TARGET_BETA)
             test_loss += loss.item()
 
             # Collect means and labels for T-SNE plot.
