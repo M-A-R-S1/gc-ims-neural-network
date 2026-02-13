@@ -139,7 +139,7 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
        :return: None.
        """
 
-    heatmap_dir = plot_dir / "heatmap" / spectrum.name
+    heatmap_dir = plot_dir / spectrum.name
     if not heatmap_dir.exists():
         heatmap_dir.mkdir(parents=True, exist_ok=True)
 

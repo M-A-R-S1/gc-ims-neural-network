@@ -3,6 +3,7 @@ from pathlib import Path
 import plot
 from multiprocessing import Pool
 import os
+import warnings
 
 def start(input_dir: Path,
           output_dir: Path,
@@ -102,7 +103,7 @@ def start(input_dir: Path,
 
         tasks.append(task_args)
 
-    # Start parallel processing. One cpu core handels one spectrum.
+    # Start parallel processing. One cpu core handles one spectrum.
     with Pool(cpu_cores) as p:
         dataset_data = p.starmap(preprocess_spectra, tasks)
 
@@ -194,3 +195,48 @@ def preprocess_spectra(spectrum: ims.Spectrum,
 
     # Return the preprocessed spectrum.
     return spectrum
+
+
+def load_hdf5_spectra (input_dir: Path,
+                       output_dir: Path) -> tuple[list[ims.Spectrum], list[Path]]:
+
+    """
+    This function load already preprocessed and saved spectra as hdf5. files, which were created at the beginning
+    in step I. This is the first step for the consensus peak window generation process.
+
+    :param input_dir: The directory where the .mea files are located in.
+    :param output_dir: Saving path of the plotting image.
+
+    :return: Tuple with a list of preprocessed spectra and a list of their paths.
+    """
+
+    print("=======================================================")
+    print(f"V: LOADING HDF5 FILES")
+
+    # List of paths to the spectra directories.
+    spectra_paths = []
+    # List of loaded spectra [Spectra which were preprocessed earlier].
+    loaded_spectra = []
+
+    dataset = ims.Dataset.read_mea(path=str(input_dir),
+                                   subfolders=True,
+                                   sequential=True,
+                                   compr="binning")
+
+    # load .hdf5 files for each spectrum. An .hdf5 file indicates that a spectrum was already processed.
+    for idx, spectrum in enumerate(dataset.data):
+        spectrum_path = output_dir / dataset.labels[idx] / "hdf5" / f"{spectrum.name}.hdf5"
+        if spectrum_path.exists():
+            loaded_spectrum = ims.Spectrum.read_hdf5(spectrum_path)
+            loaded_spectra.append(loaded_spectrum)
+            # Save the output directory of the spektrum
+            spectra_paths.append(output_dir / dataset.labels[idx])
+            print(f"\t- Spectrum {idx + 1}/{len(dataset.data)} - Save file found [loaded]")
+
+    # Inform the user that the number of spectra and preprocessed 5df5 files are different.
+    if len(loaded_spectra) != len(dataset.data):
+        warnings.warn(f"Attention! Spectra count ({len(loaded_spectra)}) does not match dataset size ({len(dataset.data)}).")
+
+    return loaded_spectra, spectra_paths
+
+

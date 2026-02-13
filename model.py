@@ -153,3 +153,4 @@ class VariationalAutoencoderCNN(nn.Module):
         # Load the model if it exists.
         if model_load_path.exists():
             self.load_state_dict(torch.load(f=model_load_path))
+            print(f"Model loaded at {model_load_path}")

@@ -1,4 +1,6 @@
 import ims
+import plot
+import config
 import os
 import numpy as np
 import pandas as pd
@@ -10,7 +12,7 @@ from multiprocessing import Pool
 import networkx as nx
 from collections import defaultdict
 from scipy.spatial import KDTree
-import plot
+
 
 
 def get_all_peaks(preprocessed_spectra: list[ims.Spectrum],
@@ -48,12 +50,9 @@ def get_all_peaks(preprocessed_spectra: list[ims.Spectrum],
         # Append the tuple of arguments to the tasks list.
         tasks.append(task_args)
 
-    # Start parallel processing. One cpu core handels one spectrum.
+    # Start parallel processing. One cpu core handles one spectrum.
     with Pool(cpu_cores) as p:
         directory_list = p.starmap(peak_detection, tasks)
-
-    # TODO -> Create an overview plot of all spectra with their detected peaks [without neighbor peaks]
-    # See "combine_peak_plots_to_single_figure" for inspiration
 
     # Extract all peak information (item) from within the list of directories.
     peak_data = [item for directory in directory_list for item in directory]
@@ -69,7 +68,7 @@ def peak_detection(spectrum: ims.Spectrum,
                    create_heatmaps: bool,
                    create_npy: bool) -> list[dict]:
     """
-    This function handels the peak detection for preprocessed gc-ims spectra in a series of steps.
+    This function handles the peak detection for preprocessed gc-ims spectra in a series of steps.
     1. Normalization of the spectrum to values between 0 and 1.
     2. Create a component tree of the spectrum and detect hierarchy levels.
     3. Filter peaks from the component tree according to specific conditions [Area Opening, intensity threshold, tree hierarchy].
@@ -230,7 +229,7 @@ def peak_detection(spectrum: ims.Spectrum,
                                            ret_idx=ret_idx,
                                            drift_idx=drift_idx,
                                            window_size=peak_radius,
-                                           plot_dir=output_dir)
+                                           plot_dir=output_dir / "heatmap" / "peak")
 
 
                 # Check if the peak window has the correct shape. This should always be the case!
@@ -241,7 +240,7 @@ def peak_detection(spectrum: ims.Spectrum,
                 # 5. Save peak information as .npy file ----------------------------------------------------------------
                 # Define the numpy filename and create the needed directories.
                 if create_npy:
-                    npy_dir = output_dir / "npy" / spectrum.name
+                    npy_dir = output_dir / "npy" / "peak" / spectrum.name
                     if not npy_dir.exists():
                         npy_dir.mkdir(parents=True, exist_ok=True)
 
@@ -532,6 +531,7 @@ def calculate_consensus_peaks(graph: nx.Graph,
         # Create lists with all retention and drift times for the current component.
         ret_times = []
         drift_times = []
+        min_intensity = -1
 
         # Walk through each node.
         for node in component:
@@ -539,6 +539,9 @@ def calculate_consensus_peaks(graph: nx.Graph,
             # If multiple labels are there, it means that this node consists of multiple peaks.
             node_data = graph.nodes[node]
             labels = node_data['labels']
+
+            if min_intensity == -1 or min_intensity > min(node_data['intensities']):
+                min_intensity = min(node_data['intensities'])
 
             # Each label represents one peak of this node. This loop makes sure that each peak of a node is
             # considered for the consensus peak calculation.
@@ -560,6 +563,7 @@ def calculate_consensus_peaks(graph: nx.Graph,
         # Insert consensus peak information to the peak_dictionary.
         peak_dictionary["mean_ret_time"] = mean_ret_time
         peak_dictionary["mean_drift_time"] = mean_drift_time
+        peak_dictionary["min_intensity"] = min_intensity
         peak_dictionary["component_idx"] = component_idx
         peak_dictionary["Peaks_Total"] = total_peaks
 
@@ -581,3 +585,110 @@ def calculate_consensus_peaks(graph: nx.Graph,
     consensus_peaks_dataframe.to_excel(filename, index=False)
 
     return consensus_peaks
+
+
+def consensus_peak_windows(preprocessed_spectra: list[ims.Spectrum],
+                           peak_radius: int,
+                           spectra_paths: list[Path],
+                           consensus_excel_file: Path,
+                           create_heatmaps: bool = True,
+                           create_npy: bool = True) -> None:
+    """
+    This function forwards to the peak detection algorithm for preprocessed gc-ims spectra.
+    It manages the multiprocessing task on multiple cpu cores (if available) and forwards spectra specific
+    information to the "peak_detection" function for parallel computing.
+
+    :param preprocessed_spectra: A list of preprocessed gc-ims spectra.
+    :param peak_radius: Defines the radius around a detected peak within which the intensities are saved as a npy file.
+    [e.g. peak_radius = 3. In an area of (2*3 +1)² = 7² = 49 indices, peak intensities are saved.
+    Doing this saves not just the detected peak itself, but also it's surrounding.]
+    :param spectra_paths: Paths to the spectra output files [plots | hdf5 files].
+    :param create_heatmaps: Specifies if heatmaps are created [default = True].
+    :param create_npy: Specifies if npy files are created. These files are important for the consensus peak detection of
+    the next step [default = True].
+
+    :return: Pandas dataframe with detected peak information.
+    """
+
+    # Check how many cpu cores are available.
+    cpu_cores = os.cpu_count()
+    # List with arguments in form of tuples for the parallel processing function.
+    tasks = []
+
+    print("=======================================================")
+    print("V. SAVING CONSENSUS PEAK WINDOWS")
+    # Walk through each preprocessed spectrum and collect needed arguments for the peak finding computation.
+    for idx, spectrum in enumerate(preprocessed_spectra):
+        task_args = (spectrum, peak_radius, spectra_paths[idx], consensus_excel_file, create_heatmaps, create_npy)
+        # Append the tuple of arguments to the tasks list.
+        tasks.append(task_args)
+
+    # Start parallel processing. One cpu core handles one spectrum.
+    with Pool(cpu_cores) as p:
+        p.starmap(save_consensus_peak_windows, tasks)
+
+
+
+def save_consensus_peak_windows(spectrum: ims.Spectrum,
+                                peak_radius: int,
+                                output_dir: Path,
+                                consensus_excel_file: Path,
+                                create_heatmaps: bool,
+                                create_npy: bool) -> None:
+
+    # 1. Spectrum normalization. ---------------------------------------------------------------------------------------
+    print(f"\t- Saving Consensus Peak Windows [{spectrum.name}]")
+    # Keep the non normalized values for later use.
+    values_non_normalized = spectrum.values.copy()
+    # Normalize the spectrum [0-1].
+    spectrum.normalization()
+
+    # TODO!!!
+    # Check if the max intensity inside the peak window of the consensus peak is greater then the min_intensity from the
+    # Excel file. If so, save the peak window, if not omit it.
+
+    # Load the Excel file as a dataframe object.
+    df = pd.read_excel(consensus_excel_file)
+
+    padded_values = np.pad(
+        spectrum.values,
+        pad_width=peak_radius,
+        mode='constant',
+        constant_values=0
+    )
+
+    # Walk through all rows.
+    for idx, row in df.iterrows():
+        # Calculate the retention and drifttime indices from the actual times saved in the Excel file.
+        ret_idx = np.abs(spectrum.ret_time - row['mean_ret_time']).argmin()
+        drift_idx = np.abs(spectrum.drift_time - row['mean_drift_time']).argmin()
+
+        start_ret_idx = ret_idx - peak_radius
+        end_ret_idx = ret_idx + 3 * peak_radius + 1
+        start_drift_idx = drift_idx - peak_radius
+        end_drift_idx = drift_idx + 3 * peak_radius + 1
+        peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+
+        # Plot the peak heatmaps.
+        if create_heatmaps:
+            plot.plot_peak_heatmap(spectrum=spectrum,
+                                   heatmap_window=peak_window_intensities,
+                                   ret_idx=ret_idx,
+                                   drift_idx=drift_idx,
+                                   window_size=peak_radius,
+                                   plot_dir=output_dir / "heatmap" / "consensus peak")
+
+        # 5. Save peak information as .npy file ----------------------------------------------------------------
+        # Define the numpy filename and create the needed directories.
+        if create_npy:
+            npy_dir = output_dir / "npy" / "consensus peak" / spectrum.name
+            if not npy_dir.exists():
+                npy_dir.mkdir(parents=True, exist_ok=True)
+
+            npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
+            np.save(npy_filename, peak_window_intensities)
+
+    # Notify that the peak detection on this spectrum is finished and print the number of peaks.
+    print(f"\t- Consensus Peaks saved [{spectrum.name}]")
+
+

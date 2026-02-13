@@ -1,5 +1,4 @@
 from pathlib import Path
-
 import config
 import preprocess
 import peak
@@ -29,97 +28,107 @@ if __name__ == '__main__':
     if not plot_dir.exists():
         plot_dir.mkdir(parents=True, exist_ok=True)
 
-    """
     # Step 1: Preprocess the .mea files
-    preprocessed_data, spectra_paths = preprocess.start(input_dir=input_dir,
-                                                        output_dir=output_dir,
-                                                        create_plots="Single",
-                                                        drift_cut=config.DRIFT_CUT,
-                                                        retention_cut=config.RETENTION_CUT,
-                                                        load_existing=True)
+    if config.PREPROCESSING or config.PEAK_DETECTION or config.SAVE_CONSENSUS_WINDOWS:
+        preprocessed_data, spectra_paths = preprocess.start(input_dir=input_dir,
+                                                            output_dir=output_dir,
+                                                            create_plots="Single",
+                                                            drift_cut=config.DRIFT_CUT,
+                                                            retention_cut=config.RETENTION_CUT,
+                                                            load_existing=True)
 
 
-    # Step 2: Calculate peaks on preprocessed data.
-    try:
-        peak_dataframe = peak.get_all_peaks(preprocessed_spectra=preprocessed_data,
-                                            peak_radius=config.PEAK_RADIUS,
-                                            spectra_paths=spectra_paths,
-                                            create_heatmaps=True,
-                                            create_npy=True)
+        # Step 2: Calculate peaks on preprocessed data.
+        if config.PEAK_DETECTION:
+            peak_dataframe = peak.get_all_peaks(preprocessed_spectra=preprocessed_data,
+                                                peak_radius=config.PEAK_RADIUS,
+                                                spectra_paths=spectra_paths,
+                                                create_heatmaps=True,
+                                                create_npy=True)
 
-        # Save peak data to Excel file.
-        excel_filename = output_dir / "01_peak_data.xlsx"
-        peak_dataframe.to_excel(excel_filename, index=False)
-    except Exception as err:
-        print(f" Error during peak detection: {err=}, {type(err)=}")
-        raise
-    
+            # Save peak data to Excel file.
+            excel_filename = output_dir / "01_peak_data.xlsx"
+            peak_dataframe.to_excel(excel_filename, index=False)
 
-    # Step 3: Consensus peak calculation.
-    excel_filename = output_dir / "01_peak_data.xlsx"
-    peak.extract_consensus_peaks(excel_file=excel_filename,
-                                 output_dir=output_dir,
-                                 create_plots="overview",
-                                 max_node_distance=config.MAX_NODE_DISTANCE)
+        # Step 3: Consensus peak calculation.
+        if config.CONSENSUS_PEAK_CALCULATION:
+            excel_filename = output_dir / "01_peak_data.xlsx"
+            peak.extract_consensus_peaks(excel_file=excel_filename,
+                                         output_dir=output_dir,
+                                         create_plots="overview",
+                                         max_node_distance=config.MAX_NODE_DISTANCE)
 
-    """
+
+        # Step 4: Save consensus peak windows as .npy files.
+        if config.SAVE_CONSENSUS_WINDOWS:
+            peak.consensus_peak_windows(preprocessed_spectra=preprocessed_data,
+                                        peak_radius=config.PEAK_RADIUS,
+                                        spectra_paths=spectra_paths,
+                                        consensus_excel_file = output_dir / "03_consensus_peaks.xlsx",
+                                        create_npy=True,
+                                        create_heatmaps=True,)
+
+
     # Step 4: Training the VAE.
-    # Device agnostic code.
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if config.USE_NEURAL_NETWORK:
+        # Device agnostic code.
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Receive all peak files and their labels/classes.
-    root_dir = output_dir
-    npy_paths = list(root_dir.rglob("*.npy"))
-    classes = sorted(entry.name for entry in root_dir.iterdir() if entry.is_dir())
-    class_dict = {class_name: idx for idx, class_name in enumerate(classes)}
+        # Receive all peak files and their labels/classes.
+        root_dir = output_dir
+        #npy_paths = list(root_dir.glob("*/npy/peak/*/*.npy"))
+        npy_paths = list(root_dir.glob("*/npy/consensus peak/*/*.npy"))
 
-    # Split the data into training and test data.
-    train_paths, test_paths = train_test_split(npy_paths,
-                                                test_size=0.20,
-                                                random_state=42,
-                                                shuffle=True)
+        classes = sorted(entry.name for entry in root_dir.iterdir() if entry.is_dir())
+        class_dict = {class_name: idx for idx, class_name in enumerate(classes)}
 
-    # Create the datasets and dataloaders.
-    train_dataset = dataloader.VaeDataset(train_paths, class_dict)
-    # Create the test dataset. Use all the data or split it.
-    if config.TEST_WITH_ALL_DATA:
-        test_dataset = dataloader.VaeDataset(npy_paths, class_dict)
-    else :
-        test_dataset = dataloader.VaeDataset(test_paths, class_dict)
+        # Split the data into training and test data.
+        train_paths, test_paths = train_test_split(npy_paths,
+                                                    test_size=0.20,
+                                                    random_state=42,
+                                                    shuffle=True)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        # Create the datasets and dataloaders.
+        train_dataset = dataloader.VaeDataset(train_paths, class_dict)
+        # Create the test dataset. Use all the data or split it.
+        if config.TEST_WITH_ALL_DATA:
+            test_dataset = dataloader.VaeDataset(npy_paths, class_dict)
+        else :
+            test_dataset = dataloader.VaeDataset(test_paths, class_dict)
 
-    # Initialize the model.
-    model = model.VariationalAutoencoderCNN(input_layers=1,
-                                            hidden_layers=HIDDEN_DIM,
-                                            latent_dimension=LATENT_DIM).to(device)
+        train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-    # Check if there is already a saved model matching the filename and directory and load it.
-    model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
+        # Initialize the model.
+        model = model.VariationalAutoencoderCNN(input_layers=1,
+                                                hidden_layers=HIDDEN_DIM,
+                                                latent_dimension=LATENT_DIM).to(device)
 
-    # Define the optimizer.
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+        # Check if there is already a saved model matching the filename and directory and load it.
+        model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
 
-    # Start training and testing if training is active.
-    if config.DO_TRAINING:
-        loop.training_loop(model=model,
-                           train_dataloader=train_dataloader,
-                           test_dataloader=test_dataloader,
-                           loss_fn=vae_loss,
-                           optimizer=optimizer,
-                           device=device,
-                           epochs=EPOCHS,
-                           plot_dir=plot_dir)
+        # Define the optimizer.
+        optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    # Start testing unseen data to evaluate the model.
-    if config.DO_TESTING:
-        loop.testing_loop(model=model,
-                          dataloader=test_dataloader,
-                          loss_fn=vae_loss,
-                          device=device,
-                          plot_dir=plot_dir)
+        # Start training and testing if training is active.
+        if config.DO_TRAINING:
+            loop.training_loop(model=model,
+                               train_dataloader=train_dataloader,
+                               test_dataloader=test_dataloader,
+                               loss_fn=vae_loss,
+                               optimizer=optimizer,
+                               device=device,
+                               epochs=EPOCHS,
+                               plot_dir=plot_dir)
 
-    # Save the model.
-    if config.SAVING:
-        model.save_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
+        # Start testing unseen data to evaluate the model.
+        if config.DO_TESTING:
+            loop.testing_loop(model=model,
+                              dataloader=test_dataloader,
+                              loss_fn=vae_loss,
+                              device=device,
+                              plot_dir=plot_dir)
+
+        # Save the model.
+        if config.SAVING:
+            model.save_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
