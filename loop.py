@@ -67,9 +67,9 @@ def train_model(model: torch.nn.Module,
         feature, label = feature.to(device), label.to(device)
 
         # 1. Forward pass.
-        label_prediction, mean, log_variance = model(feature)
+        reconstruction, mean, log_variance = model(feature)
         # 2. Calculate the loss.
-        total_loss, recon_loss, kld_loss = loss_fn(feature, label_prediction, mean, log_variance, beta)
+        total_loss, recon_loss, kld_loss = loss_fn(feature, reconstruction, mean, log_variance, beta)
         # Divide the loss with the bach size.
         normalized_loss = total_loss / feature.size(0)
         # 3 Clear the gardient.
@@ -127,9 +127,9 @@ def eval_model(model: torch.nn.Module,
             # Put features and labels on the device.
             feature, label = feature.to(device), label.to(device)
             # 1. Forward pass.
-            label_prediction, mean, log_variance = model(feature)
+            reconstruction, mean, log_variance = model(feature)
             # 2. Calculate the test loss.
-            total_loss, recon_loss, kld_loss = loss_fn(feature, label_prediction, mean, log_variance, beta)
+            total_loss, recon_loss, kld_loss = loss_fn(feature, reconstruction, mean, log_variance, beta)
 
             loss['total'] += total_loss.item()
             loss['recon'] += recon_loss.item()
@@ -147,7 +147,7 @@ def eval_model(model: torch.nn.Module,
     # Every X epochs create a plot and compare the original with the reconstructed image.
     if (current_epoch + 1) % plot_interval == 0 or current_epoch == 0:
         plot.plot_original_and_reconstruction(feature=feature,
-                                              feature_reconstructed=label_prediction,
+                                              feature_reconstructed=reconstruction,
                                               plot_dir=plot_dir,
                                               epoch=current_epoch,
                                               image_number=20)

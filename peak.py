@@ -587,12 +587,12 @@ def calculate_consensus_peaks(graph: nx.Graph,
     return consensus_peaks
 
 
-def consensus_peak_windows(preprocessed_spectra: list[ims.Spectrum],
-                           peak_radius: int,
-                           spectra_paths: list[Path],
-                           consensus_excel_file: Path,
-                           create_heatmaps: bool = True,
-                           create_npy: bool = True) -> None:
+def save_all_consensus_peak_windows(preprocessed_spectra: list[ims.Spectrum],
+                                    peak_radius: int,
+                                    spectra_paths: list[Path],
+                                    consensus_excel_file: Path,
+                                    create_heatmaps: bool = True,
+                                    create_npy: bool = True) -> None:
     """
     This function forwards to the peak detection algorithm for preprocessed gc-ims spectra.
     It manages the multiprocessing task on multiple cpu cores (if available) and forwards spectra specific
@@ -625,16 +625,16 @@ def consensus_peak_windows(preprocessed_spectra: list[ims.Spectrum],
 
     # Start parallel processing. One cpu core handles one spectrum.
     with Pool(cpu_cores) as p:
-        p.starmap(save_consensus_peak_windows, tasks)
+        p.starmap(save_spektrum_consensus_peak_windows, tasks)
 
 
 
-def save_consensus_peak_windows(spectrum: ims.Spectrum,
-                                peak_radius: int,
-                                output_dir: Path,
-                                consensus_excel_file: Path,
-                                create_heatmaps: bool,
-                                create_npy: bool) -> None:
+def save_spektrum_consensus_peak_windows(spectrum: ims.Spectrum,
+                                         peak_radius: int,
+                                         output_dir: Path,
+                                         consensus_excel_file: Path,
+                                         create_heatmaps: bool,
+                                         create_npy: bool) -> None:
 
     # 1. Spectrum normalization. ---------------------------------------------------------------------------------------
     print(f"\t- Saving Consensus Peak Windows [{spectrum.name}]")
@@ -659,6 +659,9 @@ def save_consensus_peak_windows(spectrum: ims.Spectrum,
         mode='constant',
         constant_values=0
     )
+
+    saved_consensus_windows = 0
+    all_consensus_windows = 0
 
     # Walk through all rows.
     for idx, consensus_peak in consensus_peaks_dataframe.iterrows():
@@ -690,10 +693,16 @@ def save_consensus_peak_windows(spectrum: ims.Spectrum,
                 if not npy_dir.exists():
                     npy_dir.mkdir(parents=True, exist_ok=True)
 
-                npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
+                npy_filename = npy_dir / f"PW_{output_dir.name}_{spectrum.name}_RT{spectrum.ret_time[ret_idx]}_DT{spectrum.drift_time[drift_idx]}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
                 np.save(npy_filename, peak_window_intensities)
 
+            # Increase the counter of the saved consensus peak windows.
+            saved_consensus_windows += 1
+
+        # Increase the counter of all consensus peak windows.
+        all_consensus_windows += 1
+
     # Notify that the peak detection on this spectrum is finished and print the number of peaks.
-    print(f"\t- Consensus Peaks saved [{spectrum.name}]")
+    print(f"\t- {saved_consensus_windows}/{all_consensus_windows} consensus peaks saved [{spectrum.name}]")
 
 

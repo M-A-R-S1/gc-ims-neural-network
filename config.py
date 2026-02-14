@@ -15,8 +15,9 @@ PLOT_DIR = "./output/IMS_Olive_Oil_Geography/model_plots"
 PREPROCESSING = False                   # Preprocess the data?
 PEAK_DETECTION = False                  # Detect raw peaks?
 CONSENSUS_PEAK_CALCULATION = False      # Calculate new consensus peaks?
-SAVE_CONSENSUS_WINDOWS = False           # Save consensus peak windows as .npy files?
-USE_NEURAL_NETWORK = True              # Build or work with the neural network?
+SAVE_CONSENSUS_WINDOWS = True           # Save consensus peak windows as .npy files?
+USE_NEURAL_NETWORK = False              # Build or work with the neural network?
+RANDOM_FOREST_CLASSIFICATION = True    # Use the random forest classifier.
 
 PEAK_RADIUS = 5
 MAX_NODE_DISTANCE = 0.006
@@ -34,8 +35,8 @@ BETA_WARMUP = 300
 
 # What should the main neural network do?
 DO_TRAINING = False                # Train the model?
-DO_TESTING = True                # Test the model?
-TEST_WITH_ALL_DATA = True        # Do you want to test the model with all the available data? [No Splitting].
+DO_TESTING = False               # Test the model?
+TEST_WITH_ALL_DATA = False        # Do you want to test the model with all the available data? [No Splitting].
 SAVING = False                     # Save the model?
 
 # Directory and filename for saving and loading.

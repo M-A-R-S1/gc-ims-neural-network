@@ -435,8 +435,8 @@ def plot_loss_curve(losses: dict[str, list[float]],
     ax1.grid(True, alpha=0.3)
 
     # 2. BCE Loss (Reconstruction)
-    ax2.plot(epochs_range, losses['train_recon'], color="blue", label="Train BCE")
-    ax2.plot(epochs_range, losses['test_recon'], color="red", linestyle="--", label="Test BCE")
+    ax2.plot(epochs_range, losses['train_recon'], color="blue", label="Train Reconstruction")
+    ax2.plot(epochs_range, losses['test_recon'], color="red", linestyle="--", label="Test Reconstruction")
     ax2.set_title("Reconstruction Loss (Reconstruction Quality)")
     ax2.legend()
     ax2.grid(True, alpha=0.3)
