@@ -643,12 +643,8 @@ def save_consensus_peak_windows(spectrum: ims.Spectrum,
     # Normalize the spectrum [0-1].
     spectrum.normalization()
 
-    # TODO!!!
-    # Check if the max intensity inside the peak window of the consensus peak is greater then the min_intensity from the
-    # Excel file. If so, save the peak window, if not omit it.
-
     # Load the Excel file as a dataframe object.
-    df = pd.read_excel(consensus_excel_file)
+    consensus_peaks_dataframe = pd.read_excel(consensus_excel_file)
 
     padded_values = np.pad(
         spectrum.values,
@@ -657,36 +653,45 @@ def save_consensus_peak_windows(spectrum: ims.Spectrum,
         constant_values=0
     )
 
+    padded_values_non_normalized = np.pad(
+        values_non_normalized,
+        pad_width=peak_radius,
+        mode='constant',
+        constant_values=0
+    )
+
     # Walk through all rows.
-    for idx, row in df.iterrows():
+    for idx, consensus_peak in consensus_peaks_dataframe.iterrows():
         # Calculate the retention and drifttime indices from the actual times saved in the Excel file.
-        ret_idx = np.abs(spectrum.ret_time - row['mean_ret_time']).argmin()
-        drift_idx = np.abs(spectrum.drift_time - row['mean_drift_time']).argmin()
+        ret_idx = np.abs(spectrum.ret_time - consensus_peak['mean_ret_time']).argmin()
+        drift_idx = np.abs(spectrum.drift_time - consensus_peak['mean_drift_time']).argmin()
 
         start_ret_idx = ret_idx - peak_radius
         end_ret_idx = ret_idx + 3 * peak_radius + 1
         start_drift_idx = drift_idx - peak_radius
         end_drift_idx = drift_idx + 3 * peak_radius + 1
         peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+        peak_window_intensities_non_normalized = padded_values_non_normalized[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
 
-        # Plot the peak heatmaps.
-        if create_heatmaps:
-            plot.plot_peak_heatmap(spectrum=spectrum,
-                                   heatmap_window=peak_window_intensities,
-                                   ret_idx=ret_idx,
-                                   drift_idx=drift_idx,
-                                   window_size=peak_radius,
-                                   plot_dir=output_dir / "heatmap" / "consensus peak")
+        if np.max(peak_window_intensities_non_normalized) >= consensus_peak['min_intensity']:
+            # Plot the peak heatmaps.
+            if create_heatmaps:
+                plot.plot_peak_heatmap(spectrum=spectrum,
+                                       heatmap_window=peak_window_intensities,
+                                       ret_idx=ret_idx,
+                                       drift_idx=drift_idx,
+                                       window_size=peak_radius,
+                                       plot_dir=output_dir / "heatmap" / "consensus peak")
 
-        # 5. Save peak information as .npy file ----------------------------------------------------------------
-        # Define the numpy filename and create the needed directories.
-        if create_npy:
-            npy_dir = output_dir / "npy" / "consensus peak" / spectrum.name
-            if not npy_dir.exists():
-                npy_dir.mkdir(parents=True, exist_ok=True)
+            # 5. Save peak information as .npy file ----------------------------------------------------------------
+            # Define the numpy filename and create the needed directories.
+            if create_npy:
+                npy_dir = output_dir / "npy" / "consensus peak" / spectrum.name
+                if not npy_dir.exists():
+                    npy_dir.mkdir(parents=True, exist_ok=True)
 
-            npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
-            np.save(npy_filename, peak_window_intensities)
+                npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
+                np.save(npy_filename, peak_window_intensities)
 
     # Notify that the peak detection on this spectrum is finished and print the number of peaks.
     print(f"\t- Consensus Peaks saved [{spectrum.name}]")

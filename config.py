@@ -12,11 +12,11 @@ PLOT_DIR = "./output/IMS_Olive_Oil_Geography/model_plots"
 #OUTPUT_DIR = "./output/IMS_Honey_Botanical"
 #PLOT_DIR = "./output/IMS_Honey_Botanical/model_plots"
 ###########################################################################################
-PREPROCESSING = True                   # Preprocess the data?
+PREPROCESSING = False                   # Preprocess the data?
 PEAK_DETECTION = False                  # Detect raw peaks?
-CONSENSUS_PEAK_CALCULATION = True      # Calculate new consensus peaks?
+CONSENSUS_PEAK_CALCULATION = False      # Calculate new consensus peaks?
 SAVE_CONSENSUS_WINDOWS = False           # Save consensus peak windows as .npy files?
-USE_NEURAL_NETWORK = False              # Build or work with the neural network?
+USE_NEURAL_NETWORK = True              # Build or work with the neural network?
 
 PEAK_RADIUS = 5
 MAX_NODE_DISTANCE = 0.006

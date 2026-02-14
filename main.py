@@ -4,7 +4,6 @@ import preprocess
 import peak
 import model
 import loop
-from config import *
 from model import vae_loss
 import dataloader
 import torch
@@ -66,7 +65,7 @@ if __name__ == '__main__':
                                         spectra_paths=spectra_paths,
                                         consensus_excel_file = output_dir / "03_consensus_peaks.xlsx",
                                         create_npy=True,
-                                        create_heatmaps=True,)
+                                        create_heatmaps=True)
 
 
     # Step 4: Training the VAE.
@@ -96,19 +95,19 @@ if __name__ == '__main__':
         else :
             test_dataset = dataloader.VaeDataset(test_paths, class_dict)
 
-        train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-        test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        train_dataloader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
+        test_dataloader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE, shuffle=False)
 
         # Initialize the model.
         model = model.VariationalAutoencoderCNN(input_layers=1,
-                                                hidden_layers=HIDDEN_DIM,
-                                                latent_dimension=LATENT_DIM).to(device)
+                                                hidden_layers=config.HIDDEN_DIM,
+                                                latent_dimension=config.LATENT_DIM).to(device)
 
         # Check if there is already a saved model matching the filename and directory and load it.
         model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
 
         # Define the optimizer.
-        optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
 
         # Start training and testing if training is active.
         if config.DO_TRAINING:
@@ -118,7 +117,7 @@ if __name__ == '__main__':
                                loss_fn=vae_loss,
                                optimizer=optimizer,
                                device=device,
-                               epochs=EPOCHS,
+                               epochs=config.EPOCHS,
                                plot_dir=plot_dir)
 
         # Start testing unseen data to evaluate the model.
