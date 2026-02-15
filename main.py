@@ -64,7 +64,7 @@ if __name__ == '__main__':
             peak.save_all_consensus_peak_windows(preprocessed_spectra=preprocessed_data,
                                                  peak_radius=config.PEAK_RADIUS,
                                                  spectra_paths=spectra_paths,
-                                                 consensus_excel_file = output_dir / "03_consensus_peaks_test.xlsx",
+                                                 consensus_excel_file = output_dir / "03_consensus_peaks.xlsx",
                                                  create_npy=True,
                                                  create_heatmaps=True)
 

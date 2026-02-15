@@ -146,7 +146,7 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
     if not heatmap_dir.exists():
         heatmap_dir.mkdir(parents=True, exist_ok=True)
 
-    heatmap_file = heatmap_dir / f"HM_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4 * window_size + 1}x{4 * window_size + 1}.png"
+    heatmap_file = heatmap_dir / f"HM_{spectrum.name}_RT{spectrum.ret_time[ret_idx]:.2f}_DT{spectrum.drift_time[drift_idx]:.2f}_{4 * window_size + 1}x{4 * window_size + 1}.png"
 
     # Create the heatmap plot
     plt.figure(figsize=(10, 10))
@@ -157,7 +157,7 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
         cmap="RdBu_r",
         cbar=True,
         linecolor='white',
-        linewidths=0.5,
+        linewidths=0.0,
         annot_kws={"size": 5}
     )
     plt.title(f"{spectrum.name} Peak Heatmap")
@@ -456,13 +456,15 @@ def plot_loss_curve(losses: dict[str, list[float]],
     plt.savefig(plot_dir / "detailed_loss_curves.png", dpi=300)
     plt.close()
 
-def random_forest_importance_plot(model: RandomForestClassifier)-> None:
+def random_forest_importance_plot(model: RandomForestClassifier,
+                                  output_dir: Path)-> None:
 
     """
     This function plots the importance of the random forest model as a bar graph.
     Zhis bar graph displays the importance of all latent vector variables and the retention and drifttime.
 
     :param model: The trained random forest model.
+    :param output_dir: The directory to save the plot.
 
     :return: None
     """
@@ -473,19 +475,22 @@ def random_forest_importance_plot(model: RandomForestClassifier)-> None:
     plt.bar(feature_names, importances)
     plt.title("Random Forest attribute importance")
     plt.ylabel("Importance Score")
-    plt.savefig(Path(config.PLOT_DIR) / "random forest" / "importance_score.png", dpi=300)
+    plt.savefig(output_dir / "importance_score.png", dpi=300)
     plt.close()
 
 
 def random_forest_confusion_matrix(model: RandomForestClassifier,
                                    test_feature: list,
-                                   test_label: list)-> None:
+                                   test_label: list,
+                                   output_dir: Path)-> None:
+
     """
     This function plots the confusion matrix of the random forest model.
 
     :param model: the trained random forest model.
     :param test_feature: the test features.
     :param test_label: the test labels.
+    :param output_dir: The directory to save the plot.
 
     :return: None.
     """
@@ -493,17 +498,20 @@ def random_forest_confusion_matrix(model: RandomForestClassifier,
     fig, ax = plt.subplots(figsize=(8, 6))
     ConfusionMatrixDisplay.from_estimator(model, test_feature, test_label, cmap='Blues', ax=ax)
     plt.title("Confusion Matrix")
-    plt.savefig(Path(config.PLOT_DIR) / "random forest" / "confusion_matrix.png", dpi=300)
+    plt.savefig(output_dir / "confusion_matrix.png", dpi=300)
     plt.close()
 
 
 def random_forest_boxplot(features: list,
-                          labels: list) -> None:
+                          labels: list,
+                          output_dir: Path) -> None:
+
     """
     This function plots a boxplot of the random forest used latent variables.
 
     :param features: List of all calculated peak window latent variables.
     :param labels: Corresponding list of labels of the features list.
+    :param output_dir: The directory to save the plot.
 
     :return: None.
     """
@@ -516,5 +524,5 @@ def random_forest_boxplot(features: list,
     plt.figure(figsize=(12, 6))
     sns.boxplot(data=melted_dataframe, x='Latent Variable', y='Value', hue='Label')
     plt.title("Latent variable boxplot")
-    plt.savefig(Path(config.PLOT_DIR) / "random forest" / "latent_space_comparison.png", dpi=300)
+    plt.savefig(output_dir / "latent_space_comparison.png", dpi=300)
     plt.close()
