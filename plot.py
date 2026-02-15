@@ -3,11 +3,14 @@ import torch
 from matplotlib import pyplot as plt
 from pathlib import Path
 import seaborn as sns
+import pandas as pd
 import math
 import ims
+import config
 import networkx as nx
 from sklearn.manifold import TSNE
-from matplotlib.ticker import MaxNLocator
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import ConfusionMatrixDisplay
 
 def single_gcims_plot(spectrum: ims.Spectrum,
                       plot_dir: Path,
@@ -453,3 +456,65 @@ def plot_loss_curve(losses: dict[str, list[float]],
     plt.savefig(plot_dir / "detailed_loss_curves.png", dpi=300)
     plt.close()
 
+def random_forest_importance_plot(model: RandomForestClassifier)-> None:
+
+    """
+    This function plots the importance of the random forest model as a bar graph.
+    Zhis bar graph displays the importance of all latent vector variables and the retention and drifttime.
+
+    :param model: The trained random forest model.
+
+    :return: None
+    """
+
+    importances = model.feature_importances_
+    feature_names = [f'z_{i}' for i in range(config.LATENT_DIM)] + ['Retentiontime', 'Drifttime']
+    plt.figure(figsize=(10, 6))
+    plt.bar(feature_names, importances)
+    plt.title("Random Forest attribute importance")
+    plt.ylabel("Importance Score")
+    plt.savefig(Path(config.PLOT_DIR) / "random forest" / "importance_score.png", dpi=300)
+    plt.close()
+
+
+def random_forest_confusion_matrix(model: RandomForestClassifier,
+                                   test_feature: list,
+                                   test_label: list)-> None:
+    """
+    This function plots the confusion matrix of the random forest model.
+
+    :param model: the trained random forest model.
+    :param test_feature: the test features.
+    :param test_label: the test labels.
+
+    :return: None.
+    """
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ConfusionMatrixDisplay.from_estimator(model, test_feature, test_label, cmap='Blues', ax=ax)
+    plt.title("Confusion Matrix")
+    plt.savefig(Path(config.PLOT_DIR) / "random forest" / "confusion_matrix.png", dpi=300)
+    plt.close()
+
+
+def random_forest_boxplot(features: list,
+                          labels: list) -> None:
+    """
+    This function plots a boxplot of the random forest used latent variables.
+
+    :param features: List of all calculated peak window latent variables.
+    :param labels: Corresponding list of labels of the features list.
+
+    :return: None.
+    """
+
+    plot_dataframe = pd.DataFrame(np.array(features)[:, :config.LATENT_DIM],
+                                  columns=[f'z_{i}' for i in range(config.LATENT_DIM)])
+
+    plot_dataframe['Label'] = labels
+    melted_dataframe = plot_dataframe.melt(id_vars='Label', var_name='Latent Variable', value_name='Value')
+    plt.figure(figsize=(12, 6))
+    sns.boxplot(data=melted_dataframe, x='Latent Variable', y='Value', hue='Label')
+    plt.title("Latent variable boxplot")
+    plt.savefig(Path(config.PLOT_DIR) / "random forest" / "latent_space_comparison.png", dpi=300)
+    plt.close()

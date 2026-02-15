@@ -4,15 +4,12 @@ import preprocess
 import peak
 import model
 import loop
+import rf_model
 from model import vae_loss
 import dataloader
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
-import re
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, ConfusionMatrixDisplay
 
 if __name__ == '__main__':
 
@@ -62,7 +59,7 @@ if __name__ == '__main__':
                                          max_node_distance=config.MAX_NODE_DISTANCE)
 
 
-        # Step 4: Save consensus peak windows as .npy files.
+        # Step 5: Save consensus peak windows as .npy files.
         if config.SAVE_CONSENSUS_WINDOWS:
             peak.save_all_consensus_peak_windows(preprocessed_spectra=preprocessed_data,
                                                  peak_radius=config.PEAK_RADIUS,
@@ -136,102 +133,16 @@ if __name__ == '__main__':
             model.save_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
 
 
-    # Step 5: Preparing and using the random forest algorithm for classification.
+    # Step 6: Preparing and using the random forest algorithm for classification.
     if config.RANDOM_FOREST_CLASSIFICATION:
-        # Listen für unsere Features und Labels
         # Device agnostic code.
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         # Initialize the model.
         model = model.VariationalAutoencoderCNN(input_layers=1,
                                                 hidden_layers=config.HIDDEN_DIM,
                                                 latent_dimension=config.LATENT_DIM).to(device)
 
-        # Check if there is already a saved model matching the filename and directory and load it.
+        # Load the model state dict.
         model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
-
-        X_features = []
-        y_labels = []
-
-        # Get all consensus .npy files.
-        npy_paths = list(output_dir.glob("*/npy/consensus peak/*/*.npy"))
-
-        # Den Encoder in den Eval-Modus setzen
-        model.eval()
-
-        for path in npy_paths:
-            filename = path.stem  # z.B. PW_Italy_151204_224012_RT77_DT29_21x21
-            parts = filename.split('_')
-
-            # 1. Label extrahieren (Stelle 1, da PW Stelle 0 ist)
-            label = parts[1]
-
-            # 2. Suche nach Zahlen inkl. Dezimalpunkt
-            rt_val = float(re.search(r'RT([\d.]+)', filename).group(1))
-            dt_val = float(re.search(r'DT([\d.]+)', filename).group(1))
-
-            # 3. .npy Datei laden und durch Encoder schicken
-            peak_data = np.load(path)
-            # Sicherstellen, dass das Format (1, 1, H, W) für den Encoder stimmt
-            input_tensor = torch.from_numpy(peak_data).float().view(1, 1, 21, 21).to(device)
-
-            with torch.inference_mode():
-                x = model.encoder(input_tensor)
-                z = model.latent_mean(x)
-                latent_vector = z.cpu().numpy().flatten()
-
-            # 4. Latenten Vektor + RT + DT kombinieren
-            combined_row = np.hstack((latent_vector, [rt_val, dt_val]))
-
-            X_features.append(combined_row)
-            y_labels.append(label)
-
-        X = np.array(X_features)
-        y = np.array(y_labels)
-
-
-        # Split in Training und Test
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        # Random Forest initialisieren
-        rf_model = RandomForestClassifier(n_estimators=1000,
-                                          class_weight='balanced',
-                                          random_state=42)
-        # Training
-        rf_model.fit(X_train, y_train)
-        # Vorhersage
-        y_pred = rf_model.predict(X_test)
-        # Ergebnisse anzeigen
-        print(classification_report(y_test, y_pred))
-
-
-        import matplotlib.pyplot as plt
-
-        importances = rf_model.feature_importances_
-        feature_names = [f'z_{i}' for i in range(config.LATENT_DIM)] + ['RT_Time', 'DT_Time']
-        plt.figure(figsize=(10, 6))
-        plt.bar(feature_names, importances)
-        plt.title("Wichtigkeit der Merkmale für die Olivenöl-Bestimmung")
-        plt.ylabel("Importance Score")
-        plt.savefig(plot_dir / "random forest" / "importance_score.png", dpi=300)
-        plt.close()
-
-        # Erstellt die Confusion Matrix
-        fig, ax = plt.subplots(figsize=(8, 6))
-        ConfusionMatrixDisplay.from_estimator(rf_model, X_test, y_test,cmap='Blues', ax=ax)
-        plt.title("Wo liegen die Verwechslungen?")
-        plt.savefig(plot_dir / "random forest" / "confusion_matrix.png", dpi=300)
-        plt.close()
-
-
-        import seaborn as sns
-        import pandas as pd
-        # Erstelle einen DataFrame für die Visualisierung
-        df_plot = pd.DataFrame(X[:, :config.LATENT_DIM], columns=[f'z_{i}' for i in range(config.LATENT_DIM)])
-        df_plot['Country'] = y
-        # Schmelze den DataFrame für Seaborn
-        df_melted = df_plot.melt(id_vars='Country', var_name='Latent_Var', value_name='Value')
-        plt.figure(figsize=(12, 6))
-        sns.boxplot(data=df_melted, x='Latent_Var', y='Value', hue='Country')
-        plt.title("Vergleich der latenten Merkmale nach Land")
-        plt.savefig(plot_dir / "random forest" / "latent_space_comparison.png", dpi=300)
-        plt.close()
+        # Start the random forest algorithm.
+        rf_model.start_random_forest(model=model, device=device)
