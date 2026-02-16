@@ -28,15 +28,15 @@ if __name__ == '__main__':
     if not plot_dir.exists():
         plot_dir.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: Preprocess the .mea files
-    if config.PREPROCESSING or config.PEAK_DETECTION or config.SAVE_CONSENSUS_WINDOWS:
+
+    if config.PREPROCESSING or config.PEAK_DETECTION or config.SAVE_CONSENSUS_WINDOWS or config.SAVE_CONSENSUS_WINDOWS:
+        # Step 1: Preprocess the .mea files
         preprocessed_data, spectra_paths = preprocess.start(input_dir=input_dir,
                                                             output_dir=output_dir,
                                                             create_plots="Single",
                                                             drift_cut=config.DRIFT_CUT,
                                                             retention_cut=config.RETENTION_CUT,
                                                             load_existing=True)
-
 
         # Step 2: Calculate peaks on preprocessed data.
         if config.PEAK_DETECTION:
@@ -58,19 +58,20 @@ if __name__ == '__main__':
                                          create_plots="overview",
                                          max_node_distance=config.MAX_NODE_DISTANCE)
 
-
-        # Step 5: Save consensus peak windows as .npy files.
+        # Step 4: Save consensus peak windows as .npy files.
         if config.SAVE_CONSENSUS_WINDOWS:
             peak.save_all_consensus_peak_windows(preprocessed_spectra=preprocessed_data,
                                                  peak_radius=config.PEAK_RADIUS,
                                                  spectra_paths=spectra_paths,
-                                                 consensus_excel_file = output_dir / "03_consensus_peaks.xlsx",
+                                                 consensus_excel_file=output_dir / "03_consensus_peaks.xlsx",
                                                  create_npy=True,
                                                  create_heatmaps=True)
 
-
-    # Step 4: Training the VAE.
+    # Step 5: Training the VAE.
     if config.USE_NEURAL_NETWORK:
+        print("=======================================================")
+        print("V. TRAIN/TEST AUTOENCODER")
+
         # Device agnostic code.
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

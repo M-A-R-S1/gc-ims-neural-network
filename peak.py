@@ -616,7 +616,7 @@ def save_all_consensus_peak_windows(preprocessed_spectra: list[ims.Spectrum],
     tasks = []
 
     print("=======================================================")
-    print("V. SAVING CONSENSUS PEAK WINDOWS")
+    print("IV. SAVING CONSENSUS PEAK WINDOWS")
     # Walk through each preprocessed spectrum and collect needed arguments for the peak finding computation.
     for idx, spectrum in enumerate(preprocessed_spectra):
         task_args = (spectrum, peak_radius, spectra_paths[idx], consensus_excel_file, create_heatmaps, create_npy)

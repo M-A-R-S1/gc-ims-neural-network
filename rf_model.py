@@ -50,8 +50,10 @@ def start_random_forest(model: torch.nn.Module,
     # Walk through all consensus times and create a random forest for each individual consensus peak.
     for idx, consensus_time in enumerate(unique_consensus_times):
         # List of all features and labels which will be used for the random forest algorithm.
-        features = []
+        rf_features = []
         labels = []
+        original_features = []
+        reconstructions = []
 
         # Get the retention and drifttimes from the filename.
         # This code uses a regular expression. It looks for the pattern 'RT' followed by a number, followed by a dot.
@@ -80,24 +82,28 @@ def start_random_forest(model: torch.nn.Module,
 
             # Calculate the latent dimension vector for the current peak window.
             with torch.inference_mode():
-                encoded_feature = model.encoder(peak_window_tensor)
-                mean = model.latent_mean(encoded_feature)
+                #encoded_feature = model.encoder(peak_window_tensor)
+                #mean = model.latent_mean(encoded_feature)
+                reconstruction, mean, _ = model(peak_window_tensor)
                 latent_vector = mean.cpu().numpy().flatten()
 
             # Combine the latent vector with the retention and drifttime.
             combined_feature = np.hstack((latent_vector, [rt_val, dt_val]))
 
             # Append the feature and labe to the list.
-            features.append(combined_feature)
+            original_features.append(peak_window_tensor)
+            reconstructions.append(reconstruction)
+            rf_features.append(combined_feature)
             labels.append(label)
 
 
         # Check if features and labels were found. If not, continue with the next consensus peak.
-        if len(features) <= 5:
+        if len(rf_features)*0.2 <= 4:
+            print(f"Index: {idx + 1} - Skipping. Not enough peak windows: {len(rf_features)}x")
             continue
 
         # Split in Training und Test datasets.
-        train_feature, test_feature, train_label, test_label = train_test_split(features,
+        train_feature, test_feature, train_label, test_label = train_test_split(rf_features,
                                                                                 labels,
                                                                                 test_size=0.2,
                                                                                 random_state=42)
@@ -116,10 +122,7 @@ def start_random_forest(model: torch.nn.Module,
         results_dataframe = pd.DataFrame(results_dict).transpose()
 
         # Print the results to the console.
-        # print("=======================================================")
         print(f"Index: {idx + 1} - {(results_dict['accuracy'] * 100): .0f} % - RT{rt_val: .2f}_DT{dt_val: .2f} - {results_dict['weighted avg']['support']}x")
-        # print(classification_report(test_label, label_predictions))
-        # print("=======================================================")
 
         # Check and create the directory.
         filedir = Path(config.PLOT_DIR) / "random forest" / f"{(results_dict['accuracy']*100):.0f}% - RT{rt_val:.2f}_DT{dt_val:.2f} - {results_dict['weighted avg']['support']}x"
@@ -128,6 +131,12 @@ def start_random_forest(model: torch.nn.Module,
          # Save the dataframe as an Excel file.
         filename = filedir /"classification_results.xlsx"
         results_dataframe.to_excel(filename, index=True)
+
+        # Plot the all used peak windows and their reconstructions as an overlay image.
+        plot.plot_all_rf_peak_windows(labels=labels,
+                                      features=original_features,
+                                      feature_recons=reconstructions,
+                                      plot_dir=filedir)
 
         # Plot the Importance graph.
         plot.random_forest_importance_plot(model=rf_model,
@@ -138,6 +147,6 @@ def start_random_forest(model: torch.nn.Module,
                                             test_label=test_label,
                                             output_dir=filedir)
         # Plot the comparison boxplot.
-        plot.random_forest_boxplot(features=features,
+        plot.random_forest_boxplot(features=rf_features,
                                    labels=labels,
                                    output_dir=filedir)

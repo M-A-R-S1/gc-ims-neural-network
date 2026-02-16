@@ -526,3 +526,67 @@ def random_forest_boxplot(features: list,
     plt.title("Latent variable boxplot")
     plt.savefig(output_dir / "latent_space_comparison.png", dpi=300)
     plt.close()
+
+
+
+def plot_all_rf_peak_windows(labels: list[str],
+                             features: list[torch.Tensor],
+                             feature_recons: list[torch.Tensor],
+                             plot_dir: Path,
+                             cols: int=5) -> None:
+    """
+    This function creates an overview plot for each unique label which is used for the random forest classifier.
+    Each overview depicts all used consensus peaks and their reconstructions.
+
+    :param labels: List of labels.
+    :param features: List of consensus peaks.
+    :param feature_recons: List of reconstructed consensus peaks.
+    :param plot_dir: The directory to save the plot.
+    :param cols: Number of columns for the plot.
+
+    :return: None
+    """
+
+    # Convert the list to numpy arrays (This allows the use of making)!
+    labels = np.array(labels)
+    features = torch.stack(features)
+    feature_recons = torch.stack(feature_recons)
+
+    # List of all unique labels.
+    unique_labels = np.unique(labels)
+
+    for label in unique_labels:
+        # Create a mask for the current label and select all features and recons which fit this mask.
+        mask = (labels == label)
+        current_label_features = features[mask].cpu().numpy()
+        current_label_recons = feature_recons[mask].cpu().numpy()
+        num_peaks = len(current_label_features)
+
+        if num_peaks == 0:
+            continue
+
+        # Calculate the layout for the plot.
+        rows = math.ceil(num_peaks / cols)
+        fig = plt.figure(figsize=(cols * 4, rows * 2))
+        fig.suptitle(f"Used consensus peaks and their reconstrucion for: {label} ", fontsize=20)
+
+        for i in range(num_peaks):
+            row_idx = i // cols
+            col_idx = (i % cols) * 2
+
+            # Original feature.
+            ax_raw = plt.subplot2grid((rows, cols * 2), (row_idx, col_idx))
+            ax_raw.imshow(current_label_features[i, 0].squeeze(), cmap='RdBu_r')
+            ax_raw.axis('off')
+            # Titel nur in der ersten Zeile zur Orientierung
+            if row_idx == 0: ax_raw.set_title(f"Peak (Raw)")
+
+            # Reconstructed feature.
+            ax_recon = plt.subplot2grid((rows, cols * 2), (row_idx, col_idx + 1))
+            ax_recon.imshow(current_label_recons[i, 0].squeeze(), cmap='RdBu_r')
+            ax_recon.axis('off')
+            if row_idx == 0: ax_recon.set_title(f"Peak (Recon)")
+
+        filename = plot_dir / f"{label}_peak_overview.png"
+        plt.savefig(filename, dpi=150)
+        plt.close()
