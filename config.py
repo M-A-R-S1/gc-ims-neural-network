@@ -41,5 +41,5 @@ SAVING = False                     # Save the model?
 
 # Directory and filename for saving and loading.
 SAVE_DIR = "models"
-FILE_NAME = "GC-IMS-CNN-VAE-OLIVES-BCE-1500.pt"
+FILE_NAME = "GC-IMS-CNN-VAE-OLIVES-1500.pt"
 ###########################################################################################
