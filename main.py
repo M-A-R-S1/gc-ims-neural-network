@@ -85,7 +85,7 @@ if __name__ == '__main__':
         # Split the data into training and test data.
         train_paths, test_paths = train_test_split(npy_paths,
                                                     test_size=0.20,
-                                                    random_state=42,
+                                                    random_state=7,
                                                     shuffle=True)
 
         # Create the datasets and dataloaders.

@@ -2,6 +2,7 @@ import plot
 import config
 from pathlib import Path
 import torch
+from torchvision.transforms import v2 as transform
 import re
 import numpy as np
 import pandas as pd
@@ -76,14 +77,20 @@ def start_random_forest(model: torch.nn.Module,
             peak_window = np.load(path)
             # Calculating the peak window size.
             peak_window_dimension = 4 * config.PEAK_RADIUS + 1
+
+           # Normalize the peak window.
+            min_intensity = peak_window.min()
+            max_intensity = peak_window.max()
+            if max_intensity - min_intensity == 0:
+                npy_file_normalized = np.zeros_like(peak_window)
+            else:
+                npy_file_normalized = (peak_window - min_intensity) / (max_intensity - min_intensity)
+
             # Changing the peak window to a tensor and converting the tensor format.
-            peak_window_tensor = torch.from_numpy(peak_window).float().view(1, 1, peak_window_dimension,
-                                                                            peak_window_dimension).to(device)
+            peak_window_tensor = torch.from_numpy(npy_file_normalized).float().view(1, 1, peak_window_dimension, peak_window_dimension).to(device)
 
             # Calculate the latent dimension vector for the current peak window.
             with torch.inference_mode():
-                #encoded_feature = model.encoder(peak_window_tensor)
-                #mean = model.latent_mean(encoded_feature)
                 reconstruction, mean, _ = model(peak_window_tensor)
                 latent_vector = mean.cpu().numpy().flatten()
 

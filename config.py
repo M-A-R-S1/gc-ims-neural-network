@@ -37,7 +37,7 @@ BETA_WARMUP = 300
 DO_TRAINING = True                # Train the model?
 DO_TESTING = False               # Test the model?
 TEST_WITH_ALL_DATA = False        # Do you want to test the model with all the available data? [No Splitting].
-SAVING = True                     # Save the model?
+SAVING = False                     # Save the model?
 
 # Directory and filename for saving and loading.
 SAVE_DIR = "models"
