@@ -168,7 +168,6 @@ def start_random_forest(model: torch.nn.Module,
                                    output_dir=filedir)
 
 
-    """
     # List of all features and labels which will be used for the random forest algorithm.
     rf_features = []
     labels = []
@@ -257,4 +256,3 @@ def start_random_forest(model: torch.nn.Module,
     plot.random_forest_boxplot(features=rf_features,
                                labels=labels,
                                output_dir=filedir)
-    """

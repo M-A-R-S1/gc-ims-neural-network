@@ -676,6 +676,8 @@ def save_spektrum_consensus_peak_windows(spectrum: ims.Spectrum,
         peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
         peak_window_intensities_non_normalized = padded_values_non_normalized[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
 
+        # TODO ... Check here, if the consensus peak is placed in the middle of the peak window
+
         if np.max(peak_window_intensities_non_normalized) >= consensus_peak['min_intensity']:
             # Plot the peak heatmaps.
             if create_heatmaps:
