@@ -456,8 +456,10 @@ def plot_loss_curve(losses: dict[str, list[float]],
     plt.savefig(plot_dir / "detailed_loss_curves.png", dpi=300)
     plt.close()
 
+
 def random_forest_importance_plot(model: RandomForestClassifier,
-                                  output_dir: Path)-> None:
+                                  output_dir: Path,
+                                  coordinates: bool)-> None:
 
     """
     This function plots the importance of the random forest model as a bar graph.
@@ -465,16 +467,34 @@ def random_forest_importance_plot(model: RandomForestClassifier,
 
     :param model: The trained random forest model.
     :param output_dir: The directory to save the plot.
+    :param coordinates: Is set to True, if coordinates are transmitted. This is only the case for the ALL IN ONE
+    random forest classification. If set to True, the retention and drifttimes are also plotted with their importance.
 
     :return: None
     """
 
     importances = model.feature_importances_
-    feature_names = [f'z_{i}' for i in range(config.LATENT_DIM)] + ['Retentiontime', 'Drifttime']
+    feature_names = [f'M{i+1}' for i in range(config.LATENT_DIM)] + [f'V{i+1}' for i in range(config.LATENT_DIM)]
+
+    if coordinates:
+        feature_names = feature_names + ['RT', 'DT']
+
+    colors = []
+    for name in feature_names:
+        if name.startswith('M'):
+            colors.append('#3498db')  # Blue color
+        elif name.startswith('V'):
+            colors.append('#e74c3c')  # red color
+        else:
+            colors.append('#2ecc71')  # green color
+
     plt.figure(figsize=(10, 6))
-    plt.bar(feature_names, importances)
+    plt.bar(feature_names, importances, color=colors, edgecolor='black', alpha=0.8)
     plt.title("Random Forest attribute importance")
     plt.ylabel("Importance Score")
+    plt.xticks(rotation=45)
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
     plt.savefig(output_dir / "importance_score.png", dpi=300)
     plt.close()
 
@@ -516,12 +536,16 @@ def random_forest_boxplot(features: list,
     :return: None.
     """
 
-    plot_dataframe = pd.DataFrame(np.array(features)[:, :config.LATENT_DIM],
-                                  columns=[f'z_{i}' for i in range(config.LATENT_DIM)])
+    plot_dataframe = pd.DataFrame(np.array(features)[:, :2*config.LATENT_DIM],
+                                  columns=[f'M{i+1}' for i in range(config.LATENT_DIM)] +
+                                          [f'V{i+1}' for i in range(config.LATENT_DIM)])
 
     plot_dataframe['Label'] = labels
     melted_dataframe = plot_dataframe.melt(id_vars='Label', var_name='Latent Variable', value_name='Value')
     plt.figure(figsize=(12, 6))
+    plt.gca().spines['top'].set_visible(False)
+    plt.gca().spines['right'].set_visible(False)
+    plt.xticks(rotation=45)
     sns.boxplot(data=melted_dataframe, x='Latent Variable', y='Value', hue='Label')
     plt.title("Latent variable boxplot")
     plt.savefig(output_dir / "latent_space_comparison.png", dpi=300)
@@ -568,7 +592,6 @@ def plot_all_rf_peak_windows(labels: list[str],
         # Calculate the layout for the plot.
         rows = math.ceil(num_peaks / cols)
         fig = plt.figure(figsize=(cols * 4, rows * 2))
-        fig.suptitle(f"Used consensus peaks and their reconstrucion for: {label} ", fontsize=20)
 
         for i in range(num_peaks):
             row_idx = i // cols
@@ -587,6 +610,6 @@ def plot_all_rf_peak_windows(labels: list[str],
             ax_recon.axis('off')
             if row_idx == 0: ax_recon.set_title(f"Peak (Recon)")
 
-        filename = plot_dir / f"{label}_peak_overview.png"
+        filename = plot_dir / f"peak_overview_{label}.png"
         plt.savefig(filename, dpi=150)
         plt.close()

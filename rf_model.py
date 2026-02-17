@@ -2,7 +2,6 @@ import plot
 import config
 from pathlib import Path
 import torch
-from torchvision.transforms import v2 as transform
 import re
 import numpy as np
 import pandas as pd
@@ -38,6 +37,14 @@ def start_random_forest(model: torch.nn.Module,
     # Set with all consensus peak times.
     unique_consensus_peaks = set()
 
+    # Find out how many spectra files are there.
+    #folders = list(output_dir.glob("*/npy/consensus peak/*/"))
+    # 2. Filtern, um sicherzugehen, dass es wirklich Verzeichnisse sind
+    # (Optional, falls du sicher bist, dass dort keine Dateien liegen)
+    spectra_count = len([f for f in list(output_dir.glob("*/npy/consensus peak/*/")) if f.is_dir()])
+    # 3. Anzahl ermitteln
+
+
     # Collect all unique consensus peak times and save them in a set.
     for path in npy_paths:
         filename = path.stem
@@ -48,7 +55,7 @@ def start_random_forest(model: torch.nn.Module,
 
     model.eval()
 
-    """
+
     # Walk through all consensus times and create a random forest for each individual consensus peak.
     for idx, consensus_peak in enumerate(unique_consensus_peaks):
         # List of all features and labels which will be used for the random forest algorithm.
@@ -92,11 +99,11 @@ def start_random_forest(model: torch.nn.Module,
 
             # Calculate the latent dimension vector for the current peak window.
             with torch.inference_mode():
-                reconstruction, mean, _ = model(peak_window_tensor)
-                latent_vector = mean.cpu().numpy().flatten()
+                reconstruction, mean, log_variance = model(peak_window_tensor)
 
-            # Combine the latent vector with the retention and drifttime.
-            combined_feature = np.hstack((latent_vector, [rt_val, dt_val]))
+            # Combine the mean and variance vector.
+            combined_feature = np.hstack((mean.cpu().numpy().flatten(),
+                                          log_variance.cpu().numpy().flatten()))
 
             # Append the feature and labe to the list.
             original_features.append(peak_window_tensor)
@@ -130,10 +137,10 @@ def start_random_forest(model: torch.nn.Module,
         results_dataframe = pd.DataFrame(results_dict).transpose()
 
         # Print the results to the console.
-        print(f"Index: {idx + 1} - {(results_dict['accuracy'] * 100): .0f} % - RT{rt_val: .2f}_DT{dt_val: .2f} - {results_dict['weighted avg']['support']}x")
+        print(f"Index: {idx + 1} - {(results_dict['accuracy'] * 100): .0f} % - RT{rt_val: .2f}_DT{dt_val: .2f} - {len(rf_features)}/{spectra_count}x")
 
         # Check and create the directory.
-        filedir = Path(config.PLOT_DIR) / "random forest" / f"{(results_dict['accuracy']*100):.0f}% - RT{rt_val:.2f}_DT{dt_val:.2f} - {results_dict['weighted avg']['support']}x"
+        filedir = Path(config.PLOT_DIR) / "random forest" / f"{(results_dict['accuracy']*100):.0f}% - RT{rt_val:.2f}_DT{dt_val:.2f} - {len(rf_features)}-{spectra_count}x"
         if not filedir.exists():
             filedir.mkdir(parents=True, exist_ok=True)
          # Save the dataframe as an Excel file.
@@ -148,7 +155,8 @@ def start_random_forest(model: torch.nn.Module,
 
         # Plot the Importance graph.
         plot.random_forest_importance_plot(model=rf_model,
-                                           output_dir=filedir)
+                                           output_dir=filedir,
+                                           coordinates=False)
         # Plot the confusion matrix.
         plot.random_forest_confusion_matrix(model=rf_model,
                                             test_feature=test_feature,
@@ -192,14 +200,13 @@ def start_random_forest(model: torch.nn.Module,
 
         # Calculate the latent dimension vector for the current peak window.
         with torch.inference_mode():
-            reconstruction, mean, _ = model(peak_window_tensor)
-            latent_vector = mean.cpu().numpy().flatten()
+            reconstruction, mean, log_variance = model(peak_window_tensor)
 
         rt_val = float(re.search(r'RT([\d.]+)', filename).group(1))
         dt_val = float(re.search(r'DT([\d.]+)', filename).group(1))
 
         # Combine the latent vector with the retention and drifttime.
-        combined_feature = np.hstack((latent_vector, [rt_val, dt_val]))
+        combined_feature = np.hstack((mean.cpu().numpy().flatten(), log_variance.cpu().numpy().flatten(), [rt_val, dt_val]))
 
         # Append the feature and labe to the list.
         rf_features.append(combined_feature)
@@ -239,7 +246,8 @@ def start_random_forest(model: torch.nn.Module,
 
     # Plot the Importance graph.
     plot.random_forest_importance_plot(model=rf_model,
-                                       output_dir=filedir)
+                                       output_dir=filedir,
+                                       coordinates=True)
     # Plot the confusion matrix.
     plot.random_forest_confusion_matrix(model=rf_model,
                                         test_feature=test_feature,
@@ -249,3 +257,4 @@ def start_random_forest(model: torch.nn.Module,
     plot.random_forest_boxplot(features=rf_features,
                                labels=labels,
                                output_dir=filedir)
+    """

@@ -144,6 +144,6 @@ if __name__ == '__main__':
                                                 latent_dimension=config.LATENT_DIM).to(device)
 
         # Load the model state dict.
-        model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
+        model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME, device=device)
         # Start the random forest algorithm.
         rf_model.start_random_forest(model=model, device=device)

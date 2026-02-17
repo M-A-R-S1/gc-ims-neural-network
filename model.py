@@ -133,12 +133,13 @@ class VariationalAutoencoderCNN(nn.Module):
         print(f"Model saved at {model_save_path}")
 
 
-    def load_model(self, model_dir: str, file_name: str) -> None:
+    def load_model(self, model_dir: str, file_name: str, device: torch.device) -> None:
         """
         Load the state dict of this model from the specified directory and filename
 
         :param model_dir: the relative path where the models are saved.
         :param file_name: the name of the saved model
+        :param device: The device on which the tensors are used [cpu or cuda].
 
         :return: None.
         """
@@ -152,5 +153,5 @@ class VariationalAutoencoderCNN(nn.Module):
 
         # Load the model if it exists.
         if model_load_path.exists():
-            self.load_state_dict(torch.load(f=model_load_path))
+            self.load_state_dict(torch.load(f=model_load_path, map_location=device))
             print(f"Model loaded at {model_load_path}")
