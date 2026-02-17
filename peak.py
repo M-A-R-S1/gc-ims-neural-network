@@ -666,25 +666,43 @@ def save_spektrum_consensus_peak_windows(spectrum: ims.Spectrum,
     # Walk through all rows.
     for idx, consensus_peak in consensus_peaks_dataframe.iterrows():
         # Calculate the retention and drifttime indices from the actual times saved in the Excel file.
-        ret_idx = np.abs(spectrum.ret_time - consensus_peak['mean_ret_time']).argmin()
-        drift_idx = np.abs(spectrum.drift_time - consensus_peak['mean_drift_time']).argmin()
+        ret_idx_original = np.abs(spectrum.ret_time - consensus_peak['mean_ret_time']).argmin()
+        drift_idx_original = np.abs(spectrum.drift_time - consensus_peak['mean_drift_time']).argmin()
 
+        # Calculate the min and max coordinates for the padded peak window.
+        start_ret_idx = ret_idx_original - peak_radius
+        end_ret_idx = ret_idx_original + 3 * peak_radius + 1
+        start_drift_idx = drift_idx_original - peak_radius
+        end_drift_idx = drift_idx_original + 3 * peak_radius + 1
+
+        # TODO ... Peak center code deactivated for now.
+        """
+        # Define the search area [The peak window] and look for the highest intensity.
+        search_area = padded_values_non_normalized[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+        local_max_coords = np.unravel_index(np.argmax(search_area), search_area.shape)
+
+        # Correct the peak window, so that the highest intensity value is centered.
+        ret_idx = ret_idx_original + (local_max_coords[0] - 2*peak_radius)
+        drift_idx = drift_idx_original + (local_max_coords[1] - 2*peak_radius)
+
+        # Adjust the min and max coordinates for the centered peak.
         start_ret_idx = ret_idx - peak_radius
         end_ret_idx = ret_idx + 3 * peak_radius + 1
         start_drift_idx = drift_idx - peak_radius
         end_drift_idx = drift_idx + 3 * peak_radius + 1
+        """
+
+        # Set the adjusted peak window (One with normalized and one with non normalized intensity values)
         peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
         peak_window_intensities_non_normalized = padded_values_non_normalized[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
-
-        # TODO ... Check here, if the consensus peak is placed in the middle of the peak window
 
         if np.max(peak_window_intensities_non_normalized) >= consensus_peak['min_intensity']:
             # Plot the peak heatmaps.
             if create_heatmaps:
                 plot.plot_peak_heatmap(spectrum=spectrum,
                                        heatmap_window=peak_window_intensities,
-                                       ret_idx=ret_idx,
-                                       drift_idx=drift_idx,
+                                       ret_idx=ret_idx_original,
+                                       drift_idx=drift_idx_original,
                                        window_size=peak_radius,
                                        plot_dir=output_dir / "heatmap" / "consensus peak")
 
@@ -695,7 +713,7 @@ def save_spektrum_consensus_peak_windows(spectrum: ims.Spectrum,
                 if not npy_dir.exists():
                     npy_dir.mkdir(parents=True, exist_ok=True)
 
-                npy_filename = npy_dir / f"PW_{output_dir.name}_{spectrum.name}_RT{spectrum.ret_time[ret_idx]}_DT{spectrum.drift_time[drift_idx]}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
+                npy_filename = npy_dir / f"PW_{output_dir.name}_{spectrum.name}_RT{spectrum.ret_time[ret_idx_original]}_DT{spectrum.drift_time[drift_idx_original]}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
                 np.save(npy_filename, peak_window_intensities)
 
             # Increase the counter of the saved consensus peak windows.
