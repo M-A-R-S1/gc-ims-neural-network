@@ -1,19 +1,6 @@
 - Check if the peak detection was already calculated, if so skip it.
 - After ~1500 epochs the train/test loss stays the same.
 
-- Testing BCL loss instead of MSE loss!?
-
-----------------------------------------------------------------------------------------------------------------------
-- Check the model, by using consensus peak widows.
-    - Create a new model, with 70% Training, 20% Validation and 10% testing datasets.
-    - The 10% testing dataset contains the peak windows from the consensus peaks.
-
-- 1st. Create new .npy files and heatmaps. Create these heatmaps and .npy files based on the consensus peak coordinates.
-- 2nd. Check for areas where no peaks were detected (Delete these areas for the "cleaned" dataset.
-    - Duplicate the .npy files and keep ALL for one scenario and use the "cleaned" .npy files for a second scenario.
-- 3rd. Train a new model with 70% training data and 20% validation data (Here we use the actual detected peaks).
-
-- Question: Can the model work with the consensus peaks? What is the result for the "all in" and "cleaned" dataset.
 ----------------------------------------------------------------------------------------------------------------------
 - Use the olive oil trained model, and insert the honey peaks (and later breathing air peaks).
 - Question: Can the model reconstruct these new peaks? Are there new peak forms different from the olive ones?
@@ -21,6 +8,13 @@
               the model did not learn with the olive data.
 - Question 2: Can we train a model with both datasets? What are the results for such a model?
 ----------------------------------------------------------------------------------------------------------------------
-- Can we change the labeling for the peaks? Instead of labeling them "Greece", "Italy", and "Spain", can we label the peaks
-according to their forms? This could shed some light on the T-SNE clustering and answer the question .. "What is the model learning anyway?"
- ... BUT ... It is very time consuming to do this manually.
+- First random forest results: 77% overall accuracy with 1806 used consensus peaks
+- Individual results range between 20% and 100%
+- Most results are higher than 80%
+- The classification seems to have problems with peaks which are shifted to much. The Autoencoder can't reconstruct them
+properly.
+
+NEXT STEPS:
+- Increasing the size of the saved .npy files
+- Each peak is now only centered perfect in the middle. By training the autoencoder with shifted peaks, the reconstruction of
+not centered consensus peaks might be better and thus the classification accuracy of the random forest classifier.

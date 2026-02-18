@@ -37,9 +37,12 @@ BETA_WARMUP = 300
 DO_TRAINING = True                # Train the model?
 DO_TESTING = False               # Test the model?
 TEST_WITH_ALL_DATA = False        # Do you want to test the model with all the available data? [No Splitting].
-SAVING = False                     # Save the model?
+SAVING = True                     # Save the model?
 
 # Directory and filename for saving and loading.
 SAVE_DIR = "models"
 FILE_NAME = "GC-IMS-CNN-VAE-OLIVES-1500.pt"
 ###########################################################################################
+# STEP 5  - RANDOM FOREST
+SINGLE_PEAK_RANDOM_FOREST = False
+COMBINED_RANDOM_FOREST = True

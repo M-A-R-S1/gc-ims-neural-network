@@ -105,7 +105,7 @@ if __name__ == '__main__':
                                                 latent_dimension=config.LATENT_DIM).to(device)
 
         # Check if there is already a saved model matching the filename and directory and load it.
-        model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME)
+        model.load_model(model_dir=config.SAVE_DIR, file_name=config.FILE_NAME, device=device)
 
         # Define the optimizer.
         optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
