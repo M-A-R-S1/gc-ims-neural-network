@@ -175,7 +175,7 @@ def peak_detection(spectrum: ims.Spectrum,
             mask_ret_max = peak_ret_idx_list < (ret_idx_max - peak_radius)
             mask_drift_min = peak_drift_idx_list >= peak_radius
             mask_drift_max = peak_drift_idx_list < (drift_idx_max - peak_radius)
-            # Combine all 4 masks to one mask condition. This mask will remove all peaks which are too close to the boarder.
+            # Combine all 4 masks to one mask condition. This mask will remove all peaks which are too close to the border.
             # This will create a list with tuples of the same length as the found peak list (peak_coords).
             # If all single mask conditions are met, true will be saved in this list. Otherwise, it will be set to False.
             final_validity_mask = (mask_ret_min &
@@ -204,7 +204,7 @@ def peak_detection(spectrum: ims.Spectrum,
             # indices outside the spectrum boarder to 0.
             padded_values = np.pad(
                 spectrum.values,
-                pad_width=peak_radius,
+                pad_width=2*peak_radius,
                 mode='constant',
                 constant_values=0
             )
@@ -212,9 +212,9 @@ def peak_detection(spectrum: ims.Spectrum,
             # Walk through all peak coordinates.
             for ret_idx, drift_idx in peak_coords:
                 start_ret_idx = ret_idx - peak_radius
-                end_ret_idx = ret_idx + 3 * peak_radius + 1
+                end_ret_idx = ret_idx + 5*peak_radius + 1
                 start_drift_idx = drift_idx - peak_radius
-                end_drift_idx = drift_idx + 3 * peak_radius + 1
+                end_drift_idx = drift_idx + 5*peak_radius + 1
                 peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
                 # peak_window_ret_times = spectrum.ret_time[start_ret_idx:end_ret_idx]
                 # peak_window_drift_times = spectrum.drift_time[start_drift_idx:end_drift_idx]
@@ -233,9 +233,9 @@ def peak_detection(spectrum: ims.Spectrum,
 
 
                 # Check if the peak window has the correct shape. This should always be the case!
-                if peak_window_intensities.shape != (4*peak_radius + 1, 4*peak_radius + 1):
+                if peak_window_intensities.shape != (6*peak_radius + 1, 6*peak_radius + 1):
                     raise ValueError(f"\tPeak Window has the wrong shape: {peak_window_intensities.shape}. "
-                                     f"Expected Shape: ({4*peak_radius + 1}, {4*peak_radius + 1})")
+                                     f"Expected Shape: ({6*peak_radius + 1}, {6*peak_radius + 1})")
 
                 # 5. Save peak information as .npy file ----------------------------------------------------------------
                 # Define the numpy filename and create the needed directories.
@@ -244,7 +244,7 @@ def peak_detection(spectrum: ims.Spectrum,
                     if not npy_dir.exists():
                         npy_dir.mkdir(parents=True, exist_ok=True)
 
-                    npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{4*peak_radius + 1}x{4*peak_radius + 1}.npy"
+                    npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{6*peak_radius + 1}x{6*peak_radius + 1}.npy"
                     np.save(npy_filename, peak_window)
                 else:
                     npy_filename = "-"

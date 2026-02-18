@@ -146,7 +146,7 @@ def plot_peak_heatmap(spectrum: ims.Spectrum,
     if not heatmap_dir.exists():
         heatmap_dir.mkdir(parents=True, exist_ok=True)
 
-    heatmap_file = heatmap_dir / f"HM_{spectrum.name}_RT{spectrum.ret_time[ret_idx]:.2f}_DT{spectrum.drift_time[drift_idx]:.2f}_{4 * window_size + 1}x{4 * window_size + 1}.png"
+    heatmap_file = heatmap_dir / f"HM_{spectrum.name}_RT{spectrum.ret_time[ret_idx]:.2f}_DT{spectrum.drift_time[drift_idx]:.2f}_{6 * window_size + 1}x{6 * window_size + 1}.png"
 
     # Create the heatmap plot
     plt.figure(figsize=(10, 10))
