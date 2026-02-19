@@ -5,7 +5,6 @@ import peak
 import model
 import loop
 import rf_model
-import xgb_model
 from model import vae_loss
 import dataloader
 import torch
