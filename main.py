@@ -5,6 +5,7 @@ import peak
 import model
 import loop
 import rf_model
+import xgb_model
 from model import vae_loss
 import dataloader
 import torch
@@ -29,7 +30,12 @@ if __name__ == '__main__':
         plot_dir.mkdir(parents=True, exist_ok=True)
 
 
-    if config.PREPROCESSING or config.PEAK_DETECTION or config.SAVE_CONSENSUS_WINDOWS or config.SAVE_CONSENSUS_WINDOWS:
+    if (config.PREPROCESSING or
+        config.PEAK_DETECTION or
+        config.SAVE_CONSENSUS_WINDOWS or
+        config.CONSENSUS_PEAK_CALCULATION or
+        config.SAVE_CONSENSUS_WINDOWS):
+
         # Step 1: Preprocess the .mea files
         preprocessed_data, spectra_paths = preprocess.start(input_dir=input_dir,
                                                             output_dir=output_dir,
@@ -89,12 +95,12 @@ if __name__ == '__main__':
                                                     shuffle=True)
 
         # Create the datasets and dataloaders.
-        train_dataset = dataloader.VaeDataset(train_paths, class_dict)
+        train_dataset = dataloader.VaeDataset(npy_paths=train_paths, class_dict=class_dict, window_size=config.PEAK_RADIUS)
         # Create the test dataset. Use all the data or split it.
         if config.TEST_WITH_ALL_DATA:
-            test_dataset = dataloader.VaeDataset(npy_paths, class_dict)
+            test_dataset = dataloader.VaeDataset(npy_paths=npy_paths, class_dict=class_dict, window_size=config.PEAK_RADIUS)
         else :
-            test_dataset = dataloader.VaeDataset(test_paths, class_dict)
+            test_dataset = dataloader.VaeDataset(npy_paths=test_paths, class_dict=class_dict, window_size=config.PEAK_RADIUS)
 
         train_dataloader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
         test_dataloader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE, shuffle=False)

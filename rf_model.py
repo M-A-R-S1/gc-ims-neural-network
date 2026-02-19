@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, ConfusionMatrixDisplay
+from sklearn.metrics import classification_report
 
 
 def start_random_forest(model: torch.nn.Module,
@@ -168,7 +168,7 @@ def start_random_forest(model: torch.nn.Module,
                                        labels=labels,
                                        output_dir=filedir)
 
-            print("Random Forest: All Individual peaks classified")
+        print("Random Forest: All Individual peaks classified")
 
 
     if config.COMBINED_RANDOM_FOREST:

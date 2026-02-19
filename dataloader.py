@@ -2,12 +2,17 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import v2 as transform
+import random
 
 class VaeDataset(Dataset):
-    def __init__(self, npy_paths: list, class_dict: dict):
+    def __init__(self, npy_paths: list, class_dict: dict, window_size: int, shifting: bool = True) -> None:
 
         self.npy_paths = npy_paths
         self.class_dict = class_dict
+        self.shifting = shifting
+
+        self.target_size = 4*window_size + 1
+        self.full_size = 6*window_size + 1
 
         self.transform = transform.Compose([
             transform.ToImage(),
@@ -20,6 +25,17 @@ class VaeDataset(Dataset):
     def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
         npy_path = self.npy_paths[index]
         npy_file = np.load(npy_path)
+
+        if self.shifting:
+            # Zufälliger Startpunkt zwischen 0 und 10 (31 - 21 = 10)
+            start_ret = random.randint(0, self.full_size - self.target_size)
+            start_drift = random.randint(0, self.full_size - self.target_size)
+        else:
+            # Exakte Mitte für konsistente Feature-Extraktion
+            start_ret = (self.full_size - self.target_size) // 2
+            start_drift = (self.full_size - self.target_size) // 2
+
+        npy_file = npy_file[start_ret: start_ret + self.target_size, start_drift: start_drift + self.target_size]
 
         min_intensity = npy_file.min()
         max_intensity = npy_file.max()
