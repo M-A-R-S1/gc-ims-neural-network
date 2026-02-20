@@ -155,3 +155,70 @@ class VariationalAutoencoderCNN(nn.Module):
         if model_load_path.exists():
             self.load_state_dict(torch.load(f=model_load_path, map_location=device))
             print(f"Model loaded at {model_load_path}")
+
+
+class ClassificationModel(nn.Module):
+    def __init__(self, input_layer: int = 32, hidden_layer: int = 64, output_layer: int = 10):
+        super(ClassificationModel, self).__init__()
+
+        self.multilayer = nn.Sequential(
+            # First layer.
+            nn.Linear(input_layer, hidden_layer),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            # Second layer.
+            nn.Linear(hidden_layer, hidden_layer),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            # Third layer.
+            nn.Linear(hidden_layer, hidden_layer // 2),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            # Output layer.
+            nn.Linear(hidden_layer // 2, output_layer)
+        )
+
+
+    def forward(self, x):
+        result = self.multilayer(x)
+        return result
+
+    def save_model(self, model_dir: str, file_name: str) -> None:
+        """
+        Save the state dict of this model to a specified directory and filename.
+
+        :param model_dir: the relative path where the models are saved.
+        :param file_name: the name of the saved model
+        :return: None.
+        """
+
+        # Create the directory if not already there.
+        model_path = Path(model_dir)
+        model_path.mkdir(parents=True, exist_ok=True)
+
+        # Creat the relative path to the file.
+        model_save_path = model_path / file_name
+
+        # Save the state dict of this model.
+        torch.save(obj=self.state_dict(), f=model_save_path)
+        print(f"Model saved at {model_save_path}")
+
+    def load_model(self, model_dir: str, file_name: str) -> None:
+        """
+        Load the state dict of this model from the specified directory and filename
+
+        :param model_dir: the relative path where the models are saved.
+        :param file_name: the name of the saved model
+        :return: None.
+        """
+
+        # Create the directory if not already there.
+        model_path = Path(model_dir)
+        model_path.mkdir(parents=True, exist_ok=True)
+
+        # Creat the relative path to the file.
+        model_load_path = model_path / file_name
+
+        # Load the model if it exists.
+        if model_load_path.exists():
+            self.load_state_dict(torch.load(f=model_load_path))
