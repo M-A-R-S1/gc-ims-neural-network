@@ -60,7 +60,7 @@ if __name__ == '__main__':
             excel_filename = output_dir / "01_peak_data.xlsx"
             peak.extract_consensus_peaks(excel_file=excel_filename,
                                          output_dir=output_dir,
-                                         create_plots="overview",
+                                         create_plots="none",
                                          max_node_distance=config.MAX_NODE_DISTANCE)
 
         # Step 4: Save consensus peak windows as .npy files.

@@ -1,9 +1,9 @@
 # OLIVE DATA [https://doi.org/10.1016/j.dib.2022.108730]
-DRIFT_CUT = (1.02, 2.5)
-RETENTION_CUT = (80, 900)
-INPUT_DIR = "./data/IMS_Olive_Oil_Geography"
-OUTPUT_DIR = "./output/IMS_Olive_Oil_Geography"
-PLOT_DIR = "./output/IMS_Olive_Oil_Geography/model_plots"
+#DRIFT_CUT = (1.02, 2.5)
+#RETENTION_CUT = (80, 900)
+#INPUT_DIR = "./data/IMS_Olive_Oil_Geography"
+#OUTPUT_DIR = "./output/IMS_Olive_Oil_Geography"
+#PLOT_DIR = "./output/IMS_Olive_Oil_Geography/model_plots"
 
 # HONEY DATA [http://dx.doi.org/10.1016/j.foodres.2022.111779]
 #DRIFT_CUT = (1.02, 2.5)
@@ -11,6 +11,13 @@ PLOT_DIR = "./output/IMS_Olive_Oil_Geography/model_plots"
 #INPUT_DIR = "./data/IMS_Honey_Botanical"
 #OUTPUT_DIR = "./output/IMS_Honey_Botanical"
 #PLOT_DIR = "./output/IMS_Honey_Botanical/model_plots"
+
+# HONEY RUB DATA
+DRIFT_CUT = (1.02, 2.0)
+RETENTION_CUT = (150, 1900)
+INPUT_DIR = "./data/IMS_Honey_RUB"
+OUTPUT_DIR = "./output/IMS_Honey_RUB"
+PLOT_DIR = "./output/IMS_Honey_RUB/model_plots"
 ###########################################################################################
 PREPROCESSING = False                   # Preprocess the data?
 PEAK_DETECTION = False                  # Detect raw peaks?
@@ -41,7 +48,7 @@ SAVING = True                     # Save the model?
 
 # Directory and filename for saving and loading.
 SAVE_DIR = "models"
-FILE_NAME = "GC-IMS-CNN-VAE-OLIVES-E1500-DIM16.pt"
+FILE_NAME = "GC-IMS-CNN-VAE-HONEY-RUB-E1500-DIM16.pt"
 ###########################################################################################
 # STEP 5  - RANDOM FOREST
 SINGLE_PEAK_RANDOM_FOREST = True
