@@ -518,6 +518,7 @@ def random_forest_confusion_matrix(model: RandomForestClassifier,
     fig, ax = plt.subplots(figsize=(8, 6))
     ConfusionMatrixDisplay.from_estimator(model, test_feature, test_label, cmap='Blues', ax=ax)
     plt.title("Confusion Matrix")
+    plt.xticks(rotation=90)
     plt.savefig(output_dir / "confusion_matrix.png", dpi=300)
     plt.close()
 
@@ -527,7 +528,7 @@ def random_forest_boxplot(features: list,
                           output_dir: Path) -> None:
 
     """
-    This function plots a boxplot of the random forest used latent variables.
+    This function plots one boxplot for each mean + variance pair of the latent space.
 
     :param features: List of all calculated peak window latent variables.
     :param labels: Corresponding list of labels of the features list.
@@ -536,21 +537,38 @@ def random_forest_boxplot(features: list,
     :return: None.
     """
 
-    plot_dataframe = pd.DataFrame(np.array(features)[:, :2*config.LATENT_DIM],
-                                  columns=[f'M{i+1}' for i in range(config.LATENT_DIM)] +
-                                          [f'V{i+1}' for i in range(config.LATENT_DIM)])
+    # Create a Dataframe to work with.
+    # Create the column names. E.g. M1 | V1 | M2 | V2 | ...
+    column_names = [f'M{i + 1}' for i in range(config.LATENT_DIM)] + [f'V{i + 1}' for i in range(config.LATENT_DIM)]
+    # Create the actual dataset and combine it with the column names.
+    dataframe = pd.DataFrame(np.array(features)[:, :2 * config.LATENT_DIM], columns=column_names)
+    # Addend a new column with the labels.
+    dataframe['Label'] = labels
 
-    plot_dataframe['Label'] = labels
-    melted_dataframe = plot_dataframe.melt(id_vars='Label', var_name='Latent Variable', value_name='Value')
-    plt.figure(figsize=(12, 6))
-    plt.gca().spines['top'].set_visible(False)
-    plt.gca().spines['right'].set_visible(False)
-    plt.xticks(rotation=45)
-    sns.boxplot(data=melted_dataframe, x='Latent Variable', y='Value', hue='Label')
-    plt.title("Latent variable boxplot")
-    plt.savefig(output_dir / "latent_space_comparison.png", dpi=300)
-    plt.close()
+    # Define and create the output directory.
+    boxplot_dir = output_dir / "boxplot"
+    boxplot_dir.mkdir(parents=True, exist_ok=True)
 
+    # Walk through all latent space values separately.
+    for idx in range(1, config.LATENT_DIM + 1):
+        mean_column = f'M{idx}'
+        variance_column = f'V{idx}'
+
+        subset = dataframe[[mean_column, variance_column, 'Label']]
+        melted_subset = subset.melt(id_vars='Label', var_name='Type', value_name='Value')
+
+        plt.figure(figsize=(8, 5))
+        plt.gca().spines['top'].set_visible(False)
+        plt.gca().spines['right'].set_visible(False)
+        plt.xticks(rotation=45)
+        sns.boxplot(data=melted_subset, x='Latent Variable', y='Value', hue='Label', palette='Set2')
+        plt.title(f"Latent Dimension {idx} Variables")
+        plt.xlabel("Latent Feature Type")
+        plt.ylabel("Value")
+        plt.legend(title='Label', bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.tight_layout()
+        plt.savefig(boxplot_dir / f"boxplot_{idx}.png", dpi=300)
+        plt.close()
 
 
 def plot_all_rf_peak_windows(labels: list[str],

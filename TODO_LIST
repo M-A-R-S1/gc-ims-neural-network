@@ -8,13 +8,5 @@
               the model did not learn with the olive data.
 - Question 2: Can we train a model with both datasets? What are the results for such a model?
 ----------------------------------------------------------------------------------------------------------------------
-- First random forest results: 77% overall accuracy with 1806 used consensus peaks
-- Individual results range between 20% and 100%
-- Most results are higher than 80%
-- The classification seems to have problems with peaks which are shifted to much. The Autoencoder can't reconstruct them
-properly.
-
-NEXT STEPS:
-- Increasing the size of the saved .npy files
-- Each peak is now only centered perfect in the middle. By training the autoencoder with shifted peaks, the reconstruction of
-not centered consensus peaks might be better and thus the classification accuracy of the random forest classifier.
+Next Steps:
+- Working on the GUI -> PyQT6 | PySide6
