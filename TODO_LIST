@@ -10,3 +10,6 @@
 ----------------------------------------------------------------------------------------------------------------------
 Next Steps:
 - Working on the GUI -> PyQT6 | PySide6
+
+- Error!!
+ImportError: libGL.so.1: cannot open shared object file: No such file or directory
