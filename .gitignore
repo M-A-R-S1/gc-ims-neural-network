@@ -6,3 +6,4 @@ output/
 venv/
 __pycache__/
 *.pyc
+app/ui/mockups/psd/
