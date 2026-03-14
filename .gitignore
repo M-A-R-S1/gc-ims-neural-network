@@ -1,9 +1,9 @@
 .idea/
 data/
 output/
+app/ui/mockups/psd/
 .ipynb_checkpoints/
 .venv/
-venv/
+venv/git
 __pycache__/
 *.pyc
-app/ui/mockups/psd/
