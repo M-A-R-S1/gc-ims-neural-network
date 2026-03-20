@@ -1,10 +1,10 @@
 import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
-from StartUpWindow import Ui_StartUpWindow
+from StartUpWindow import Ui_StartWidget
 
 
-class MainWindow(QtWidgets.QMainWindow, Ui_StartUpWindow):
+class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
