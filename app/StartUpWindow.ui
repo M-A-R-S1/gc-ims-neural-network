@@ -147,11 +147,7 @@
     color: #00eaff;
     border-radius: 10px;
 }
-
-QPushButton:hover {
-    background-color: #131313;
-    border-style: solid;
-}</string>
+</string>
    </property>
    <property name="text">
     <string/>
@@ -196,11 +192,7 @@ QPushButton:hover {
     color: #ff9000;
     border-radius: 10px;
 }
-
-QPushButton:hover {
-    background-color: #131313;
-    border-style: solid;
-}</string>
+</string>
    </property>
    <property name="text">
     <string/>

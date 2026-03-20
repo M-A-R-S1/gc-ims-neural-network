@@ -77,11 +77,7 @@ class Ui_StartUpWindow(object):
 "    color: #00eaff;\n"
 "    border-radius: 10px;\n"
 "}\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: #131313;\n"
-"    border-style: solid;\n"
-"}")
+"")
         icon1 = QIcon()
         icon1.addFile(u"ui/_pics/icons/add_blue.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_create.setIcon(icon1)
@@ -98,11 +94,7 @@ class Ui_StartUpWindow(object):
 "    color: #ff9000;\n"
 "    border-radius: 10px;\n"
 "}\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: #131313;\n"
-"    border-style: solid;\n"
-"}")
+"")
         icon2 = QIcon()
         icon2.addFile(u"ui/_pics/icons/folder-orange.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_open.setIcon(icon2)
