@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>StartWidget</class>
+ <widget class="QWidget" name="StartWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1574</width>
+    <height>1028</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>9999999</width>
+    <height>999999</height>
+   </size>
+  </property>
+  <property name="font">
+   <font>
+    <kerning>true</kerning>
+   </font>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::ContextMenuPolicy::NoContextMenu</enum>
+  </property>
+  <property name="windowTitle">
+   <string>GC-IMS suite</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>ui/_pics/logo_small.png</normaloff>ui/_pics/logo_small.png</iconset>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(29, 29, 29)</string>
+  </property>
+  <property name="locale">
+   <locale language="English" country="Germany"/>
+  </property>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>138</width>
+     <height>1031</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="sizeConstraint">
+     <enum>QLayout::SizeConstraint::SetMinAndMaxSize</enum>
+    </property>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
