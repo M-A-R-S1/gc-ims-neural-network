@@ -68,7 +68,7 @@
     </size>
    </property>
    <property name="currentIndex">
-    <number>1</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="StartUpWindow">
     <widget class="QLabel" name="label_create">
@@ -369,6 +369,9 @@
 </string>
      </property>
      <property name="text">
+      <string/>
+     </property>
+     <property name="placeholderText">
       <string>Project name ...</string>
      </property>
     </widget>
@@ -376,7 +379,7 @@
      <property name="geometry">
       <rect>
        <x>130</x>
-       <y>350</y>
+       <y>360</y>
        <width>591</width>
        <height>41</height>
       </rect>
@@ -406,7 +409,7 @@
      <property name="geometry">
       <rect>
        <x>140</x>
-       <y>350</y>
+       <y>360</y>
        <width>41</width>
        <height>41</height>
       </rect>
@@ -484,7 +487,7 @@
       </font>
      </property>
      <property name="cursor">
-      <cursorShape>PointingHandCursor</cursorShape>
+      <cursorShape>ForbiddenCursor</cursorShape>
      </property>
      <property name="styleSheet">
       <string notr="true">QPushButton {
@@ -497,6 +500,33 @@
      </property>
      <property name="text">
       <string>Create</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_error_name">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>330</y>
+       <width>401</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>10</pointsize>
+       <kerning>true</kerning>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: #ff4c4c;</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
      </property>
     </widget>
    </widget>

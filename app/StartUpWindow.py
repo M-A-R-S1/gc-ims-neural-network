@@ -156,7 +156,7 @@ class Ui_StartWidget(object):
 "")
         self.label_location = QLabel(self.CreateNewProject)
         self.label_location.setObjectName(u"label_location")
-        self.label_location.setGeometry(QRect(130, 350, 591, 41))
+        self.label_location.setGeometry(QRect(130, 360, 591, 41))
         self.label_location.setFont(font5)
         self.label_location.setStyleSheet(u"QLabel  {\n"
 "    border: 1px solid #ff9000;\n"
@@ -168,7 +168,7 @@ class Ui_StartWidget(object):
 "")
         self.button_location = QPushButton(self.CreateNewProject)
         self.button_location.setObjectName(u"button_location")
-        self.button_location.setGeometry(QRect(140, 350, 41, 41))
+        self.button_location.setGeometry(QRect(140, 360, 41, 41))
         self.button_location.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button_location.setStyleSheet(u"QPushButton  {\n"
 "    border: 0px solid;\n"
@@ -193,7 +193,7 @@ class Ui_StartWidget(object):
         self.button_create_2.setObjectName(u"button_create_2")
         self.button_create_2.setGeometry(QRect(620, 530, 101, 41))
         self.button_create_2.setFont(font5)
-        self.button_create_2.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.button_create_2.setCursor(QCursor(Qt.CursorShape.ForbiddenCursor))
         self.button_create_2.setStyleSheet(u"QPushButton {\n"
 "    border: 1px solid #00eaff;\n"
 "    background-color: #232323; \n"
@@ -201,6 +201,17 @@ class Ui_StartWidget(object):
 "    border-radius: 10px;\n"
 "}\n"
 "")
+        self.label_error_name = QLabel(self.CreateNewProject)
+        self.label_error_name.setObjectName(u"label_error_name")
+        self.label_error_name.setGeometry(QRect(140, 330, 401, 20))
+        font6 = QFont()
+        font6.setFamilies([u"Lato"])
+        font6.setPointSize(10)
+        font6.setWeight(QFont.Light)
+        font6.setKerning(True)
+        self.label_error_name.setFont(font6)
+        self.label_error_name.setStyleSheet(u"color: #ff4c4c;")
+        self.label_error_name.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
         self.stackedWidget.addWidget(self.CreateNewProject)
         QWidget.setTabOrder(self.button_create, self.button_open)
         QWidget.setTabOrder(self.button_open, self.lineEdit_project_name)
@@ -227,10 +238,12 @@ class Ui_StartWidget(object):
         self.label_open.setText(QCoreApplication.translate("StartWidget", u"open existing project", None))
         self.label_subheader_2.setText(QCoreApplication.translate("StartWidget", u"<html><head/><body><p align=\"center\">Specify a project name and choose a project<br> saving location</p></body></html>", None))
         self.label_header_2.setText(QCoreApplication.translate("StartWidget", u"Create a new GC-IMS project", None))
-        self.lineEdit_project_name.setText(QCoreApplication.translate("StartWidget", u"Project name ...", None))
+        self.lineEdit_project_name.setText("")
+        self.lineEdit_project_name.setPlaceholderText(QCoreApplication.translate("StartWidget", u"Project name ...", None))
         self.label_location.setText(QCoreApplication.translate("StartWidget", u"Project location ...", None))
         self.button_location.setText("")
         self.button_cancle.setText(QCoreApplication.translate("StartWidget", u"Cancle", None))
         self.button_create_2.setText(QCoreApplication.translate("StartWidget", u"Create", None))
+        self.label_error_name.setText("")
     # retranslateUi
 

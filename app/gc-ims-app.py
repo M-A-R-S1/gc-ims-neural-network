@@ -2,7 +2,8 @@ import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
 from StartUpWindow import Ui_StartWidget
-
+from pathlib import Path
+import re
 
 class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
     def __init__(self):
@@ -33,7 +34,154 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
         # Connect the buttons to change the index of the currently shown stacked widget.
         self.button_create.clicked.connect(self.create_project_page)
         self.button_cancle.clicked.connect(self.create_home_page)
+        # Connect the location button to open a "folder selection dialog".
+        self.button_location.clicked.connect(self.select_project_location)
+        # Connect the name input field with the validation function.
+        self.lineEdit_project_name.textChanged.connect(self.validate_project_inputs)
+        # Connect the create project button.
+        self.button_create_2.clicked.connect(self.create_project)
 
+
+    def select_project_location(self) -> None:
+        """
+        This function is called if the user wants to select a location for the project.
+        A File dialog will prompt the user to select a folder for the project.
+
+        :return: None
+        """
+
+        start_directory = ""
+        if self.project_path is not None:
+            start_directory = str(self.project_path)
+
+        # Start the file dialog for folder selection.
+        folder = QtWidgets.QFileDialog.getExistingDirectory(self,
+                                                            "Choose a directory for your project",
+                                                            start_directory)
+        # Was a folder selected?
+        if folder:
+            self.project_path = Path(folder)
+            self.label_location.setText(str(Path(folder)))
+            # Check if the "create" button can be pressed.
+            self.validate_project_inputs()
+
+
+    def create_project(self) -> None:
+        """
+        This function is called if the "create" button is clicked. This will create a new project at the
+        project path with the project name and creates a .gcimsp file.
+
+        :return: None.
+        """
+
+        # Strip the name of whitespace characters.
+        project_name = self.lineEdit_project_name.text().strip()
+        # Get the project folder and name and set the project file.
+        project_folder = self.project_path / project_name
+        project_file = project_folder / f"{project_name}.gcimsp"
+
+        # Try to create the project ...
+        try:
+            # Create the project folder.
+            project_folder.mkdir(parents=True, exist_ok=False)
+
+            # Create the content for the .gcimsp file and create the file.
+            content = (f"Project: {project_name}\n"
+                       f"Created: {QtCore.QDate.currentDate().toString()}")
+            project_file.write_text(content, encoding="utf-8")
+
+            # Change to the project main window
+            #TODO ....
+
+        # Error handling here!
+        # Error if the project already exists [Same name].
+        except FileExistsError:
+            QtWidgets.QMessageBox.critical(self, "Error", "Folder with this name already exists!")
+         # Error if the user has not the needed permissions to create a project.
+        except PermissionError:
+            QtWidgets.QMessageBox.critical(self,
+                                      "Permission Denied",
+                                      "You do not have permission to write in this directory. Please choose a different location.")
+        # Error for other stuff...
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Systemerror", f"Error: {str(e)}")
+
+
+    def validate_project_inputs(self) -> None:
+        """
+        This function is continuously called while the user is trying to create a new project.
+        This function checks if all conditions are met in order to create a new project. This includes:
+         - Valid project name
+         - Valid project location
+
+        :return: None.
+        """
+
+        project_name = self.lineEdit_project_name.text().strip()
+
+        # Invalid character definition [Regex].
+        invalid_chars = r'[\\/:*?"<>|+#]'
+        # Check the project name for invalid characters.
+        contains_invalid = re.search(invalid_chars, project_name)
+
+        # Name and folder valid?
+        is_name_valid = len(project_name) > 0 and not contains_invalid
+        is_path_selected = self.project_path is not None
+
+        # Invalid characters found in the project name -> Display error message!
+        if contains_invalid:
+            self.label_error_name.show()
+            self.label_error_name.setText("Error: Invalid characters detected: \\ / : * ? \" < > | + #")
+            self.lineEdit_project_name.setStyleSheet(f"""
+                                                        QLineEdit {{
+                                                            border: 1px solid #ff4c4c;
+                                                            background-color: #232323; 
+                                                            color: #ebebeb;
+                                                            border-radius: 10px;
+                                                           padding-left: 10px;
+                                                        }}
+                                                    """)
+
+        # No invalid characters found in the project name.
+        else:
+            self.label_error_name.hide()
+            self.lineEdit_project_name.setStyleSheet(f"""
+                                                        QLineEdit {{
+                                                            border: 1px solid #ff9000;
+                                                            background-color: #232323; 
+                                                            color: #9e9e9e;
+                                                            border-radius: 10px;
+                                                           padding-left: 10px;
+                                                        }}
+                                                    """)
+
+        # All conditions are met and the project name is not equal to the placeholder.
+        if is_name_valid and is_path_selected and project_name != "Project name ...":
+            # Activate the "create" button and set the stylesheet.
+            self.button_create_2.setEnabled(True)
+            self.button_create_2.setCursor(QtCore.Qt.PointingHandCursor)
+            self.button_create_2.setStyleSheet(f"""
+                                                    QPushButton {{
+                                                        border: 1px solid #00eaff;
+                                                        background-color: #232323; 
+                                                        color: #00eaff;
+                                                        border-radius: 10px;
+                                                    }}
+                                                """)
+
+        # Conditions are not met. The "create" button can't pre pressed.
+        else:
+            # Deactivate the "create" button and change the stylesheet.
+            self.button_create_2.setCursor(QtCore.Qt.ForbiddenCursor)
+            self.button_create_2.setEnabled(False)
+            self.button_create_2.setStyleSheet(f"""
+                                                    QPushButton {{
+                                                        border: 1px solid #9e9e9e;
+                                                        background-color: #232323; 
+                                                        color: #9e9e9e;
+                                                        border-radius: 10px;
+                                                    }}
+                                                """)
 
     def create_project_page(self) -> None:
         """
@@ -41,10 +189,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
 
         :return: None
         """
-        # reset the name of the input field to default.
-        self.lineEdit_project_name.setText("Project name ...")
+        # reset page field and variables to default.
+        self.lineEdit_project_name.clear()
+        self.lineEdit_project_name.setPlaceholderText("Project name ...")
+        self.project_path = None
+        self.label_location.setText("Project location ...")
+        self.validate_project_inputs()
         # Change to the "create project" page by changing the index of the stacked widget.
         self.stackedWidget.setCurrentIndex(1)
+
 
     def create_home_page(self) -> None:
         """
