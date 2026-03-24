@@ -105,6 +105,7 @@ class Ui_StartWidget(object):
         self.label_logo_big = QLabel(self.StartUpWindow)
         self.label_logo_big.setObjectName(u"label_logo_big")
         self.label_logo_big.setGeometry(QRect(0, 50, 851, 131))
+        self.label_logo_big.setStyleSheet(u"")
         self.label_logo_big.setPixmap(QPixmap(u"ui/_pics/logo_big.png"))
         self.label_logo_big.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label_header = QLabel(self.StartUpWindow)
@@ -242,7 +243,7 @@ class Ui_StartWidget(object):
         self.lineEdit_project_name.setPlaceholderText(QCoreApplication.translate("StartWidget", u"Project name ...", None))
         self.label_location.setText(QCoreApplication.translate("StartWidget", u"Project location ...", None))
         self.button_location.setText("")
-        self.button_cancle.setText(QCoreApplication.translate("StartWidget", u"Cancle", None))
+        self.button_cancle.setText(QCoreApplication.translate("StartWidget", u"Back", None))
         self.button_create_2.setText(QCoreApplication.translate("StartWidget", u"Create", None))
         self.label_error_name.setText("")
     # retranslateUi

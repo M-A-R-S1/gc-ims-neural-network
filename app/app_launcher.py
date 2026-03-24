@@ -2,10 +2,14 @@ import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
 from StartUpWindow import Ui_StartWidget
+from app_project import ProjectWindow
 from pathlib import Path
 import re
 
 class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
+    # Signal for project opening.
+    open_project_signal = QtCore.Signal(Path)
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -40,6 +44,29 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
         self.lineEdit_project_name.textChanged.connect(self.validate_project_inputs)
         # Connect the create project button.
         self.button_create_2.clicked.connect(self.create_project)
+        # Connect the open project button.
+        self.button_open.clicked.connect(self.open_project)
+
+
+    def open_project(self) -> None:
+        """
+        This function is called when the "open" button is clicked.
+        This function opens a file dialog where the user has to select a project for the loading process.
+
+        :return: None.
+        """
+
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self,
+                                                            "Open Project File",
+                                                            "",
+                                                            "GC-IMS Project Files (*.gcimsp)")
+
+        if file_path:
+            project_file = Path(file_path)
+
+            if project_file.exists():
+                self.open_project_signal.emit(project_file)
+                self.close()
 
 
     def select_project_location(self) -> None:
@@ -91,7 +118,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
             project_file.write_text(content, encoding="utf-8")
 
             # Change to the project main window
-            #TODO ....
+            self.open_project_signal.emit(project_file)
+            self.close()
 
         # Error handling here!
         # Error if the project already exists [Same name].
@@ -308,10 +336,31 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
 app = QtWidgets.QApplication(sys.argv)
 
 # Create a window and show it.
-window = MainWindow()
+launcher = MainWindow()
 # turns of the minimize and maximize buttons.
-window.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowCloseButtonHint)
-window.show()
+launcher.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowCloseButtonHint)
+launcher.show()
+
+# Reference array for the project window.
+project_window_reference = []
+
+def launch_main_project(path: Path) -> None:
+    """
+    This function is called when a project is about to be loaded. The current launcher is closed and the
+    main project window is loaded with the selected project.
+
+    :param path: Path to the project folder.
+
+    :return: None.
+    """
+
+    project_window = ProjectWindow(path)
+    project_window_reference.append(project_window)
+    project_window.show()
+
+
+# Connect the "open project" signal.
+launcher.open_project_signal.connect(launch_main_project)
 
 # Start the App.
-app.exec()
+sys.exit(app.exec())

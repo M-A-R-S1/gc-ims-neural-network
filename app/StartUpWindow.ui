@@ -470,7 +470,7 @@
 </string>
      </property>
      <property name="text">
-      <string>Cancle</string>
+      <string>Back</string>
      </property>
     </widget>
     <widget class="QPushButton" name="button_create_2">
