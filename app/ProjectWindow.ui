@@ -126,8 +126,14 @@
                  <height>90</height>
                 </size>
                </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
                <property name="styleSheet">
-                <string notr="true">border: 0px;</string>
+                <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+}</string>
                </property>
                <property name="text">
                 <string/>
@@ -174,16 +180,26 @@
             <layout class="QVBoxLayout" name="verticalLayout_2">
              <item>
               <widget class="QPushButton" name="preprocessing_button">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
                  <height>90</height>
                 </size>
                </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
                <property name="styleSheet">
-                <string notr="true">border: 0px;
-border-top: 2px solid #666666;
-padding-top: 20px;</string>
+                <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+    border-top: 2px solid #666666;
+	padding-top: 20px;
+}
+</string>
                </property>
                <property name="text">
                 <string/>
@@ -236,10 +252,16 @@ padding-top: 20px;</string>
                  <height>90</height>
                 </size>
                </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
                <property name="styleSheet">
-                <string notr="true">border: 0px;
-border-top: 2px solid #666666;
-padding-top: 20px;</string>
+                <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+    border-top: 2px solid #666666;
+	padding-top: 20px;
+}</string>
                </property>
                <property name="text">
                 <string/>
@@ -292,10 +314,16 @@ padding-top: 20px;</string>
                  <height>90</height>
                 </size>
                </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
                <property name="styleSheet">
-                <string notr="true">border: 0px;
-border-top: 2px solid #666666;
-padding-top: 20px;</string>
+                <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+    border-top: 2px solid #666666;
+	padding-top: 20px;
+}</string>
                </property>
                <property name="text">
                 <string/>
@@ -348,10 +376,16 @@ padding-top: 20px;</string>
                  <height>90</height>
                 </size>
                </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
                <property name="styleSheet">
-                <string notr="true">border: 0px;
-border-top: 2px solid #666666;
-padding-top: 20px;</string>
+                <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+    border-top: 2px solid #666666;
+	padding-top: 20px;
+}</string>
                </property>
                <property name="text">
                 <string/>
@@ -468,10 +502,16 @@ padding-top: 20px;</string>
                  <height>90</height>
                 </size>
                </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
                <property name="styleSheet">
-                <string notr="true">border: 0px;
-border-top: 2px solid #666666;
-padding-top: 20px;</string>
+                <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+    border-top: 2px solid #666666;
+	padding-top: 20px;
+}</string>
                </property>
                <property name="text">
                 <string/>

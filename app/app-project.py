@@ -1,6 +1,7 @@
 import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtGui import QIcon, QPalette, QColor
 from ProjectWindow import Ui_ProjectWindow
 
 class MainWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
@@ -30,6 +31,34 @@ class MainWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                                     end_color=QtGui.QColor(BUTTON_BACKGROUND_HOVER_COLOR),
                                     dashed=False)
         """
+
+        # Get the active color palette
+        palette_active = self.dataset_button.palette()
+        palette_active.setColor(QPalette.WindowText, QColor(ACTIVE_COLOR))
+        # Get the deactivated color palette
+        palette_deactivated = self.dataset_button.palette()
+        palette_deactivated.setColor(QPalette.WindowText, QColor(DEACTIVATED_COLOR))
+        # Get the normal color palette
+        palette_normal = self.dataset_button.palette()
+        palette_normal.setColor(QPalette.WindowText, QColor(NORMAL_COLOR))
+
+        # Set the dataset as active.
+        self.dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_orange.png"))
+        self.dataset_label.setPalette(palette_active)
+        # Set the remaining buttons as inactive.
+        self.preprocessing_button.setEnabled(False)
+        self.preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_grey.png"))
+        self.preprocessing_label.setPalette(palette_deactivated)
+        self.peak_explorer_button.setEnabled(False)
+        self.peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_grey.png"))
+        self.peak_explorer_label.setPalette(palette_deactivated)
+        self.consensus_button.setEnabled(False)
+        self.consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_grey.png"))
+        self.consensus_label.setPalette(palette_deactivated)
+        self.classifier_button.setEnabled(False)
+        self.classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+        self.classifier_label.setPalette(palette_deactivated)
+
 
     def button_hover_animation(self,
                                button: QtWidgets.QPushButton,

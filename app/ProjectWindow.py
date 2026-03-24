@@ -65,7 +65,11 @@ class Ui_ProjectWindow(object):
         self.dataset_button = QPushButton(self.dataset_container)
         self.dataset_button.setObjectName(u"dataset_button")
         self.dataset_button.setMaximumSize(QSize(16777215, 90))
-        self.dataset_button.setStyleSheet(u"border: 0px;")
+        self.dataset_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.dataset_button.setStyleSheet(u"QPushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"}")
         icon1 = QIcon()
         icon1.addFile(u"ui/_pics/icons/dataset_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.dataset_button.setIcon(icon1)
@@ -94,10 +98,16 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.preprocessing_button = QPushButton(self.preprocessing_container)
         self.preprocessing_button.setObjectName(u"preprocessing_button")
+        self.preprocessing_button.setEnabled(True)
         self.preprocessing_button.setMaximumSize(QSize(16777215, 90))
-        self.preprocessing_button.setStyleSheet(u"border: 0px;\n"
-"border-top: 2px solid #666666;\n"
-"padding-top: 20px;")
+        self.preprocessing_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.preprocessing_button.setStyleSheet(u"QPushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"    border-top: 2px solid #666666;\n"
+"	padding-top: 20px;\n"
+"}\n"
+"")
         icon2 = QIcon()
         icon2.addFile(u"ui/_pics/icons/preprocessing_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.preprocessing_button.setIcon(icon2)
@@ -124,9 +134,13 @@ class Ui_ProjectWindow(object):
         self.peak_explorer_button = QPushButton(self.peak_explorer_container)
         self.peak_explorer_button.setObjectName(u"peak_explorer_button")
         self.peak_explorer_button.setMaximumSize(QSize(16777215, 90))
-        self.peak_explorer_button.setStyleSheet(u"border: 0px;\n"
-"border-top: 2px solid #666666;\n"
-"padding-top: 20px;")
+        self.peak_explorer_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.peak_explorer_button.setStyleSheet(u"QPushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"    border-top: 2px solid #666666;\n"
+"	padding-top: 20px;\n"
+"}")
         icon3 = QIcon()
         icon3.addFile(u"ui/_pics/icons/peak_explorer_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.peak_explorer_button.setIcon(icon3)
@@ -153,9 +167,13 @@ class Ui_ProjectWindow(object):
         self.consensus_button = QPushButton(self.consensus_container)
         self.consensus_button.setObjectName(u"consensus_button")
         self.consensus_button.setMaximumSize(QSize(16777215, 90))
-        self.consensus_button.setStyleSheet(u"border: 0px;\n"
-"border-top: 2px solid #666666;\n"
-"padding-top: 20px;")
+        self.consensus_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.consensus_button.setStyleSheet(u"QPushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"    border-top: 2px solid #666666;\n"
+"	padding-top: 20px;\n"
+"}")
         icon4 = QIcon()
         icon4.addFile(u"ui/_pics/icons/consensus_peak_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.consensus_button.setIcon(icon4)
@@ -182,9 +200,13 @@ class Ui_ProjectWindow(object):
         self.classifier_button = QPushButton(self.classifier_container)
         self.classifier_button.setObjectName(u"classifier_button")
         self.classifier_button.setMaximumSize(QSize(16777215, 90))
-        self.classifier_button.setStyleSheet(u"border: 0px;\n"
-"border-top: 2px solid #666666;\n"
-"padding-top: 20px;")
+        self.classifier_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.classifier_button.setStyleSheet(u"QPushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"    border-top: 2px solid #666666;\n"
+"	padding-top: 20px;\n"
+"}")
         icon5 = QIcon()
         icon5.addFile(u"ui/_pics/icons/classifier_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.classifier_button.setIcon(icon5)
@@ -230,9 +252,13 @@ class Ui_ProjectWindow(object):
         self.settings_button = QPushButton(self.settings_container)
         self.settings_button.setObjectName(u"settings_button")
         self.settings_button.setMaximumSize(QSize(16777215, 90))
-        self.settings_button.setStyleSheet(u"border: 0px;\n"
-"border-top: 2px solid #666666;\n"
-"padding-top: 20px;")
+        self.settings_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.settings_button.setStyleSheet(u"QPushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"    border-top: 2px solid #666666;\n"
+"	padding-top: 20px;\n"
+"}")
         icon6 = QIcon()
         icon6.addFile(u"ui/_pics/icons/settings_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.settings_button.setIcon(icon6)
