@@ -89,8 +89,8 @@ class Ui_DatasetWidget(object):
         self.verticalLayout_3.setContentsMargins(1, 1, 1, 1)
         self.label_container_header = QLabel(self.labels_inner_container)
         self.label_container_header.setObjectName(u"label_container_header")
-        self.label_container_header.setMinimumSize(QSize(0, 50))
-        self.label_container_header.setMaximumSize(QSize(16777215, 50))
+        self.label_container_header.setMinimumSize(QSize(0, 60))
+        self.label_container_header.setMaximumSize(QSize(16777215, 60))
         font3 = QFont()
         font3.setFamilies([u"Lato"])
         font3.setPointSize(25)
@@ -113,10 +113,10 @@ class Ui_DatasetWidget(object):
         self.scrollArea_labels.setWidgetResizable(True)
         self.scrollArea_labels_Contents = QWidget()
         self.scrollArea_labels_Contents.setObjectName(u"scrollArea_labels_Contents")
-        self.scrollArea_labels_Contents.setGeometry(QRect(0, 0, 480, 626))
+        self.scrollArea_labels_Contents.setGeometry(QRect(0, 0, 480, 606))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_labels_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.verticalSpacer = QSpacerItem(20, 605, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_4.addItem(self.verticalSpacer)
 
@@ -126,18 +126,26 @@ class Ui_DatasetWidget(object):
 
         self.button_add_label = QPushButton(self.labels_inner_container)
         self.button_add_label.setObjectName(u"button_add_label")
-        self.button_add_label.setMinimumSize(QSize(0, 50))
-        self.button_add_label.setMaximumSize(QSize(16777215, 50))
+        self.button_add_label.setMinimumSize(QSize(0, 60))
+        self.button_add_label.setMaximumSize(QSize(16777215, 60))
         self.button_add_label.setFont(font3)
         self.button_add_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button_add_label.setAutoFillBackground(False)
-        self.button_add_label.setStyleSheet(u"border: 0px;\n"
+        self.button_add_label.setStyleSheet(u"QPushButton {\n"
+"border: 0px;\n"
 "border-top: 1px solid #ff9000;\n"
 "border-top-left-radius: 0px;\n"
 "border-top-right-radius: 0px;\n"
 "border-bottom-left-radius: 10px;\n"
 "border-bottom-right-radius: 10px;\n"
-"background-color: #232323;")
+"background-color: #232323;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: #131313;\n"
+"}\n"
+"\n"
+"")
         icon = QIcon()
         icon.addFile(u"ui/_pics/icons/add_circle_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_add_label.setIcon(icon)

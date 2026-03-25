@@ -25,8 +25,10 @@ class Ui_DatasetLabelEntry(object):
         DatasetLabelEntry.resize(462, 50)
         DatasetLabelEntry.setMinimumSize(QSize(0, 50))
         DatasetLabelEntry.setMaximumSize(QSize(16777215, 50))
-        DatasetLabelEntry.setStyleSheet(u"background-color: #2e2e2e;\n"
-"border-bottom: 1px solid #666666;")
+        DatasetLabelEntry.setStyleSheet(u"QWidget {\n"
+"background-color: #2e2e2e;\n"
+"border-bottom: 1px solid #666666;\n"
+"}")
         self.horizontalLayout = QHBoxLayout(DatasetLabelEntry)
         self.horizontalLayout.setSpacing(15)
         self.horizontalLayout.setObjectName(u"horizontalLayout")

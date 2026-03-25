@@ -176,13 +176,13 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>50</height>
+                <height>60</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>50</height>
+                <height>60</height>
                </size>
               </property>
               <property name="font">
@@ -223,7 +223,7 @@ border-radius: 0px;</string>
                  <x>0</x>
                  <y>0</y>
                  <width>480</width>
-                 <height>626</height>
+                 <height>606</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -235,7 +235,7 @@ border-radius: 0px;</string>
                   <property name="sizeHint" stdset="0">
                    <size>
                     <width>20</width>
-                    <height>605</height>
+                    <height>585</height>
                    </size>
                   </property>
                  </spacer>
@@ -249,13 +249,13 @@ border-radius: 0px;</string>
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>50</height>
+                <height>60</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>50</height>
+                <height>60</height>
                </size>
               </property>
               <property name="font">
@@ -271,13 +271,21 @@ border-radius: 0px;</string>
                <bool>false</bool>
               </property>
               <property name="styleSheet">
-               <string notr="true">border: 0px;
+               <string notr="true">QPushButton {
+border: 0px;
 border-top: 1px solid #ff9000;
 border-top-left-radius: 0px;
 border-top-right-radius: 0px;
 border-bottom-left-radius: 10px;
 border-bottom-right-radius: 10px;
-background-color: #232323;</string>
+background-color: #232323;
+}
+
+QPushButton:hover {
+background-color: #131313;
+}
+
+</string>
               </property>
               <property name="text">
                <string>Add label</string>
