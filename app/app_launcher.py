@@ -1,7 +1,7 @@
 import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
-from StartUpWindow import Ui_StartWidget
+from ui.LauncherWindow import Ui_StartWidget
 from app_project import ProjectWindow
 from pathlib import Path
 import re
@@ -356,7 +356,7 @@ def launch_main_project(path: Path) -> None:
 
     project_window = ProjectWindow(path)
     project_window_reference.append(project_window)
-    project_window.show()
+    project_window.showMaximized()
 
 
 # Connect the "open project" signal.

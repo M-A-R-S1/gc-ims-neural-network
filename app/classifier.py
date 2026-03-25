@@ -1,5 +1,5 @@
 from PySide6 import QtWidgets
-from ClassifierWidget import Ui_ClassifierWidget
+from ui.ClassifierWidget import Ui_ClassifierWidget
 
 class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
     def __init__(self):

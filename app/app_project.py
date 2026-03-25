@@ -2,7 +2,7 @@ import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QIcon, QPalette, QColor
-from ProjectWindow import Ui_ProjectWindow
+from ui.ProjectWindow import Ui_ProjectWindow
 from dataset import DatasetPage
 from preprocessing import PreprocessingPage
 from peak_explorer import PeakExplorerPage
@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
     # Create a window and show it.
     project_window = ProjectWindow("")
-    project_window.show()
+    project_window.showMaximized()
 
     # Start the App.
     sys.exit(app.exec())
