@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QSizePolicy, QWidget)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
+    QSizePolicy, QWidget)
 
 class Ui_DatasetLabelEntry(object):
     def setupUi(self, DatasetLabelEntry):
@@ -28,6 +28,10 @@ class Ui_DatasetLabelEntry(object):
         DatasetLabelEntry.setStyleSheet(u"QWidget {\n"
 "background-color: #2e2e2e;\n"
 "border-bottom: 1px solid #666666;\n"
+"}\n"
+"\n"
+"QWidget:hover {\n"
+"background-color: #131313;\n"
 "}")
         self.horizontalLayout = QHBoxLayout(DatasetLabelEntry)
         self.horizontalLayout.setSpacing(15)
@@ -47,23 +51,45 @@ class Ui_DatasetLabelEntry(object):
 
         self.horizontalLayout.addWidget(self.button_labelDelete)
 
-        self.lineEdit_label = QLineEdit(DatasetLabelEntry)
-        self.lineEdit_label.setObjectName(u"lineEdit_label")
+        self.button_labelRename = QPushButton(DatasetLabelEntry)
+        self.button_labelRename.setObjectName(u"button_labelRename")
+        self.button_labelRename.setMaximumSize(QSize(30, 16777215))
+        self.button_labelRename.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.button_labelRename.setStyleSheet(u"QPushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"}")
+        icon1 = QIcon()
+        icon1.addFile(u"ui/_pics/icons/classifier_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.button_labelRename.setIcon(icon1)
+        self.button_labelRename.setIconSize(QSize(30, 30))
+
+        self.horizontalLayout.addWidget(self.button_labelRename)
+
+        self.label_name = QLabel(DatasetLabelEntry)
+        self.label_name.setObjectName(u"label_name")
         font = QFont()
-        font.setFamilies([u"Lato"])
         font.setPointSize(15)
         font.setWeight(QFont.Light)
-        self.lineEdit_label.setFont(font)
-        self.lineEdit_label.setStyleSheet(u"border: None;")
+        self.label_name.setFont(font)
+        self.label_name.setStyleSheet(u"border: None;\n"
+"color: #ebebeb;\n"
+"background-color: transparent;")
 
-        self.horizontalLayout.addWidget(self.lineEdit_label)
+        self.horizontalLayout.addWidget(self.label_name)
 
         self.label_counter = QLabel(DatasetLabelEntry)
         self.label_counter.setObjectName(u"label_counter")
         self.label_counter.setMaximumSize(QSize(60, 16777215))
-        self.label_counter.setFont(font)
+        font1 = QFont()
+        font1.setFamilies([u"Lato"])
+        font1.setPointSize(15)
+        font1.setWeight(QFont.Light)
+        self.label_counter.setFont(font1)
         self.label_counter.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.label_counter.setStyleSheet(u"border: None;")
+        self.label_counter.setStyleSheet(u"border: None;\n"
+"color: #ebebeb;\n"
+"background-color: transparent;")
         self.label_counter.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.horizontalLayout.addWidget(self.label_counter)
@@ -77,7 +103,8 @@ class Ui_DatasetLabelEntry(object):
     def retranslateUi(self, DatasetLabelEntry):
         DatasetLabelEntry.setWindowTitle(QCoreApplication.translate("DatasetLabelEntry", u"Form", None))
         self.button_labelDelete.setText("")
-        self.lineEdit_label.setText(QCoreApplication.translate("DatasetLabelEntry", u"label name", None))
+        self.button_labelRename.setText("")
+        self.label_name.setText(QCoreApplication.translate("DatasetLabelEntry", u"TextLabel", None))
         self.label_counter.setText(QCoreApplication.translate("DatasetLabelEntry", u"0x", None))
     # retranslateUi
 

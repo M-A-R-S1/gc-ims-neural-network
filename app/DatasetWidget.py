@@ -101,7 +101,8 @@ class Ui_DatasetWidget(object):
 "border-top-right-radius: 10px;\n"
 "border-bottom-left-radius: 0px;\n"
 "border-bottom-right-radius: 0px;\n"
-"background-color: #232323;")
+"background-color: #232323;\n"
+"color: #ebebeb;")
         self.label_container_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_3.addWidget(self.label_container_header)
@@ -113,7 +114,7 @@ class Ui_DatasetWidget(object):
         self.scrollArea_labels.setWidgetResizable(True)
         self.scrollArea_labels_Contents = QWidget()
         self.scrollArea_labels_Contents.setObjectName(u"scrollArea_labels_Contents")
-        self.scrollArea_labels_Contents.setGeometry(QRect(0, 0, 480, 606))
+        self.scrollArea_labels_Contents.setGeometry(QRect(0, 0, 480, 583))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_labels_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -139,6 +140,7 @@ class Ui_DatasetWidget(object):
 "border-bottom-left-radius: 10px;\n"
 "border-bottom-right-radius: 10px;\n"
 "background-color: #232323;\n"
+"color: #ebebeb;\n"
 "}\n"
 "\n"
 "QPushButton:hover {\n"

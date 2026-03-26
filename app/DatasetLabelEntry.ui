@@ -29,6 +29,10 @@
    <string notr="true">QWidget {
 background-color: #2e2e2e;
 border-bottom: 1px solid #666666;
+}
+
+QWidget:hover {
+background-color: #131313;
 }</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
@@ -68,19 +72,52 @@ border-bottom: 1px solid #666666;
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="lineEdit_label">
+    <widget class="QPushButton" name="button_labelRename">
+     <property name="maximumSize">
+      <size>
+       <width>30</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+}</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>ui/_pics/icons/classifier_grey.png</normaloff>ui/_pics/icons/classifier_grey.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>30</width>
+       <height>30</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_name">
      <property name="font">
       <font>
-       <family>Lato</family>
        <pointsize>15</pointsize>
        <fontweight>Light</fontweight>
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">border: None;</string>
+      <string notr="true">border: None;
+color: #ebebeb;
+background-color: transparent;</string>
      </property>
      <property name="text">
-      <string>label name</string>
+      <string>TextLabel</string>
      </property>
     </widget>
    </item>
@@ -103,7 +140,9 @@ border-bottom: 1px solid #666666;
       <enum>Qt::LayoutDirection::LeftToRight</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">border: None;</string>
+      <string notr="true">border: None;
+color: #ebebeb;
+background-color: transparent;</string>
      </property>
      <property name="text">
       <string>0x</string>

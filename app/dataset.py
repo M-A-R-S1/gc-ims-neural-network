@@ -2,7 +2,7 @@ from PySide6 import QtWidgets, QtCore
 from DatasetWidget import Ui_DatasetWidget
 from app import DatasetLabelEntry
 from app.DatasetLabelEntry import Ui_DatasetLabelEntry
-from dialogs import CreateLabelDialog
+from dialogs import CreateLabelDialog, CustomMessageDialog
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
@@ -29,9 +29,9 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 if not self.is_label_duplicate(name):
                     self.add_label_entry(name)
                 else:
-                    QtWidgets.QMessageBox.warning(self, "Error", "Label already exists, please choose another name")
+                    CustomMessageDialog.show_error("Error - Duplication", "Label already exists, please choose another name")
             else:
-                QtWidgets.QMessageBox.warning(self, "Error", "Please choose a name")
+                CustomMessageDialog.show_error("Error - Empty", "Empty label name! Please choose a name for your label.")
 
 
     def is_label_duplicate(self, name: str, exclude_widget=None) -> bool:
@@ -40,7 +40,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             widget = self.scrollArea_labels_Contents.layout().itemAt(i).widget()
 
             if isinstance(widget, DatasetLabelEntry) and widget is not exclude_widget:
-                if widget.lineEdit_label.text().lower() == name.lower():
+                if widget.label_name.text().lower() == name.lower():
                     return True
 
         return False
@@ -57,7 +57,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
     def confirm_delete(self, label: DatasetLabelEntry) -> None:
 
-        label_name = label.lineEdit_label.text()
+        label_name = label.label_name.text()
 
         message = QtWidgets.QMessageBox(self)
         message.setWindowTitle("Delete label")
@@ -74,7 +74,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
     def confirm_rename(self, label: DatasetLabelEntry, name: str) -> None:
 
         if self.is_label_duplicate(name, exclude_widget=label):
-            QtWidgets.QMessageBox.warning(self, "Error!", "Label already exists, please choose another name")
+            CustomMessageDialog.show_error("Error - Duplication", "Label already exists, please choose another name")
             label.use_old_label_name()
             return
 
@@ -106,18 +106,19 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
         self.setupUi(self)
 
         # Set the label values.
-        self.lineEdit_label.setText(label_name.strip())
+        self.label_name.setText(label_name.strip())
         self.label_counter.setText(f"{count}x")
         self.old_label_name = label_name.strip()
 
         # Connect the delete button.
         self.button_labelDelete.clicked.connect(lambda: self.delete_requested.emit(self))
         # Connect the label Edit line.
-        self.lineEdit_label.editingFinished.connect(self.handle_label_rename)
+        self.button_labelRename.clicked.connect(self.handle_label_rename)
+        # TODO ...
 
 
     def handle_label_rename(self):
-        new_label_name = self.lineEdit_label.text().strip()
+        new_label_name = self.label_name.text().strip()
 
         if new_label_name == self.old_label_name:
             return
@@ -126,4 +127,4 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
 
 
     def use_old_label_name(self):
-        self.lineEdit_label.setText(self.old_label_name)
+        self.label_name.setText(self.old_label_name)

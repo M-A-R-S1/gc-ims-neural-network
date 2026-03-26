@@ -198,7 +198,8 @@ border-top-left-radius: 10px;
 border-top-right-radius: 10px;
 border-bottom-left-radius: 0px;
 border-bottom-right-radius: 0px;
-background-color: #232323;</string>
+background-color: #232323;
+color: #ebebeb;</string>
               </property>
               <property name="text">
                <string>Labels</string>
@@ -223,7 +224,7 @@ border-radius: 0px;</string>
                  <x>0</x>
                  <y>0</y>
                  <width>480</width>
-                 <height>606</height>
+                 <height>583</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -279,6 +280,7 @@ border-top-right-radius: 0px;
 border-bottom-left-radius: 10px;
 border-bottom-right-radius: 10px;
 background-color: #232323;
+color: #ebebeb;
 }
 
 QPushButton:hover {
