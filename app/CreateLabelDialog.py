@@ -64,7 +64,10 @@ class Ui_CreateLabelDialog(object):
 "    color: #00eaff;\n"
 "    border-radius: 10px;\n"
 "}\n"
-"")
+"\n"
+"QPushButton:hover {\n"
+"	background-color: #131313;\n"
+"}")
         self.button_cancel = QPushButton(CreateLabelDialog)
         self.button_cancel.setObjectName(u"button_cancel")
         self.button_cancel.setGeometry(QRect(20, 150, 101, 41))
@@ -75,6 +78,10 @@ class Ui_CreateLabelDialog(object):
 "    background-color: #232323; \n"
 "    color: #9e9e9e;\n"
 "    border-radius: 10px;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"	background-color: #131313;\n"
 "}\n"
 "")
 

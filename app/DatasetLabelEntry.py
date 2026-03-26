@@ -22,16 +22,16 @@ class Ui_DatasetLabelEntry(object):
     def setupUi(self, DatasetLabelEntry):
         if not DatasetLabelEntry.objectName():
             DatasetLabelEntry.setObjectName(u"DatasetLabelEntry")
-        DatasetLabelEntry.resize(462, 50)
+        DatasetLabelEntry.resize(389, 50)
         DatasetLabelEntry.setMinimumSize(QSize(0, 50))
         DatasetLabelEntry.setMaximumSize(QSize(16777215, 50))
         DatasetLabelEntry.setStyleSheet(u"QWidget {\n"
-"background-color: #2e2e2e;\n"
-"border-bottom: 1px solid #666666;\n"
+"	background-color: #2e2e2e;\n"
+"	border-bottom: 1px solid #666666;\n"
 "}\n"
 "\n"
 "QWidget:hover {\n"
-"background-color: #131313;\n"
+"	background-color: #131313;\n"
 "}")
         self.horizontalLayout = QHBoxLayout(DatasetLabelEntry)
         self.horizontalLayout.setSpacing(15)
@@ -69,6 +69,7 @@ class Ui_DatasetLabelEntry(object):
         self.label_name = QLabel(DatasetLabelEntry)
         self.label_name.setObjectName(u"label_name")
         font = QFont()
+        font.setFamilies([u"Lato"])
         font.setPointSize(15)
         font.setWeight(QFont.Light)
         self.label_name.setFont(font)
@@ -81,11 +82,7 @@ class Ui_DatasetLabelEntry(object):
         self.label_counter = QLabel(DatasetLabelEntry)
         self.label_counter.setObjectName(u"label_counter")
         self.label_counter.setMaximumSize(QSize(60, 16777215))
-        font1 = QFont()
-        font1.setFamilies([u"Lato"])
-        font1.setPointSize(15)
-        font1.setWeight(QFont.Light)
-        self.label_counter.setFont(font1)
+        self.label_counter.setFont(font)
         self.label_counter.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.label_counter.setStyleSheet(u"border: None;\n"
 "color: #ebebeb;\n"

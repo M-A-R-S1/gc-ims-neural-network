@@ -2,7 +2,7 @@ from PySide6 import QtWidgets, QtCore
 from DatasetWidget import Ui_DatasetWidget
 from app import DatasetLabelEntry
 from app.DatasetLabelEntry import Ui_DatasetLabelEntry
-from dialogs import CreateLabelDialog, CustomMessageDialog
+from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
@@ -58,14 +58,13 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
     def confirm_delete(self, label: DatasetLabelEntry) -> None:
 
         label_name = label.label_name.text()
+        dialog = CustomYesNoDialog(title="Delete label",
+                                   message=f"Are you sure you want to delete the '{label_name}' label?",
+                                   type="warning",
+                                   parent=self)
 
-        message = QtWidgets.QMessageBox(self)
-        message.setWindowTitle("Delete label")
-        message.setText(f"Are you sure you want to delete the '{label_name}' label?")
-        message.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-        message.setDefaultButton(QtWidgets.QMessageBox.No)
 
-        if message.exec() == QtWidgets.QMessageBox.Yes:
+        if dialog.exec() == QtWidgets.QDialog.Accepted:
             label.deleteLater()
             self.scrollArea_labels_Contents.layout().removeWidget(label)
             self.update_label_count()

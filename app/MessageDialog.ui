@@ -81,6 +81,10 @@
     color: #9e9e9e;
     border-radius: 10px;
 }
+
+QPushButton:hover {
+	background-color: #131313;
+}
 </string>
    </property>
    <property name="text">
@@ -103,7 +107,7 @@
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap>ui/_pics/icons/peak_explorer_orange.png</pixmap>
+    <pixmap>ui/_pics/icons/error_magenta.png</pixmap>
    </property>
    <property name="scaledContents">
     <bool>true</bool>

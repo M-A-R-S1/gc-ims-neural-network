@@ -50,12 +50,16 @@ class Ui_MessageDialog(object):
 "    color: #9e9e9e;\n"
 "    border-radius: 10px;\n"
 "}\n"
+"\n"
+"QPushButton:hover {\n"
+"	background-color: #131313;\n"
+"}\n"
 "")
         self.label_icon = QLabel(MessageDialog)
         self.label_icon.setObjectName(u"label_icon")
         self.label_icon.setEnabled(True)
         self.label_icon.setGeometry(QRect(100, 20, 201, 191))
-        self.label_icon.setPixmap(QPixmap(u"ui/_pics/icons/peak_explorer_orange.png"))
+        self.label_icon.setPixmap(QPixmap(u"ui/_pics/icons/error_magenta.png"))
         self.label_icon.setScaledContents(True)
         self.label_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
