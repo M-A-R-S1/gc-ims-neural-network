@@ -2,6 +2,7 @@ from PySide6 import QtWidgets, QtCore
 from DatasetWidget import Ui_DatasetWidget
 from app import DatasetLabelEntry
 from app.DatasetLabelEntry import Ui_DatasetLabelEntry
+from dialogs import CreateLabelDialog
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
@@ -18,14 +19,19 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
 
     def open_add_label_dialog(self):
-        name, status = QtWidgets.QInputDialog.getText(self, "Create a new label", "Label name:")
+        dialog = CreateLabelDialog(self)
 
-        if status and name:
-            if self.is_label_duplicate(name.strip()):
-                QtWidgets.QMessageBox.warning(self, "Error!", "Label already exists, please choose another name")
-                return
+        if dialog.exec() == QtWidgets.QDialog.Accepted:
+            data = dialog.get_data()
+            name = data['name']
+
+            if name:
+                if not self.is_label_duplicate(name):
+                    self.add_label_entry(name)
+                else:
+                    QtWidgets.QMessageBox.warning(self, "Error", "Label already exists, please choose another name")
             else:
-                self.add_label_entry(name.strip())
+                QtWidgets.QMessageBox.warning(self, "Error", "Please choose a name")
 
 
     def is_label_duplicate(self, name: str, exclude_widget=None) -> bool:

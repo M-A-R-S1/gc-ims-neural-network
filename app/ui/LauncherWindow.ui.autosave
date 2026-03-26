@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>StartWidget</class>
+ <widget class="QWidget" name="StartWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>849</width>
+    <height>604</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>849</width>
+    <height>604</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>849</width>
+    <height>604</height>
+   </size>
+  </property>
+  <property name="font">
+   <font>
+    <kerning>true</kerning>
+   </font>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::ContextMenuPolicy::NoContextMenu</enum>
+  </property>
+  <property name="windowTitle">
+   <string>GC-IMS suite</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>ui/_pics/logo_small.png</normaloff>ui/_pics/logo_small.png</iconset>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(29, 29, 29)</string>
+  </property>
+  <property name="locale">
+   <locale language="English" country="Germany"/>
+  </property>
+  <widget class="QStackedWidget" name="stackedWidget">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>849</width>
+     <height>604</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>849</width>
+     <height>604</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>849</width>
+     <height>604</height>
+    </size>
+   </property>
+   <property name="currentIndex">
+    <number>1</number>
+   </property>
+   <widget class="QWidget" name="StartUpWindow">
+    <widget class="QLabel" name="label_create">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>550</y>
+       <width>201</width>
+       <height>28</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>12</pointsize>
+       <kerning>true</kerning>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: #9e9e9e;</string>
+     </property>
+     <property name="text">
+      <string>create new project</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_subheader">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>260</y>
+       <width>851</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>17</pointsize>
+       <kerning>true</kerning>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: #9e9e9e;</string>
+     </property>
+     <property name="text">
+      <string>Create or open a GC-IMS project</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="button_open">
+     <property name="geometry">
+      <rect>
+       <x>520</x>
+       <y>340</y>
+       <width>200</width>
+       <height>207</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>120</pointsize>
+       <kerning>true</kerning>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LayoutDirection::LeftToRight</enum>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    border: 1.5px dashed #ff9000;
+    background-color: #232323; 
+    color: #ff9000;
+    border-radius: 10px;
+}
+</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>ui/_pics/icons/folder-orange.png</normaloff>ui/_pics/icons/folder-orange.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>100</width>
+       <height>100</height>
+      </size>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="button_create">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>340</y>
+       <width>200</width>
+       <height>207</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>120</pointsize>
+       <kerning>true</kerning>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LayoutDirection::LeftToRight</enum>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    border: 1.5px dashed #00eaff;
+    background-color: #232323; 
+    color: #00eaff;
+    border-radius: 10px;
+}
+</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>ui/_pics/icons/add_blue.png</normaloff>ui/_pics/icons/add_blue.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>100</width>
+       <height>100</height>
+      </size>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_logo_big">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>50</y>
+       <width>851</width>
+       <height>131</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"/>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="pixmap">
+      <pixmap>ui/_pics/logo_big.png</pixmap>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_header">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>210</y>
+       <width>851</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>35</pointsize>
+       <kerning>true</kerning>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: #ebebeb;</string>
+     </property>
+     <property name="text">
+      <string>Welcome</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_open">
+     <property name="geometry">
+      <rect>
+       <x>520</x>
+       <y>550</y>
+       <width>201</width>
+       <height>28</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>12</pointsize>
+       <kerning>true</kerning>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: #9e9e9e;</string>
+     </property>
+     <property name="text">
+      <string>open existing project</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="CreateNewProject">
+    <widget class="QLabel" name="label_subheader_2">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>160</y>
+       <width>851</width>
+       <height>61</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>17</pointsize>
+       <kerning>true</kerning>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: #9e9e9e;</string>
+     </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Specify a project name and choose a project&lt;br&gt; saving location&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_header_2">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>100</y>
+       <width>851</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>35</pointsize>
+       <kerning>true</kerning>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: #ebebeb;</string>
+     </property>
+     <property name="text">
+      <string>Create a new GC-IMS project</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="lineEdit_project_name">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>280</y>
+       <width>591</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>14</pointsize>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLineEdit {
+    border: 1px solid #ff9000;
+    background-color: #232323; 
+    color: #9e9e9e;
+    border-radius: 10px;
+   padding-left: 10px;
+}
+</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="placeholderText">
+      <string>Project name ...</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_location">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>360</y>
+       <width>591</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>14</pointsize>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel  {
+    border: 1px solid #ff9000;
+    background-color: #232323; 
+    color: #9e9e9e;
+    border-radius: 10px;
+   padding-left: 50px;
+}
+</string>
+     </property>
+     <property name="text">
+      <string>Project location ...</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="button_location">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>360</y>
+       <width>41</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton  {
+    border: 0px solid;
+    background-color: None; 
+}
+</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>ui/_pics/icons/folder-orange.png</normaloff>ui/_pics/icons/folder-orange.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>32</width>
+       <height>32</height>
+      </size>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="button_cancle">
+     <property name="geometry">
+      <rect>
+       <x>130</x>
+       <y>530</y>
+       <width>101</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>14</pointsize>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    border: 1px solid #9e9e9e;
+    background-color: #232323; 
+    color: #9e9e9e;
+    border-radius: 10px;
+}
+</string>
+     </property>
+     <property name="text">
+      <string>Back</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="button_create_2">
+     <property name="geometry">
+      <rect>
+       <x>620</x>
+       <y>530</y>
+       <width>101</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>14</pointsize>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>ForbiddenCursor</cursorShape>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+    border: 1px solid #00eaff;
+    background-color: #232323; 
+    color: #00eaff;
+    border-radius: 10px;
+}
+</string>
+     </property>
+     <property name="text">
+      <string>Create</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_error_name">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>330</y>
+       <width>401</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>10</pointsize>
+       <kerning>true</kerning>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: #ff4c4c;</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+     </property>
+    </widget>
+   </widget>
+  </widget>
+ </widget>
+ <tabstops>
+  <tabstop>button_create</tabstop>
+  <tabstop>button_open</tabstop>
+  <tabstop>lineEdit_project_name</tabstop>
+  <tabstop>button_location</tabstop>
+  <tabstop>button_cancle</tabstop>
+  <tabstop>button_create_2</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
