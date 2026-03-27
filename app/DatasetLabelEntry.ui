@@ -22,6 +22,9 @@
     <height>50</height>
    </size>
   </property>
+  <property name="cursor">
+   <cursorShape>PointingHandCursor</cursorShape>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -113,6 +116,9 @@ QWidget:hover {
        <fontweight>Light</fontweight>
       </font>
      </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
      <property name="styleSheet">
       <string notr="true">border: None;
 color: #ebebeb;
@@ -137,6 +143,9 @@ background-color: transparent;</string>
        <pointsize>15</pointsize>
        <fontweight>Light</fontweight>
       </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="layoutDirection">
       <enum>Qt::LayoutDirection::LeftToRight</enum>

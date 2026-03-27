@@ -421,7 +421,7 @@ background-color: #232323;
 color: #ebebeb;</string>
               </property>
               <property name="text">
-               <string>Spectra_name</string>
+               <string>No label selected</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignmentFlag::AlignCenter</set>

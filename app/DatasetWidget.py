@@ -298,7 +298,7 @@ class Ui_DatasetWidget(object):
         self.label_container_header.setText(QCoreApplication.translate("DatasetWidget", u"Labels", None))
         self.button_add_label.setText(QCoreApplication.translate("DatasetWidget", u"Add label", None))
         self.label_labelcounter.setText(QCoreApplication.translate("DatasetWidget", u"0 labels", None))
-        self.spectra_container_header.setText(QCoreApplication.translate("DatasetWidget", u"Spectra_name", None))
+        self.spectra_container_header.setText(QCoreApplication.translate("DatasetWidget", u"No label selected", None))
         self.button_add_spectra.setText(QCoreApplication.translate("DatasetWidget", u"Add spectrum", None))
         self.label_spectracounter.setText(QCoreApplication.translate("DatasetWidget", u"0 spectra", None))
     # retranslateUi

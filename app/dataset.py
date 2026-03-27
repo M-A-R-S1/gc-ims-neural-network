@@ -13,9 +13,10 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # Defining the layout.
         self.scrollArea_labels_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
         self.scrollArea_labels_Contents.layout().setSpacing(5)
-
         # Connect the "add label" button.
         self.button_add_label.clicked.connect(self.open_add_label_dialog)
+        # The selected label.
+        self.current_selected_label = None
 
 
     def open_add_label_dialog(self):
@@ -40,7 +41,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             widget = self.scrollArea_labels_Contents.layout().itemAt(i).widget()
 
             if isinstance(widget, DatasetLabelEntry) and widget is not exclude_widget:
-                if widget.label_name.text().lower() == name.lower():
+                if widget.label_name.text() == name:
                     return True
 
         return False
@@ -50,9 +51,20 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         label = DatasetLabelEntry(name)
         label.delete_requested.connect(self.confirm_delete)
         label.rename_requested.connect(self.confirm_rename)
-        #self.scrollArea_labels_Contents.layout().addWidget(label)
+        label.clicked.connect(self.handle_label_selection)
         self.scrollArea_labels_Contents.layout().insertWidget(self.scrollArea_labels_Contents.layout().count() - 1, label)
         self.update_label_count()
+
+
+    def handle_label_selection(self, selected_widget) -> None:
+        if self.current_selected_label:
+            self.current_selected_label.set_active(False)
+
+        self.current_selected_label = selected_widget
+        self.current_selected_label.set_active(True)
+
+        label_text = selected_widget.label_name.text()
+        self.spectra_container_header.setText(label_text)
 
 
     def confirm_delete(self, label: DatasetLabelEntry) -> None:
@@ -65,6 +77,10 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
 
         if dialog.exec() == QtWidgets.QDialog.Accepted:
+            if label == self.current_selected_label:
+                self.spectra_container_header.setText("No label selected")
+                self.current_selected_label = None
+
             label.deleteLater()
             self.scrollArea_labels_Contents.layout().removeWidget(label)
             self.update_label_count()
@@ -79,6 +95,9 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
         label.label_name.setText(name)
         label.old_label_name = name
+
+        if label == self.current_selected_label:
+            self.spectra_container_header.setText(name)
 
 
     def update_label_count(self) -> None:
@@ -97,6 +116,8 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
     delete_requested = QtCore.Signal(object)
     # Rename signal.
     rename_requested = QtCore.Signal(object, str)
+    # Label was clicked signal.
+    clicked = QtCore.Signal(object)
 
     def __init__(self,
                  label_name: str,
@@ -146,3 +167,17 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
 
     def use_old_label_name(self):
         self.label_name.setText(self.old_label_name)
+
+
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+        if event.button() == QtCore.Qt.LeftButton:
+            self.clicked.emit(self)
+
+
+    def set_active(self, active: bool) -> None:
+        if active:
+            self.label_name.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+            self.label_counter.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+        else:
+            self.label_name.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
+            self.label_counter.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
