@@ -114,7 +114,7 @@ class Ui_DatasetWidget(object):
         self.scrollArea_labels.setWidgetResizable(True)
         self.scrollArea_labels_Contents = QWidget()
         self.scrollArea_labels_Contents.setObjectName(u"scrollArea_labels_Contents")
-        self.scrollArea_labels_Contents.setGeometry(QRect(0, 0, 480, 583))
+        self.scrollArea_labels_Contents.setGeometry(QRect(0, 0, 480, 606))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_labels_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -175,12 +175,105 @@ class Ui_DatasetWidget(object):
 
         self.horizontalLayout.addWidget(self.labels_outer_container)
 
-        self.spectra_container = QWidget(self.dataset_container)
-        self.spectra_container.setObjectName(u"spectra_container")
-        self.spectra_container.setMaximumSize(QSize(500, 16777215))
-        self.spectra_container.setStyleSheet(u"")
+        self.spectra_outer_container = QWidget(self.dataset_container)
+        self.spectra_outer_container.setObjectName(u"spectra_outer_container")
+        self.spectra_outer_container.setMaximumSize(QSize(500, 16777215))
+        self.spectra_outer_container.setStyleSheet(u"")
+        self.verticalLayout_7 = QVBoxLayout(self.spectra_outer_container)
+        self.verticalLayout_7.setSpacing(10)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.verticalLayout_7.setContentsMargins(-1, 30, -1, -1)
+        self.spectra_inner_container = QWidget(self.spectra_outer_container)
+        self.spectra_inner_container.setObjectName(u"spectra_inner_container")
+        self.spectra_inner_container.setMaximumSize(QSize(16777215, 16777215))
+        self.spectra_inner_container.setFont(font)
+        self.spectra_inner_container.setStyleSheet(u"QWidget {\n"
+"	background-color: #2e2e2e;\n"
+"	border: 1px solid #ff9000;\n"
+"	border-radius: 10px;\n"
+"}")
+        self.verticalLayout_5 = QVBoxLayout(self.spectra_inner_container)
+        self.verticalLayout_5.setSpacing(0)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.verticalLayout_5.setContentsMargins(1, 1, 1, 1)
+        self.spectra_container_header = QLabel(self.spectra_inner_container)
+        self.spectra_container_header.setObjectName(u"spectra_container_header")
+        self.spectra_container_header.setMinimumSize(QSize(0, 60))
+        self.spectra_container_header.setMaximumSize(QSize(16777215, 60))
+        self.spectra_container_header.setFont(font3)
+        self.spectra_container_header.setStyleSheet(u"border: 0px;\n"
+"border-bottom: 1px solid #ff9000;\n"
+"border-top-left-radius: 10px;\n"
+"border-top-right-radius: 10px;\n"
+"border-bottom-left-radius: 0px;\n"
+"border-bottom-right-radius: 0px;\n"
+"background-color: #232323;\n"
+"color: #ebebeb;")
+        self.spectra_container_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.horizontalLayout.addWidget(self.spectra_container)
+        self.verticalLayout_5.addWidget(self.spectra_container_header)
+
+        self.scrollArea_spectra = QScrollArea(self.spectra_inner_container)
+        self.scrollArea_spectra.setObjectName(u"scrollArea_spectra")
+        self.scrollArea_spectra.setStyleSheet(u"border: 0px;\n"
+"border-radius: 0px;")
+        self.scrollArea_spectra.setWidgetResizable(True)
+        self.scrollArea_spectra_Contents = QWidget()
+        self.scrollArea_spectra_Contents.setObjectName(u"scrollArea_spectra_Contents")
+        self.scrollArea_spectra_Contents.setGeometry(QRect(0, 0, 480, 606))
+        self.verticalLayout_6 = QVBoxLayout(self.scrollArea_spectra_Contents)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalSpacer_2 = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_6.addItem(self.verticalSpacer_2)
+
+        self.scrollArea_spectra.setWidget(self.scrollArea_spectra_Contents)
+
+        self.verticalLayout_5.addWidget(self.scrollArea_spectra)
+
+        self.button_add_spectra = QPushButton(self.spectra_inner_container)
+        self.button_add_spectra.setObjectName(u"button_add_spectra")
+        self.button_add_spectra.setMinimumSize(QSize(0, 60))
+        self.button_add_spectra.setMaximumSize(QSize(16777215, 60))
+        self.button_add_spectra.setFont(font3)
+        self.button_add_spectra.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.button_add_spectra.setAutoFillBackground(False)
+        self.button_add_spectra.setStyleSheet(u"QPushButton {\n"
+"border: 0px;\n"
+"border-top: 1px solid #ff9000;\n"
+"border-top-left-radius: 0px;\n"
+"border-top-right-radius: 0px;\n"
+"border-bottom-left-radius: 10px;\n"
+"border-bottom-right-radius: 10px;\n"
+"background-color: #232323;\n"
+"color: #ebebeb;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: #131313;\n"
+"}\n"
+"\n"
+"")
+        self.button_add_spectra.setIcon(icon)
+        self.button_add_spectra.setIconSize(QSize(35, 35))
+
+        self.verticalLayout_5.addWidget(self.button_add_spectra)
+
+
+        self.verticalLayout_7.addWidget(self.spectra_inner_container)
+
+        self.label_spectracounter = QLabel(self.spectra_outer_container)
+        self.label_spectracounter.setObjectName(u"label_spectracounter")
+        self.label_spectracounter.setMaximumSize(QSize(16777215, 30))
+        self.label_spectracounter.setFont(font4)
+        self.label_spectracounter.setStyleSheet(u"color: #9e9e9e;")
+        self.label_spectracounter.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.verticalLayout_7.addWidget(self.label_spectracounter)
+
+        self.verticalLayout_7.setStretch(0, 1)
+
+        self.horizontalLayout.addWidget(self.spectra_outer_container)
 
         self.preview_container = QWidget(self.dataset_container)
         self.preview_container.setObjectName(u"preview_container")
@@ -205,5 +298,8 @@ class Ui_DatasetWidget(object):
         self.label_container_header.setText(QCoreApplication.translate("DatasetWidget", u"Labels", None))
         self.button_add_label.setText(QCoreApplication.translate("DatasetWidget", u"Add label", None))
         self.label_labelcounter.setText(QCoreApplication.translate("DatasetWidget", u"0 labels", None))
+        self.spectra_container_header.setText(QCoreApplication.translate("DatasetWidget", u"Spectra_name", None))
+        self.button_add_spectra.setText(QCoreApplication.translate("DatasetWidget", u"Add spectrum", None))
+        self.label_spectracounter.setText(QCoreApplication.translate("DatasetWidget", u"0 spectra", None))
     # retranslateUi
 
