@@ -133,18 +133,13 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
 
     def add_spectra_to_list(self, file_paths):
+        file_paths.sort(key=lambda x: str(x).lower())
         layout = self.scrollArea_spectra_Contents.layout()
 
-        current_count = 0
-        for i in range(layout.count()):
-            if isinstance(layout.itemAt(i).widget(), DatasetSpectrumEntry):
-                current_count += 1
-
         for path in file_paths:
-            current_count += 1
-            new_spectrum = DatasetSpectrumEntry(path, current_count)
-            layout.insertWidget(layout.count() - 1, new_spectrum)
-
+            new_spectrum = DatasetSpectrumEntry(path, layout.count()+1)
+            new_spectrum.delete_requested.connect(self.remove_spectrum)
+            layout.insertWidget(layout.count(), new_spectrum)
 
 
     def clear_spectra_list(self):
@@ -154,6 +149,37 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             widget = item.widget()
             if widget:
                 widget.deleteLater()
+
+
+    def remove_spectrum(self, spectrum_widget):
+        full_text = spectrum_widget.spectrum_name.text()
+        display_name = full_text.split(" - ", 1)[1] if " - " in full_text else full_text
+
+        dialog = CustomYesNoDialog(title="Delete spectrum",
+                                   message=f"Do you really want to remove this spectrum?\n\n {display_name}",
+                                   type="warning",
+                                   parent=self)
+
+        if dialog.exec() == QtWidgets.QDialog.Accepted:
+            spectrum_widget.deleteLater()
+            self.scrollArea_spectra_Contents.layout().removeWidget(spectrum_widget)
+            QtCore.QTimer.singleShot(10, self.renumber_spectra)
+
+
+    def renumber_spectra(self):
+        layout = self.scrollArea_spectra_Contents.layout()
+        counter = 1
+
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            widget = item.widget()
+
+            if isinstance(widget, DatasetSpectrumEntry):
+                current_text = widget.spectrum_name.text()
+                if " - " in current_text:
+                    pure_name = current_text.split(" - ", 1)[1]
+                    widget.spectrum_name.setText(f"{counter} - {pure_name}")
+                    counter += 1
 
 
 class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
@@ -229,6 +255,9 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
 
 
 class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
+    # Delete signal
+    delete_requested = QtCore.Signal(object)
+
     def __init__(self, path:str, number: int):
         super().__init__()
         self.setupUi(self)
@@ -239,3 +268,6 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
         self.spectrum_name.setText(f"{number} - {self.spectrum_path.parent.name}/{self.spectrum_path.stem}")
         self.button_spectrumDelete.enterEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_magenta.png'))
         self.button_spectrumDelete.leaveEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_grey.png'))
+
+        # Connect the delete button
+        self.button_spectrumDelete.clicked.connect(lambda: self.delete_requested.emit(self))
