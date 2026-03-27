@@ -52,7 +52,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
     def setup_pages(self):
         # Dataset
-        self.dataset_page = DatasetPage()
+        self.dataset_page = DatasetPage(self.current_project)
         self.Main_container.addWidget(self.dataset_page)
         # Preprocessing
         self.preprocessing_page = PreprocessingPage()

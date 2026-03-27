@@ -5,13 +5,16 @@ from DatasetLabelEntry import Ui_DatasetLabelEntry
 from DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from pathlib import Path
+import json
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
-    def __init__(self):
+    def __init__(self, project_path: str) -> None   :
         super().__init__()
         self.setupUi(self)
 
+        # Project save path
+        self.project_path = Path(project_path)
         # Defining the layout.
         self.scrollArea_labels_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
         self.scrollArea_labels_Contents.layout().setSpacing(5)
@@ -23,6 +26,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.current_selected_label = None
         # Connect the "add spectra" button.
         self.button_add_spectra.clicked.connect(self.open_spectra_file_dialog)
+        # Saves labels and spectra in a dictionary.
+        self.dataset_storage = {}
 
 
     def open_label_file_dialog(self):
@@ -73,6 +78,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         label_text = selected_widget.label_name.text()
         self.spectra_container_header.setText(label_text)
 
+        self.refresh_spectra_display()
+
 
     def confirm_delete(self, label: DatasetLabelEntry) -> None:
 
@@ -91,6 +98,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             label.deleteLater()
             self.scrollArea_labels_Contents.layout().removeWidget(label)
             self.update_label_count()
+            self.refresh_spectra_display()
+            self.save_dataset()
 
 
     def confirm_rename(self, label: DatasetLabelEntry, name: str) -> None:
@@ -100,11 +109,18 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             label.use_old_label_name()
             return
 
+        if label.old_label_name in self.dataset_storage:
+            self.dataset_storage[name] = self.dataset_container.pop(label.old_label_name)
+        else:
+            self.dataset_storage[name] = []
+
         label.label_name.setText(name)
         label.old_label_name = name
 
         if label == self.current_selected_label:
             self.spectra_container_header.setText(name)
+
+        self.save_dataset()
 
 
     def update_label_count(self) -> None:
@@ -133,13 +149,39 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
 
     def add_spectra_to_list(self, file_paths):
-        file_paths.sort(key=lambda x: str(x).lower())
-        layout = self.scrollArea_spectra_Contents.layout()
 
-        for path in file_paths:
-            new_spectrum = DatasetSpectrumEntry(path, layout.count()+1)
-            new_spectrum.delete_requested.connect(self.remove_spectrum)
-            layout.insertWidget(layout.count(), new_spectrum)
+        if self.current_selected_label.label_name not in self.dataset_storage:
+            self.dataset_storage[self.current_selected_label.label_name] = []
+
+        for p in file_paths:
+            path_obj = Path(p)
+            # Optional: Dubletten-Check
+            if path_obj not in self.dataset_storage[self.current_selected_label.label_name]:
+                self.dataset_storage[self.current_selected_label.label_name].append(path_obj)
+
+        self.save_dataset()
+        # 2. UI aktualisieren (Liste neu zeichnen)
+        self.refresh_spectra_display()
+
+
+    def refresh_spectra_display(self):
+        # 1. Alle alten Widgets löschen
+        layout = self.scrollArea_spectra_Contents.layout()
+        while layout.count() >= 1:
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        # 2. Neue Widgets aus dem Speicher erstellen
+        if self.current_selected_label.label_name in self.dataset_storage:
+            paths = self.dataset_storage[self.current_selected_label.label_name]
+            # Hier sortieren wir für die Anzeige
+            paths.sort(key=lambda x: x.name.lower())
+
+            for i, path in enumerate(paths, 1):
+                new_entry = DatasetSpectrumEntry(path, layout.count()+1)
+                new_entry.delete_requested.connect(self.remove_spectrum)
+                layout.insertWidget(layout.count(), new_entry)
 
 
     def clear_spectra_list(self):
@@ -164,7 +206,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             spectrum_widget.deleteLater()
             self.scrollArea_spectra_Contents.layout().removeWidget(spectrum_widget)
             QtCore.QTimer.singleShot(10, self.renumber_spectra)
-
+            self.dataset_storage[self.current_selected_label.label_name].remove(spectrum_widget.spectrum_path)
+            self.save_dataset()
 
     def renumber_spectra(self):
         layout = self.scrollArea_spectra_Contents.layout()
@@ -180,6 +223,17 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                     pure_name = current_text.split(" - ", 1)[1]
                     widget.spectrum_name.setText(f"{counter} - {pure_name}")
                     counter += 1
+
+    def save_dataset(self):
+        export_data = {
+            label: [str(p) for p in paths] for label, paths in self.dataset_storage.items()
+        }
+
+        try:
+            with open(self.project_path, 'w', encoding='utf-8') as f: json.dump(export_data, f, indent=4)
+        except Exception as e:
+            CustomMessageDialog.show_error("Error - Saving", "Something went wrong while saving the dataset!", self)
+            print(f"Fehler beim Speichern: {e}")
 
 
 class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
