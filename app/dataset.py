@@ -1,8 +1,8 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
 from DatasetWidget import Ui_DatasetWidget
 from app import DatasetLabelEntry
 from app.DatasetLabelEntry import Ui_DatasetLabelEntry
-from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog
+from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
@@ -77,7 +77,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             label.use_old_label_name()
             return
 
-        label.use_old_label_name = name
+        label.label_name.setText(name)
+        label.old_label_name = name
 
 
     def update_label_count(self) -> None:
@@ -112,17 +113,35 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
         # Connect the delete button.
         self.button_labelDelete.clicked.connect(lambda: self.delete_requested.emit(self))
         # Connect the label Edit line.
-        self.button_labelRename.clicked.connect(self.handle_label_rename)
-        # TODO ...
+        self.button_labelRename.clicked.connect(self.rename_dialog)
+        # Hover effects for the rename button.
+        self.button_labelRename.enterEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_orange', True)
+        self.button_labelRename.leaveEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_grey', False)
+        # Hover effects for the delete button.
+        self.button_labelDelete.enterEvent = lambda e: self.button_hover_effect(self.button_labelDelete, 'delete_magenta',True)
+        self.button_labelDelete.leaveEvent = lambda e: self.button_hover_effect(self.button_labelDelete, 'delete_grey',False)
 
 
-    def handle_label_rename(self):
-        new_label_name = self.label_name.text().strip()
+    def button_hover_effect(self,
+                            button: QtWidgets.QPushButton,
+                            icon_name: str,
+                            hover: bool):
 
-        if new_label_name == self.old_label_name:
-            return
+        if hover:
+            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+        else:
+            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
 
-        self.rename_requested.emit(self, new_label_name)
+    def rename_dialog(self):
+        dialog = RenameLabelDialog(self.label_name.text(), self)
+
+        if dialog.exec() == QtWidgets.QDialog.Accepted:
+            new_label_name = dialog.get_data()['name']
+
+            if new_label_name == self.label_name.text():
+                return
+
+            self.rename_requested.emit(self, new_label_name)
 
 
     def use_old_label_name(self):

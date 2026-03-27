@@ -86,6 +86,7 @@ QWidget:hover {
       <string notr="true">QPushButton {
     background-color: transparent;
     border: none;
+	background-image: url(&quot;ui/_pics/icons/classifier_grey.png&quot;);
 }</string>
      </property>
      <property name="text">
@@ -93,7 +94,7 @@ QWidget:hover {
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>ui/_pics/icons/classifier_grey.png</normaloff>ui/_pics/icons/classifier_grey.png</iconset>
+       <normaloff>ui/_pics/icons/edit_grey.png</normaloff>ui/_pics/icons/edit_grey.png</iconset>
      </property>
      <property name="iconSize">
       <size>

@@ -58,9 +58,10 @@ class Ui_DatasetLabelEntry(object):
         self.button_labelRename.setStyleSheet(u"QPushButton {\n"
 "    background-color: transparent;\n"
 "    border: none;\n"
+"	background-image: url(\"ui/_pics/icons/classifier_grey.png\");\n"
 "}")
         icon1 = QIcon()
-        icon1.addFile(u"ui/_pics/icons/classifier_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(u"ui/_pics/icons/edit_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_labelRename.setIcon(icon1)
         self.button_labelRename.setIconSize(QSize(30, 30))
 

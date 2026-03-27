@@ -3,6 +3,7 @@ from PySide6.QtGui import QPixmap
 from CreateLabelDialog import Ui_CreateLabelDialog
 from MessageDialog import Ui_MessageDialog
 from YesNoDialog import Ui_YesNoDialog
+from RenameLabelDialog import Ui_RenameLabelDialog
 
 class CreateLabelDialog(QtWidgets.QDialog, Ui_CreateLabelDialog):
     def __init__(self, parent=None):
@@ -22,6 +23,34 @@ class CreateLabelDialog(QtWidgets.QDialog, Ui_CreateLabelDialog):
         # Set The OK button as default.
         self.button_ok.setDefault(True)
         # Focus the lineEdit.
+        self.lineEdit_label_name.setFocus()
+
+    def get_data(self):
+        return {
+            "name": self.lineEdit_label_name.text().strip()
+        }
+
+
+class RenameLabelDialog(QtWidgets.QDialog, Ui_RenameLabelDialog):
+    def __init__(self, current_name, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+        self.setWindowTitle("Rename label")
+        self.setWindowFlags(
+            QtCore.Qt.Dialog |
+            QtCore.Qt.CustomizeWindowHint |
+            QtCore.Qt.WindowCloseButtonHint |
+            QtCore.Qt.WindowTitleHint
+        )
+
+        # Connect the buttons.
+        self.button_ok.clicked.connect(self.accept)
+        self.button_cancel.clicked.connect(self.reject)
+        # Set The OK button as default.
+        self.button_ok.setDefault(True)
+        # Focus the lineEdit and set the current name.
+        self.lineEdit_label_name.setText(current_name)
+        self.lineEdit_label_name.selectAll()
         self.lineEdit_label_name.setFocus()
 
     def get_data(self):
