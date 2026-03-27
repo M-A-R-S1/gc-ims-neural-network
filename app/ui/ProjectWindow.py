@@ -23,7 +23,7 @@ class Ui_ProjectWindow(object):
     def setupUi(self, ProjectWindow):
         if not ProjectWindow.objectName():
             ProjectWindow.setObjectName(u"ProjectWindow")
-        ProjectWindow.resize(1400, 883)
+        ProjectWindow.resize(1599, 944)
         ProjectWindow.setMinimumSize(QSize(1400, 820))
         icon = QIcon()
         icon.addFile(u"ui/_pics/logo_small.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
@@ -36,8 +36,8 @@ class Ui_ProjectWindow(object):
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.Sidebar_container = QWidget(self.centralwidget)
         self.Sidebar_container.setObjectName(u"Sidebar_container")
-        self.Sidebar_container.setMinimumSize(QSize(130, 820))
-        self.Sidebar_container.setMaximumSize(QSize(130, 16777215))
+        self.Sidebar_container.setMinimumSize(QSize(80, 820))
+        self.Sidebar_container.setMaximumSize(QSize(80, 16777215))
         self.Sidebar_container.setStyleSheet(u"background-color: #2f2f2f;")
         self.verticalLayout_7 = QVBoxLayout(self.Sidebar_container)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
@@ -49,8 +49,8 @@ class Ui_ProjectWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.Sidebar_top.sizePolicy().hasHeightForWidth())
         self.Sidebar_top.setSizePolicy(sizePolicy)
-        self.Sidebar_top.setMinimumSize(QSize(130, 670))
-        self.Sidebar_top.setMaximumSize(QSize(130, 670))
+        self.Sidebar_top.setMinimumSize(QSize(80, 650))
+        self.Sidebar_top.setMaximumSize(QSize(80, 650))
         self.Sidebar_top.setStyleSheet(u"")
         self.verticalLayout_9 = QVBoxLayout(self.Sidebar_top)
         self.verticalLayout_9.setSpacing(6)
@@ -58,13 +58,16 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
         self.sb_dataset_container = QWidget(self.Sidebar_top)
         self.sb_dataset_container.setObjectName(u"sb_dataset_container")
+        self.sb_dataset_container.setMinimumSize(QSize(0, 0))
+        self.sb_dataset_container.setMaximumSize(QSize(16777215, 90))
         self.sb_dataset_container.setStyleSheet(u"")
         self.verticalLayout = QVBoxLayout(self.sb_dataset_container)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(-1, -1, -1, 15)
+        self.verticalLayout.setContentsMargins(-1, -1, -1, 5)
         self.sb_dataset_button = QPushButton(self.sb_dataset_container)
         self.sb_dataset_button.setObjectName(u"sb_dataset_button")
-        self.sb_dataset_button.setMaximumSize(QSize(16777215, 90))
+        self.sb_dataset_button.setMinimumSize(QSize(0, 60))
+        self.sb_dataset_button.setMaximumSize(QSize(16777215, 70))
         self.sb_dataset_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.sb_dataset_button.setStyleSheet(u"QPushButton {\n"
 "    background-color: transparent;\n"
@@ -73,18 +76,20 @@ class Ui_ProjectWindow(object):
         icon1 = QIcon()
         icon1.addFile(u"ui/_pics/icons/dataset_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_dataset_button.setIcon(icon1)
-        self.sb_dataset_button.setIconSize(QSize(80, 80))
+        self.sb_dataset_button.setIconSize(QSize(60, 60))
 
         self.verticalLayout.addWidget(self.sb_dataset_button)
 
         self.sb_dataset_label = QLabel(self.sb_dataset_container)
         self.sb_dataset_label.setObjectName(u"sb_dataset_label")
+        self.sb_dataset_label.setMaximumSize(QSize(16777215, 16777215))
         font = QFont()
         font.setFamilies([u"Lato"])
         font.setPointSize(10)
         self.sb_dataset_label.setFont(font)
         self.sb_dataset_label.setStyleSheet(u"")
         self.sb_dataset_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sb_dataset_label.setWordWrap(True)
 
         self.verticalLayout.addWidget(self.sb_dataset_label)
 
@@ -99,7 +104,7 @@ class Ui_ProjectWindow(object):
         self.sb_preprocessing_button = QPushButton(self.sb_preprocessing_container)
         self.sb_preprocessing_button.setObjectName(u"sb_preprocessing_button")
         self.sb_preprocessing_button.setEnabled(True)
-        self.sb_preprocessing_button.setMaximumSize(QSize(16777215, 90))
+        self.sb_preprocessing_button.setMaximumSize(QSize(16777215, 70))
         self.sb_preprocessing_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.sb_preprocessing_button.setStyleSheet(u"QPushButton {\n"
 "    background-color: transparent;\n"
@@ -111,7 +116,7 @@ class Ui_ProjectWindow(object):
         icon2 = QIcon()
         icon2.addFile(u"ui/_pics/icons/preprocessing_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_preprocessing_button.setIcon(icon2)
-        self.sb_preprocessing_button.setIconSize(QSize(80, 80))
+        self.sb_preprocessing_button.setIconSize(QSize(60, 60))
 
         self.verticalLayout_2.addWidget(self.sb_preprocessing_button)
 
@@ -120,6 +125,7 @@ class Ui_ProjectWindow(object):
         self.sb_preprocessing_label.setFont(font)
         self.sb_preprocessing_label.setStyleSheet(u"")
         self.sb_preprocessing_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sb_preprocessing_label.setWordWrap(True)
 
         self.verticalLayout_2.addWidget(self.sb_preprocessing_label)
 
@@ -133,7 +139,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.sb_peak_explorer_button = QPushButton(self.sb_peak_explorer_container)
         self.sb_peak_explorer_button.setObjectName(u"sb_peak_explorer_button")
-        self.sb_peak_explorer_button.setMaximumSize(QSize(16777215, 90))
+        self.sb_peak_explorer_button.setMaximumSize(QSize(16777215, 70))
         self.sb_peak_explorer_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.sb_peak_explorer_button.setStyleSheet(u"QPushButton {\n"
 "    background-color: transparent;\n"
@@ -144,7 +150,7 @@ class Ui_ProjectWindow(object):
         icon3 = QIcon()
         icon3.addFile(u"ui/_pics/icons/peak_explorer_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_peak_explorer_button.setIcon(icon3)
-        self.sb_peak_explorer_button.setIconSize(QSize(80, 80))
+        self.sb_peak_explorer_button.setIconSize(QSize(60, 60))
 
         self.verticalLayout_3.addWidget(self.sb_peak_explorer_button)
 
@@ -153,6 +159,7 @@ class Ui_ProjectWindow(object):
         self.sb_peak_explorer_label.setFont(font)
         self.sb_peak_explorer_label.setStyleSheet(u"")
         self.sb_peak_explorer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sb_peak_explorer_label.setWordWrap(True)
 
         self.verticalLayout_3.addWidget(self.sb_peak_explorer_label)
 
@@ -166,7 +173,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.sb_consensus_button = QPushButton(self.sb_consensus_container)
         self.sb_consensus_button.setObjectName(u"sb_consensus_button")
-        self.sb_consensus_button.setMaximumSize(QSize(16777215, 90))
+        self.sb_consensus_button.setMaximumSize(QSize(16777215, 70))
         self.sb_consensus_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.sb_consensus_button.setStyleSheet(u"QPushButton {\n"
 "    background-color: transparent;\n"
@@ -177,7 +184,7 @@ class Ui_ProjectWindow(object):
         icon4 = QIcon()
         icon4.addFile(u"ui/_pics/icons/consensus_peak_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_consensus_button.setIcon(icon4)
-        self.sb_consensus_button.setIconSize(QSize(80, 80))
+        self.sb_consensus_button.setIconSize(QSize(60, 60))
 
         self.verticalLayout_4.addWidget(self.sb_consensus_button)
 
@@ -186,6 +193,7 @@ class Ui_ProjectWindow(object):
         self.sb_consensus_label.setFont(font)
         self.sb_consensus_label.setStyleSheet(u"")
         self.sb_consensus_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sb_consensus_label.setWordWrap(True)
 
         self.verticalLayout_4.addWidget(self.sb_consensus_label)
 
@@ -199,7 +207,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.sb_classifier_button = QPushButton(self.sb_classifier_container)
         self.sb_classifier_button.setObjectName(u"sb_classifier_button")
-        self.sb_classifier_button.setMaximumSize(QSize(16777215, 90))
+        self.sb_classifier_button.setMaximumSize(QSize(16777215, 70))
         self.sb_classifier_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.sb_classifier_button.setStyleSheet(u"QPushButton {\n"
 "    background-color: transparent;\n"
@@ -210,7 +218,7 @@ class Ui_ProjectWindow(object):
         icon5 = QIcon()
         icon5.addFile(u"ui/_pics/icons/classifier_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_classifier_button.setIcon(icon5)
-        self.sb_classifier_button.setIconSize(QSize(80, 80))
+        self.sb_classifier_button.setIconSize(QSize(60, 60))
 
         self.verticalLayout_5.addWidget(self.sb_classifier_button)
 
@@ -219,6 +227,7 @@ class Ui_ProjectWindow(object):
         self.sb_classifier_label.setFont(font)
         self.sb_classifier_label.setStyleSheet(u"")
         self.sb_classifier_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sb_classifier_label.setWordWrap(True)
 
         self.verticalLayout_5.addWidget(self.sb_classifier_label)
 
@@ -228,7 +237,7 @@ class Ui_ProjectWindow(object):
 
         self.verticalLayout_7.addWidget(self.Sidebar_top)
 
-        self.verticalSpacer = QSpacerItem(20, 65, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.verticalSpacer = QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_7.addItem(self.verticalSpacer)
 
@@ -236,8 +245,8 @@ class Ui_ProjectWindow(object):
         self.Sidebar_bottom.setObjectName(u"Sidebar_bottom")
         sizePolicy.setHeightForWidth(self.Sidebar_bottom.sizePolicy().hasHeightForWidth())
         self.Sidebar_bottom.setSizePolicy(sizePolicy)
-        self.Sidebar_bottom.setMinimumSize(QSize(130, 130))
-        self.Sidebar_bottom.setMaximumSize(QSize(130, 130))
+        self.Sidebar_bottom.setMinimumSize(QSize(80, 100))
+        self.Sidebar_bottom.setMaximumSize(QSize(80, 100))
         self.Sidebar_bottom.setStyleSheet(u"")
         self.verticalLayout_8 = QVBoxLayout(self.Sidebar_bottom)
         self.verticalLayout_8.setSpacing(0)
@@ -251,7 +260,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_6.setContentsMargins(9, 0, -1, 9)
         self.sb_settings_button = QPushButton(self.sb_settings_container)
         self.sb_settings_button.setObjectName(u"sb_settings_button")
-        self.sb_settings_button.setMaximumSize(QSize(16777215, 90))
+        self.sb_settings_button.setMaximumSize(QSize(16777215, 70))
         self.sb_settings_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.sb_settings_button.setStyleSheet(u"QPushButton {\n"
 "    background-color: transparent;\n"
@@ -262,7 +271,7 @@ class Ui_ProjectWindow(object):
         icon6 = QIcon()
         icon6.addFile(u"ui/_pics/icons/settings_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_settings_button.setIcon(icon6)
-        self.sb_settings_button.setIconSize(QSize(80, 80))
+        self.sb_settings_button.setIconSize(QSize(60, 60))
 
         self.verticalLayout_6.addWidget(self.sb_settings_button)
 
@@ -271,6 +280,7 @@ class Ui_ProjectWindow(object):
         self.sb_settings_label.setFont(font)
         self.sb_settings_label.setStyleSheet(u"")
         self.sb_settings_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sb_settings_label.setWordWrap(True)
 
         self.verticalLayout_6.addWidget(self.sb_settings_label)
 
@@ -304,7 +314,7 @@ class Ui_ProjectWindow(object):
         self.sb_dataset_button.setText("")
         self.sb_dataset_label.setText(QCoreApplication.translate("ProjectWindow", u"Dataset", None))
         self.sb_preprocessing_button.setText("")
-        self.sb_preprocessing_label.setText(QCoreApplication.translate("ProjectWindow", u"Preprocessing", None))
+        self.sb_preprocessing_label.setText(QCoreApplication.translate("ProjectWindow", u"Pre-processing", None))
         self.sb_peak_explorer_button.setText("")
         self.sb_peak_explorer_label.setText(QCoreApplication.translate("ProjectWindow", u"Peak Explorer", None))
         self.sb_consensus_button.setText("")

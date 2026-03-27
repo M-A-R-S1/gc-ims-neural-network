@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1400</width>
-    <height>883</height>
+    <width>1599</width>
+    <height>944</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -44,13 +44,13 @@
      <widget class="QWidget" name="Sidebar_container" native="true">
       <property name="minimumSize">
        <size>
-        <width>130</width>
+        <width>80</width>
         <height>820</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
-        <width>130</width>
+        <width>80</width>
         <height>16777215</height>
        </size>
       </property>
@@ -80,14 +80,14 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>130</width>
-           <height>670</height>
+           <width>80</width>
+           <height>650</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>130</width>
-           <height>670</height>
+           <width>80</width>
+           <height>650</height>
           </size>
          </property>
          <property name="styleSheet">
@@ -111,19 +111,37 @@
           </property>
           <item>
            <widget class="QWidget" name="sb_dataset_container" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>90</height>
+             </size>
+            </property>
             <property name="styleSheet">
              <string notr="true"/>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout">
+            <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
              <property name="bottomMargin">
-              <number>15</number>
+              <number>5</number>
              </property>
              <item>
               <widget class="QPushButton" name="sb_dataset_button">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>60</height>
+                </size>
+               </property>
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>90</height>
+                 <height>70</height>
                 </size>
                </property>
                <property name="cursor">
@@ -144,14 +162,20 @@
                </property>
                <property name="iconSize">
                 <size>
-                 <width>80</width>
-                 <height>80</height>
+                 <width>60</width>
+                 <height>60</height>
                 </size>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QLabel" name="sb_dataset_label">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="font">
                 <font>
                  <family>Lato</family>
@@ -166,6 +190,9 @@
                </property>
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -186,7 +213,7 @@
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>90</height>
+                 <height>70</height>
                 </size>
                </property>
                <property name="cursor">
@@ -210,8 +237,8 @@
                </property>
                <property name="iconSize">
                 <size>
-                 <width>80</width>
-                 <height>80</height>
+                 <width>60</width>
+                 <height>60</height>
                 </size>
                </property>
               </widget>
@@ -228,10 +255,13 @@
                 <string notr="true"/>
                </property>
                <property name="text">
-                <string>Preprocessing</string>
+                <string>Pre-processing</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -249,7 +279,7 @@
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>90</height>
+                 <height>70</height>
                 </size>
                </property>
                <property name="cursor">
@@ -272,8 +302,8 @@
                </property>
                <property name="iconSize">
                 <size>
-                 <width>80</width>
-                 <height>80</height>
+                 <width>60</width>
+                 <height>60</height>
                 </size>
                </property>
               </widget>
@@ -295,6 +325,9 @@
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
               </widget>
              </item>
             </layout>
@@ -311,7 +344,7 @@
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>90</height>
+                 <height>70</height>
                 </size>
                </property>
                <property name="cursor">
@@ -334,8 +367,8 @@
                </property>
                <property name="iconSize">
                 <size>
-                 <width>80</width>
-                 <height>80</height>
+                 <width>60</width>
+                 <height>60</height>
                 </size>
                </property>
               </widget>
@@ -357,6 +390,9 @@
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
               </widget>
              </item>
             </layout>
@@ -373,7 +409,7 @@
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>90</height>
+                 <height>70</height>
                 </size>
                </property>
                <property name="cursor">
@@ -396,8 +432,8 @@
                </property>
                <property name="iconSize">
                 <size>
-                 <width>80</width>
-                 <height>80</height>
+                 <width>60</width>
+                 <height>60</height>
                 </size>
                </property>
               </widget>
@@ -419,6 +455,9 @@
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
               </widget>
              </item>
             </layout>
@@ -435,7 +474,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>65</height>
+           <height>20</height>
           </size>
          </property>
         </spacer>
@@ -450,14 +489,14 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>130</width>
-           <height>130</height>
+           <width>80</width>
+           <height>100</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
-           <width>130</width>
-           <height>130</height>
+           <width>80</width>
+           <height>100</height>
           </size>
          </property>
          <property name="styleSheet">
@@ -499,7 +538,7 @@
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>90</height>
+                 <height>70</height>
                 </size>
                </property>
                <property name="cursor">
@@ -522,8 +561,8 @@
                </property>
                <property name="iconSize">
                 <size>
-                 <width>80</width>
-                 <height>80</height>
+                 <width>60</width>
+                 <height>60</height>
                 </size>
                </property>
               </widget>
@@ -545,6 +584,9 @@
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignCenter</set>
                </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
               </widget>
              </item>
             </layout>
@@ -561,7 +603,7 @@
       <property name="styleSheet">
        <string notr="true">background-color: #1d1d1d;</string>
       </property>
-      <widget class="QWidget" name="dataset_container" native="true"/>
+      <widget class="QWidget" name="dataset_container"/>
      </widget>
     </item>
    </layout>

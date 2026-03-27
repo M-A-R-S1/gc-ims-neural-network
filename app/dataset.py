@@ -1,8 +1,10 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from DatasetWidget import Ui_DatasetWidget
-from app import DatasetLabelEntry
-from app.DatasetLabelEntry import Ui_DatasetLabelEntry
+import DatasetLabelEntry
+from DatasetLabelEntry import Ui_DatasetLabelEntry
+from DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
+from pathlib import Path
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
@@ -13,13 +15,17 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # Defining the layout.
         self.scrollArea_labels_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
         self.scrollArea_labels_Contents.layout().setSpacing(5)
+        self.scrollArea_spectra_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
+        self.scrollArea_spectra_Contents.layout().setSpacing(5)
         # Connect the "add label" button.
-        self.button_add_label.clicked.connect(self.open_add_label_dialog)
+        self.button_add_label.clicked.connect(self.open_label_file_dialog)
         # The selected label.
         self.current_selected_label = None
+        # Connect the "add spectra" button.
+        self.button_add_spectra.clicked.connect(self.open_spectra_file_dialog)
 
 
-    def open_add_label_dialog(self):
+    def open_label_file_dialog(self):
         dialog = CreateLabelDialog(self)
 
         if dialog.exec() == QtWidgets.QDialog.Accepted:
@@ -57,6 +63,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
 
     def handle_label_selection(self, selected_widget) -> None:
+        self.clear_spectra_list()
         if self.current_selected_label:
             self.current_selected_label.set_active(False)
 
@@ -109,6 +116,44 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 count += 1
 
         self.label_labelcounter.setText(f"{count} labels")
+
+
+    def open_spectra_file_dialog(self):
+        if not self.current_selected_label:
+            CustomMessageDialog.show_error("Error - no label selected!", "You can't add a spectrum unless you select a label first!" , self)
+            return
+
+        file_paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self,
+                                                               "Select GC-IMS spectra",
+                                                               "",
+                                                               "GC-IMS File (*.mea)")
+
+        if file_paths:
+            self.add_spectra_to_list(file_paths)
+
+
+    def add_spectra_to_list(self, file_paths):
+        layout = self.scrollArea_spectra_Contents.layout()
+
+        current_count = 0
+        for i in range(layout.count()):
+            if isinstance(layout.itemAt(i).widget(), DatasetSpectrumEntry):
+                current_count += 1
+
+        for path in file_paths:
+            current_count += 1
+            new_spectrum = DatasetSpectrumEntry(path, current_count)
+            layout.insertWidget(layout.count() - 1, new_spectrum)
+
+
+
+    def clear_spectra_list(self):
+        layout = self.scrollArea_spectra_Contents.layout()
+        while layout.count() > 0:
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
 
 
 class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
@@ -181,3 +226,16 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
         else:
             self.label_name.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
             self.label_counter.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
+
+
+class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
+    def __init__(self, path:str, number: int):
+        super().__init__()
+        self.setupUi(self)
+
+        self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+
+        self.spectrum_path = Path(path)
+        self.spectrum_name.setText(f"{number} - {self.spectrum_path.parent.name}/{self.spectrum_path.stem}")
+        self.button_spectrumDelete.enterEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_magenta.png'))
+        self.button_spectrumDelete.leaveEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_grey.png'))
