@@ -32,7 +32,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.current_selected_label = None
         self.current_selected_spectrum = None
         # Connect the "add spectra" button.
-        self.button_add_spectra.clicked.connect(self.open_spectra_file_dialog)
+        self.button_add_spectra.clicked.connect(self.add_spectra_dialog)
         # Saves labels and spectra in a dictionary.
         self.dataset_storage = {}
         # Setup the plot area.
@@ -164,7 +164,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.spectra_container_header.setText(label_name)
 
         # Refresh the spectra scroll area to show the spectra associated with the new selected label.
-        self.refresh_spectra_display()
+        self.update_spectra_list()
 
 
     def delete_label_dialog(self,
@@ -202,8 +202,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             self.update_label_count()
             # Remove the label from the data storage dictionary and refresh the spectra scroll area.
             del self.dataset_storage[label_name]
-            self.refresh_spectra_display()
-            # TODO ... refresh needed!?
+            self.update_spectra_list()
             # Save the adjusted dataset storage.
             self.save_dataset()
 
@@ -273,98 +272,170 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.label_labelcounter.setText(f"{count} labels")
 
 
-    def open_spectra_file_dialog(self):
+    def add_spectra_dialog(self) -> None:
+        """
+        This function opens a file dialog for spectra to choose when the "add spectra" button was pressed by the user.
+        =============================================================================
+        :return: None
+        """
+
+        # Show an error dialog if the user wants to add a spectrum without choosing a label first.
         if not self.current_selected_label:
-            CustomMessageDialog.show_error("Error - no label selected!", "You can't add a spectrum unless you select a label first!" , self)
+            CustomMessageDialog.show_error(title="Error - no label selected!",
+                                           message="You can't add a spectrum unless you select a label first!" ,
+                                           parent=self)
             return
 
+        # Open a file dialog and collect paths to .mea files.
         file_paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self,
-                                                               "Select GC-IMS spectra",
-                                                               "",
-                                                               "GC-IMS File (*.mea)")
-
+                                                               caption="Select GC-IMS spectra",
+                                                               dir="",
+                                                               filter="GC-IMS File (*.mea)")
+        # Forward the paths for handling.
         if file_paths:
-            self.add_spectra_to_list(file_paths)
+            self.add_spectra(paths=file_paths)
 
 
-    def add_spectra_to_list(self, file_paths):
-        for file in file_paths:
-            # Optional: Dubletten-Check
-            if file not in self.dataset_storage[self.current_selected_label.label_name.text()]:
-                self.dataset_storage[self.current_selected_label.label_name.text()].append(file)
+    def add_spectra(self,
+                    paths: list[str]) -> None:
+        """
+        This function accepts a list of spectra paths and saves them in the dataset storage dictionary.
+        =============================================================================
+        :param paths: list of spectra paths.
+        =============================================================================
+        :return: None.
+        """
 
+        # Walk through all paths and add them to the dataset storage dictionary.
+        for path in paths:
+            # Check if the path is already part of the dictionary, if so skip it.
+            if path not in self.dataset_storage[self.current_selected_label.label_name.text()]:
+                self.dataset_storage[self.current_selected_label.label_name.text()].append(path)
+
+        # Save the adjusted dataset storage.
         self.save_dataset()
         # 2. UI aktualisieren (Liste neu zeichnen)
-        self.refresh_spectra_display()
+        self.update_spectra_list()
 
 
-    def refresh_spectra_display(self):
-        # 1. Alle alten Widgets löschen
-        layout = self.scrollArea_spectra_Contents.layout()
-        while layout.count() >= 1:
-            item = layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+    def update_spectra_list(self) -> None:
+        """
+        This function updates the spectra scroll area and shows all spectra which are connected to the currently
+        selected label. It also connects delete and click signals to the spectra widgets.
+        =============================================================================
+        :return: None
+        """
 
+        # Get the spectra scroll area layout.
+        spectra_layout = self.scrollArea_spectra_Contents.layout()
+        # Clear the spectra list.
+        self.clear_spectra_list()
 
+        # If a label is selected look for all spectra which are connected to this label and add them to the spectra scroll area.
         if self.current_selected_label is not None:
-            # 2. Neue Widgets aus dem Speicher erstellen
+            # Get all spectra paths of the current label from the dataset storage dictionary.
             paths = self.dataset_storage[self.current_selected_label.label_name.text()]
-            # Hier sortieren wir für die Anzeige
-            paths.sort(key=lambda x: x)
+            # Sort the paths.
+            paths.sort()
 
-            for i, path in enumerate(paths, 1):
-                new_entry = DatasetSpectrumEntry(path, layout.count() + 1)
-                new_entry.delete_signal.connect(self.remove_spectrum)
-                new_entry.clicked.connect(self.plot_spectrum)
-                layout.insertWidget(layout.count(), new_entry)
+            # Walk through all paths from the current label and set up the spectra widgets.
+            for path in paths:
+                # Create a new spectra widget element.
+                spectra_widget = DatasetSpectrumEntry(path, spectra_layout.count() + 1)
+                # Connect the widget to a delete and click signal.
+                spectra_widget.delete_signal.connect(self.delete_spectrum)
+                spectra_widget.clicked.connect(self.plot_spectrum)
+                # Insert the widget to the spectra scroll area.
+                spectra_layout.insertWidget(spectra_layout.count(), spectra_widget)
 
+            # Update the spectra counter inside the label scroll area and the counter beneath the spectra scroll area.
             self.current_selected_label.spectra_counter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])}x")
             self.label_spectracounter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])} spectra")
+        # If there is currently no label selected set the spectra counter to the default value.
         else :
             self.label_spectracounter.setText("0 spectra")
 
 
-    def clear_spectra_list(self):
-        layout = self.scrollArea_spectra_Contents.layout()
-        while layout.count() > 0:
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
+    def clear_spectra_list(self) -> None:
+        """
+        This function removes all spectra widgets from the spectra scroll area.
+        =============================================================================
+        :return: None.
+        """
+
+        # Get the spectra scroll area layout
+        spectra_layout = self.scrollArea_spectra_Contents.layout()
+        # Remove all widgets from the spectra scroll area.
+        while spectra_layout.count() > 0:
+            item = spectra_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
 
-    def remove_spectrum(self, spectrum_widget):
-        full_text = spectrum_widget.spectrum_name.text()
-        display_name = full_text.split(" - ", 1)[1] if " - " in full_text else full_text
+    def delete_spectrum(self,
+                        spectrum_widget: DatasetSpectrumEntry):
+        """
+        This function shows a delete dialog when the delete button of a spectrum is pressed.
+        If the user chooses to delete the spectrum, it is removed from the spectra scroll area and the dataset storage
+        dictionary.
+        =============================================================================
+        :param spectrum_widget: The widget of the spectrum to be deleted.
+        =============================================================================
+        :return: None
+        """
 
-        dialog = CustomYesNoDialog(title="Delete spectrum",
-                                   message=f"Do you really want to remove this spectrum?\n\n {display_name}",
-                                   type="warning",
-                                   parent=self)
+        # Get the name of the spectrum which is about to be deleted.
+        spectrum_name = spectrum_widget.spectrum_name.text()
+        # Crop the name by removing the first part, which is a number followed by a hyphen. -> "1 -"
+        cropped_name = spectrum_name.split(" - ", 1)[1] if " - " in spectrum_name else spectrum_name
 
-        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+        # Create a Yes/No dialog for the user to make sure that he really wants to delete the spectrum.
+        delete_dialog = CustomYesNoDialog(title="Delete spectrum",
+                                          message=f"Do you really want to remove this spectrum?\n\n {cropped_name}",
+                                          type="warning",
+                                          parent=self)
+
+        # The user really wants to delete to spectrum.
+        if delete_dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            # Delete the spectrum widget and remove it from the spectra scroll area.
             spectrum_widget.deleteLater()
             self.scrollArea_spectra_Contents.layout().removeWidget(spectrum_widget)
+            # Wait for 10 milliseconds and then call the renumber_spectra function to adjust the spectra numbering in the spectra scroll area.
             QtCore.QTimer.singleShot(10, self.renumber_spectra)
+            # Remove the spectrum also from the dataset storage directory.
             self.dataset_storage[self.current_selected_label.label_name.text()].remove(spectrum_widget.spectrum_path)
-            self.refresh_spectra_display()
+            # Update the displayed spectra list and save the dataset storage.
+            self.update_spectra_list()
             self.save_dataset()
 
-    def renumber_spectra(self):
-        layout = self.scrollArea_spectra_Contents.layout()
+
+    def renumber_spectra(self) -> None:
+        """
+        This function walks through all spectra widgets of the spectra scroll area and adds numbers to their name according
+        to their index in the scroll area. This function is called when one of the spectra was deleted and ensures the
+        correct ordering.
+        =============================================================================
+        :return: None.
+        """
+
+        # Get the spectra layout.
+        spectra_layout = self.scrollArea_spectra_Contents.layout()
+        # The counter which is used for the numbering process.
         counter = 1
 
-        for i in range(layout.count()):
-            item = layout.itemAt(i)
-            widget = item.widget()
+        # One iteration for each spectrum widget.
+        for index in range(spectra_layout.count()):
+            # Get the spectrum widget of the current index.
+            spectrum_widget = spectra_layout.itemAt(index).widget()
 
-            if isinstance(widget, DatasetSpectrumEntry):
-                current_text = widget.spectrum_name.text()
-                if " - " in current_text:
-                    pure_name = current_text.split(" - ", 1)[1]
-                    widget.spectrum_name.setText(f"{counter} - {pure_name}")
-                    counter += 1
+            # Check if the widget is an instance of the DatasetSpectrumEntry class.
+            if isinstance(spectrum_widget, DatasetSpectrumEntry):
+                # Get the name of the spectrum, crop it and add the number of the current index to it.
+                spectrum_name = spectrum_widget.spectrum_name.text()
+                cropped_name = spectrum_name.split(" - ", 1)[1]
+                spectrum_widget.spectrum_name.setText(f"{counter} - {cropped_name}")
+                counter += 1
+
 
     def save_dataset(self):
         export_data = {
@@ -391,7 +462,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 self.add_label(label_name)
 
             # 3. Die Benutzeroberfläche (UI) aktualisieren
-            self.refresh_spectra_display()
+            self.update_spectra_list()
         except Exception as e:
             print(f"Dataset loading error: {e}")
 
