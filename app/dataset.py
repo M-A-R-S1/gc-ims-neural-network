@@ -6,6 +6,11 @@ from DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from pathlib import Path
 import json
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+import ims
+from matplotlib import pyplot as plt
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
@@ -28,6 +33,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.button_add_spectra.clicked.connect(self.open_spectra_file_dialog)
         # Saves labels and spectra in a dictionary.
         self.dataset_storage = {}
+        # Setup the plot area.
+        self.setup_plot()
 
         # load dataset from project.
         self.load_dataset()
@@ -184,13 +191,13 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             for i, path in enumerate(paths, 1):
                 new_entry = DatasetSpectrumEntry(path, layout.count() + 1)
                 new_entry.delete_requested.connect(self.remove_spectrum)
+                new_entry.clicked.connect(self.plot_spectrum)
                 layout.insertWidget(layout.count(), new_entry)
 
             self.current_selected_label.label_counter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])}x")
             self.label_spectracounter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])} spectra")
         else :
             self.label_spectracounter.setText("0 spectra")
-
 
 
     def clear_spectra_list(self):
@@ -262,6 +269,72 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             self.refresh_spectra_display()
         except Exception as e:
             print(f"Dataset loading error: {e}")
+
+
+    def setup_plot(self):
+
+        self.preview_image.setStyleSheet("background-color: #191919; border: none;")
+        self.canvas = MplCanvas(self, width=5, height=4, dpi=50)
+        self.canvas.fig.set_facecolor('#191919')
+
+        # 2. Layout für dein QWidget erstellen (falls noch keins da ist)
+        layout = QtWidgets.QVBoxLayout(self.preview_image)
+        layout.addWidget(self.canvas)
+
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        self.toolbar.setStyleSheet("background-color: #2b2b2b; color: white; border: none;")
+        layout.addWidget(self.toolbar)
+
+        self.canvas.axes.set_title("Empty preview")
+        self.canvas.axes.set_xticks([])
+        self.canvas.axes.set_yticks([])
+        self.canvas.draw()
+
+
+    def plot_spectrum(self, file_path):
+        plt.style.use('dark_background')
+
+        # 1. Daten laden
+        spec = ims.Spectrum.read_mea(file_path)
+
+        # 2. Bestehende Achsen leeren (verhindert das "Überlagern" von alten Plots)
+        self.canvas.fig.patch.set_facecolor('#191919')
+        self.canvas.axes.clear()
+        self.canvas.axes.set_facecolor('#191919')
+
+        plt.rcParams.update({
+            'font.size': 14,  # Standardgröße für alles
+            'axes.titlesize': 26,  # Größe des Titels
+            'axes.labelsize': 20,  # Größe der Achsenbeschriftungen (X/Y Label)
+            'xtick.labelsize': 16,  # Größe der Zahlen an den Achsen
+            'ytick.labelsize': 16
+        })
+
+        # 3. Zeichnen (direkt auf self.canvas.axes)
+        # Nutze spec.values und die berechneten Extents
+        img = self.canvas.axes.imshow(
+            spec.values,
+            origin="lower",
+            aspect="auto",
+            cmap="RdBu_r",
+            vmin=30,  # Hintergrundrauschen unterdrücken
+            vmax=400,  # RIP-Peak deckeln für besseren Kontrast
+            extent=(
+                min(spec.drift_time),
+                max(spec.drift_time),
+                min(spec.ret_time),
+                max(spec.ret_time),
+            ),
+        )
+
+        # 4. Beschriftung (Nur über das axes-Objekt!)
+        self.canvas.axes.set_xlabel("Drift Time [ms]", labelpad=15)
+        self.canvas.axes.set_ylabel("Retention Time [s]", labelpad=15)
+        self.canvas.axes.set_title(Path(file_path).stem)
+
+        # 5. Layout anpassen und neu zeichnen
+        self.canvas.fig.tight_layout()
+        self.canvas.draw()
 
 
 class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
@@ -339,6 +412,8 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
 class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
     # Delete signal
     delete_requested = QtCore.Signal(object)
+    # Click signal
+    clicked = QtCore.Signal(str)
 
     def __init__(self, path:str, number: int):
         super().__init__()
@@ -353,3 +428,15 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
 
         # Connect the delete button
         self.button_spectrumDelete.clicked.connect(lambda: self.delete_requested.emit(self))
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.clicked.emit(self.spectrum_path)
+
+
+class MplCanvas(FigureCanvas):
+    def __init__(self, parent=None, width=5, height=4, dpi=50):
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = self.fig.add_subplot(111)
+        self.fig.tight_layout()
+        super().__init__(self.fig)

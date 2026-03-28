@@ -278,6 +278,25 @@ class Ui_DatasetWidget(object):
         self.preview_container = QWidget(self.dataset_container)
         self.preview_container.setObjectName(u"preview_container")
         self.preview_container.setStyleSheet(u"")
+        self.verticalLayout_8 = QVBoxLayout(self.preview_container)
+        self.verticalLayout_8.setSpacing(10)
+        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
+        self.verticalLayout_8.setContentsMargins(-1, 40, -1, -1)
+        self.label_preview = QLabel(self.preview_container)
+        self.label_preview.setObjectName(u"label_preview")
+        self.label_preview.setMaximumSize(QSize(16777215, 40))
+        self.label_preview.setFont(font3)
+        self.label_preview.setStyleSheet(u"color: #ebebeb;")
+        self.label_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.verticalLayout_8.addWidget(self.label_preview)
+
+        self.preview_image = QWidget(self.preview_container)
+        self.preview_image.setObjectName(u"preview_image")
+        self.preview_image.setStyleSheet(u"background-color: #232323;")
+
+        self.verticalLayout_8.addWidget(self.preview_image)
+
 
         self.horizontalLayout.addWidget(self.preview_container)
 
@@ -301,5 +320,6 @@ class Ui_DatasetWidget(object):
         self.spectra_container_header.setText(QCoreApplication.translate("DatasetWidget", u"No label selected", None))
         self.button_add_spectra.setText(QCoreApplication.translate("DatasetWidget", u"Add spectrum", None))
         self.label_spectracounter.setText(QCoreApplication.translate("DatasetWidget", u"0 spectra", None))
+        self.label_preview.setText(QCoreApplication.translate("DatasetWidget", u"Spectrum preview", None))
     # retranslateUi
 
