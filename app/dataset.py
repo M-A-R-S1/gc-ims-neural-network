@@ -29,6 +29,9 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # Saves labels and spectra in a dictionary.
         self.dataset_storage = {}
 
+        # load dataset from project.
+        self.load_dataset()
+
 
     def open_label_file_dialog(self):
         dialog = CreateLabelDialog(self)
@@ -66,6 +69,12 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.scrollArea_labels_Contents.layout().insertWidget(self.scrollArea_labels_Contents.layout().count() - 1, label)
         self.update_label_count()
 
+        if name not in self.dataset_storage:
+            self.dataset_storage[name] = []
+            self.save_dataset()
+
+        label.label_counter.setText(f"{len(self.dataset_storage[name])}x")
+
 
     def handle_label_selection(self, selected_widget) -> None:
         self.clear_spectra_list()
@@ -98,6 +107,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             label.deleteLater()
             self.scrollArea_labels_Contents.layout().removeWidget(label)
             self.update_label_count()
+            del self.dataset_storage[label_name]
             self.refresh_spectra_display()
             self.save_dataset()
 
@@ -109,10 +119,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             label.use_old_label_name()
             return
 
-        if label.old_label_name in self.dataset_storage:
-            self.dataset_storage[name] = self.dataset_container.pop(label.old_label_name)
-        else:
-            self.dataset_storage[name] = []
+        self.dataset_storage[name] = self.dataset_storage.pop(label.old_label_name)
 
         label.label_name.setText(name)
         label.old_label_name = name
@@ -149,15 +156,10 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
 
     def add_spectra_to_list(self, file_paths):
-
-        if self.current_selected_label.label_name not in self.dataset_storage:
-            self.dataset_storage[self.current_selected_label.label_name] = []
-
-        for p in file_paths:
-            path_obj = Path(p)
+        for file in file_paths:
             # Optional: Dubletten-Check
-            if path_obj not in self.dataset_storage[self.current_selected_label.label_name]:
-                self.dataset_storage[self.current_selected_label.label_name].append(path_obj)
+            if file not in self.dataset_storage[self.current_selected_label.label_name.text()]:
+                self.dataset_storage[self.current_selected_label.label_name.text()].append(file)
 
         self.save_dataset()
         # 2. UI aktualisieren (Liste neu zeichnen)
@@ -172,16 +174,23 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             if item.widget():
                 item.widget().deleteLater()
 
-        # 2. Neue Widgets aus dem Speicher erstellen
-        if self.current_selected_label.label_name in self.dataset_storage:
-            paths = self.dataset_storage[self.current_selected_label.label_name]
+
+        if self.current_selected_label is not None:
+            # 2. Neue Widgets aus dem Speicher erstellen
+            paths = self.dataset_storage[self.current_selected_label.label_name.text()]
             # Hier sortieren wir für die Anzeige
-            paths.sort(key=lambda x: x.name.lower())
+            paths.sort(key=lambda x: x)
 
             for i, path in enumerate(paths, 1):
-                new_entry = DatasetSpectrumEntry(path, layout.count()+1)
+                new_entry = DatasetSpectrumEntry(path, layout.count() + 1)
                 new_entry.delete_requested.connect(self.remove_spectrum)
                 layout.insertWidget(layout.count(), new_entry)
+
+            self.current_selected_label.label_counter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])}x")
+            self.label_spectracounter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])} spectra")
+        else :
+            self.label_spectracounter.setText("0 spectra")
+
 
 
     def clear_spectra_list(self):
@@ -206,7 +215,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             spectrum_widget.deleteLater()
             self.scrollArea_spectra_Contents.layout().removeWidget(spectrum_widget)
             QtCore.QTimer.singleShot(10, self.renumber_spectra)
-            self.dataset_storage[self.current_selected_label.label_name].remove(spectrum_widget.spectrum_path)
+            self.dataset_storage[self.current_selected_label.label_name.text()].remove(spectrum_widget.spectrum_path)
+            self.refresh_spectra_display()
             self.save_dataset()
 
     def renumber_spectra(self):
@@ -234,6 +244,24 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         except Exception as e:
             CustomMessageDialog.show_error("Error - Saving", "Something went wrong while saving the dataset!", self)
             print(f"Fehler beim Speichern: {e}")
+
+
+    def load_dataset(self):
+        try:
+            with open(self.project_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 1. Alten Speicher komplett leeren
+            self.dataset_storage.clear()
+            self.dataset_storage.update(data)
+
+            for label_name in self.dataset_storage.keys():
+                self.add_label_entry(label_name)
+
+            # 3. Die Benutzeroberfläche (UI) aktualisieren
+            self.refresh_spectra_display()
+        except Exception as e:
+            print(f"Dataset loading error: {e}")
 
 
 class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
@@ -318,8 +346,8 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
 
         self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
 
-        self.spectrum_path = Path(path)
-        self.spectrum_name.setText(f"{number} - {self.spectrum_path.parent.name}/{self.spectrum_path.stem}")
+        self.spectrum_path = path
+        self.spectrum_name.setText(f"{number} - {Path(self.spectrum_path).parent.name}/{Path(self.spectrum_path).stem}")
         self.button_spectrumDelete.enterEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_magenta.png'))
         self.button_spectrumDelete.leaveEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_grey.png'))
 

@@ -115,7 +115,7 @@
        <widget class="QWidget" name="labels_outer_container" native="true">
         <property name="maximumSize">
          <size>
-          <width>500</width>
+          <width>400</width>
           <height>16777215</height>
          </size>
         </property>
@@ -223,7 +223,7 @@ border-radius: 0px;</string>
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>480</width>
+                 <width>380</width>
                  <height>606</height>
                 </rect>
                </property>
@@ -340,7 +340,7 @@ background-color: #131313;
        <widget class="QWidget" name="spectra_outer_container" native="true">
         <property name="maximumSize">
          <size>
-          <width>500</width>
+          <width>600</width>
           <height>16777215</height>
          </size>
         </property>
@@ -442,7 +442,7 @@ border-radius: 0px;</string>
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>480</width>
+                 <width>580</width>
                  <height>606</height>
                 </rect>
                </property>
