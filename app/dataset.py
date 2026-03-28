@@ -1,4 +1,5 @@
 from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtCore import QSize, Qt
 from DatasetWidget import Ui_DatasetWidget
 import DatasetLabelEntry
 from DatasetLabelEntry import Ui_DatasetLabelEntry
@@ -29,6 +30,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.button_add_label.clicked.connect(self.open_label_file_dialog)
         # The selected label.
         self.current_selected_label = None
+        self.current_selected_spectrum = None
         # Connect the "add spectra" button.
         self.button_add_spectra.clicked.connect(self.open_spectra_file_dialog)
         # Saves labels and spectra in a dictionary.
@@ -85,6 +87,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
     def handle_label_selection(self, selected_widget) -> None:
         self.clear_spectra_list()
+        self.current_selected_spectrum = None
+
         if self.current_selected_label:
             self.current_selected_label.set_active(False)
 
@@ -276,26 +280,60 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.preview_image.setStyleSheet("background-color: #191919; border: none;")
         self.canvas = MplCanvas(self, width=5, height=4, dpi=50)
         self.canvas.fig.set_facecolor('#191919')
+        self.canvas.axes.set_facecolor('#191919')
+
+        plt.rcParams.update({
+            'font.size': 14,  # Standardgröße für alles
+            'axes.titlesize': 26,  # Größe des Titels
+            'axes.labelsize': 20,  # Größe der Achsenbeschriftungen (X/Y Label)
+            'xtick.labelsize': 16,  # Größe der Zahlen an den Achsen
+            'ytick.labelsize': 16
+        })
+
+        # Optional: Den Rahmen der Axes (Spines) ebenfalls verstecken oder färben
+        for spine in self.canvas.axes.spines.values():
+            spine.set_edgecolor('#191919')  # Ein dezentes Grau für den Rahmen
 
         # 2. Layout für dein QWidget erstellen (falls noch keins da ist)
         layout = QtWidgets.QVBoxLayout(self.preview_image)
         layout.addWidget(self.canvas)
 
         self.toolbar = NavigationToolbar(self.canvas, self)
-        self.toolbar.setStyleSheet("background-color: #2b2b2b; color: white; border: none;")
+        self.toolbar.setStyleSheet("background-color: #191919; color: white; border: none;")
+        toolbar_actions = self.toolbar.actions()
+
+        for action in toolbar_actions:
+            if "Subplots" in action.text() or "Back" in action.text() or "Forward" in action.text():
+                self.toolbar.removeAction(action)
+
+        self.toolbar.setIconSize(QSize(36,36))
+        # 2. Die Höhe der Toolbar fixieren
+        self.toolbar.setFixedHeight(50)
+
+        for button in self.toolbar.findChildren(QtWidgets.QToolButton):
+            button.setCursor(Qt.PointingHandCursor)
+
+        #self.toolbar.hide()
         layout.addWidget(self.toolbar)
 
-        self.canvas.axes.set_title("Empty preview")
         self.canvas.axes.set_xticks([])
         self.canvas.axes.set_yticks([])
         self.canvas.draw()
 
 
-    def plot_spectrum(self, file_path):
+    def plot_spectrum(self, spectrum_widget):
+
+        if self.current_selected_spectrum:
+            self.current_selected_spectrum.set_active(False)
+
+        self.current_selected_spectrum = spectrum_widget
+        self.current_selected_spectrum.set_active(True)
+
         plt.style.use('dark_background')
 
         # 1. Daten laden
-        spec = ims.Spectrum.read_mea(file_path)
+        spec = ims.Spectrum.read_mea(spectrum_widget.spectrum_path)
+        spec.riprel()
 
         # 2. Bestehende Achsen leeren (verhindert das "Überlagern" von alten Plots)
         self.canvas.fig.patch.set_facecolor('#191919')
@@ -330,7 +368,9 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # 4. Beschriftung (Nur über das axes-Objekt!)
         self.canvas.axes.set_xlabel("Drift Time [ms]", labelpad=15)
         self.canvas.axes.set_ylabel("Retention Time [s]", labelpad=15)
-        self.canvas.axes.set_title(Path(file_path).stem)
+
+        self.canvas.fig.subplots_adjust(left=0.069, bottom=0.058, right=0.094, top=0.995)
+        self.toolbar.show()
 
         # 5. Layout anpassen und neu zeichnen
         self.canvas.fig.tight_layout()
@@ -413,7 +453,7 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
     # Delete signal
     delete_requested = QtCore.Signal(object)
     # Click signal
-    clicked = QtCore.Signal(str)
+    clicked = QtCore.Signal(object)
 
     def __init__(self, path:str, number: int):
         super().__init__()
@@ -431,7 +471,14 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
-            self.clicked.emit(self.spectrum_path)
+            self.clicked.emit(self)
+
+
+    def set_active(self, active: bool) -> None:
+        if active:
+            self.spectrum_name.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+        else:
+            self.spectrum_name.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
 
 
 class MplCanvas(FigureCanvas):
