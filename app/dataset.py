@@ -1,17 +1,17 @@
+from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import QSize, Qt
 from DatasetWidget import Ui_DatasetWidget
-import DatasetLabelEntry
 from DatasetLabelEntry import Ui_DatasetLabelEntry
 from DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from pathlib import Path
-import json
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-import ims
 from matplotlib import pyplot as plt
+import ims
+import json
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
@@ -22,12 +22,12 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # Project save path
         self.project_path = Path(project_path)
         # Defining the layout.
-        self.scrollArea_labels_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
+        self.scrollArea_labels_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea_labels_Contents.layout().setSpacing(5)
-        self.scrollArea_spectra_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
+        self.scrollArea_spectra_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea_spectra_Contents.layout().setSpacing(5)
         # Connect the "add label" button.
-        self.button_add_label.clicked.connect(self.open_label_file_dialog)
+        self.button_add_label.clicked.connect(self.add_label_dialog)
         # The selected label.
         self.current_selected_label = None
         self.current_selected_spectrum = None
@@ -42,113 +42,234 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.load_dataset()
 
 
-    def open_label_file_dialog(self):
+    def add_label_dialog(self) -> None:
+        """
+        This function is called if the "Add label" button is pressed and shows a label dialog.
+        In this dialog the user can enter a label name for the addition to the label list.
+        This label is added to the label list if the label name is not emtpy and not a duplicate.
+        =============================================================================
+        :return: None.
+        """
+
+        # Create the dialog window.
         dialog = CreateLabelDialog(self)
 
-        if dialog.exec() == QtWidgets.QDialog.Accepted:
+        # Show the dialog window and wait for the user response. If the user wants to add a label proceed here.
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             data = dialog.get_data()
             name = data['name']
 
+            # Check if the label is a new label and if the name is not empty.
             if name:
-                if not self.is_label_duplicate(name):
-                    self.add_label_entry(name)
+                if not self.duplication_check(name):
+                    # The new label is not a duplicate, add the label!
+                    self.add_label(name)
                 else:
                     CustomMessageDialog.show_error("Error - Duplication", "Label already exists, please choose another name")
             else:
                 CustomMessageDialog.show_error("Error - Empty", "Empty label name! Please choose a name for your label.")
 
 
-    def is_label_duplicate(self, name: str, exclude_widget=None) -> bool:
+    def duplication_check(self,
+                          name: str,
+                          exclude_widget=None) -> bool:
+        """
+        This function takes in the name of a new label or the name of a renamed label and checks if there is already
+        a label with this name present. If so this label is considered a duplication and is not added as a new label!
+        =============================================================================
+        :param name: The name of the new/renamed label.
+        :param exclude_widget: The widget of the renamed label.
+        =============================================================================
+        :return: Boolean value for the duplication check [True = duplicate | False = No duplicate]
+        """
 
+        # Walks through all labels and checks if the new label name is unique
         for i in range(self.scrollArea_labels_Contents.layout().count()):
+            # Get the widget of the label.
             widget = self.scrollArea_labels_Contents.layout().itemAt(i).widget()
 
+            # Check if the widget is of the correct type "DatasetLabelEntry" and if the widget should be excluded.
             if isinstance(widget, DatasetLabelEntry) and widget is not exclude_widget:
+                # If the new label name matches on of the labels return true.
                 if widget.label_name.text() == name:
                     return True
 
+        # No duplications found.
         return False
 
 
-    def add_label_entry(self, name: str) -> None:
+    def add_label(self,
+                        name: str) -> None:
+        """
+        This function is called when a new label is about to be added. The label is connected so a series of signals
+        [Delete | Rename] and is finally added as a widget to the label scroll area and to the dataset storage dictionary.
+        =============================================================================
+        :param name: The name of the label.
+        =============================================================================
+        :return: None.
+        """
+
+        # Create a new instance of the "DatasetLabelEntry" class.
         label = DatasetLabelEntry(name)
-        label.delete_requested.connect(self.confirm_delete)
-        label.rename_requested.connect(self.confirm_rename)
-        label.clicked.connect(self.handle_label_selection)
+        # Connect to the delete and rename signals.
+        label.delete_signal.connect(self.delete_label_dialog)
+        label.rename_signal.connect(self.rename_label_dialog)
+        # Connect the label click to a handling function.
+        label.clicked.connect(self.handle_label_click)
+        # Insert the new label into the label scroll area as a widget.
         self.scrollArea_labels_Contents.layout().insertWidget(self.scrollArea_labels_Contents.layout().count() - 1, label)
+        # Update the label counter.
         self.update_label_count()
 
+        # Check if the label is already saved in the dataset storage directory. If not add it.
         if name not in self.dataset_storage:
             self.dataset_storage[name] = []
             self.save_dataset()
 
-        label.label_counter.setText(f"{len(self.dataset_storage[name])}x")
+        # Count the number of spectra which are associated for the current label and update the spectra counter.
+        label.spectra_counter.setText(f"{len(self.dataset_storage[name])}x")
 
 
-    def handle_label_selection(self, selected_widget) -> None:
+    def handle_label_click(self,
+                           label_widget: DatasetLabelEntry) -> None:
+        """
+        This function is handling the "label clicked" event. If a label widget is clicked inside the label scroll area
+        this function is called. The label is now registered as the "currently selected" label.
+
+        This will change the following things:
+            1. The selected label widget is highlighted in the label scroll area.
+            2. The header of the spectra scroll area is set to the name of the selected label.
+            3. The spectra scroll area list is cleared and filled with all spectra which are associated with the new
+               selected label.
+        =============================================================================
+        :param label_widget: The label widget which was clicked in the label scroll area.
+        =============================================================================
+        :return: None.
+        """
+
+        # Clear the spectra scroll area from all widgets.
         self.clear_spectra_list()
         self.current_selected_spectrum = None
 
+        # Find out which label is currently selected and deactivate it.
         if self.current_selected_label:
             self.current_selected_label.set_active(False)
 
-        self.current_selected_label = selected_widget
+        # Set the clicked label as the "currently selected label".
+        self.current_selected_label = label_widget
         self.current_selected_label.set_active(True)
 
-        label_text = selected_widget.label_name.text()
-        self.spectra_container_header.setText(label_text)
+        # Get the name of the label and set this name to the header of the spectra scroll area.
+        label_name = label_widget.label_name.text()
+        self.spectra_container_header.setText(label_name)
 
+        # Refresh the spectra scroll area to show the spectra associated with the new selected label.
         self.refresh_spectra_display()
 
 
-    def confirm_delete(self, label: DatasetLabelEntry) -> None:
-
-        label_name = label.label_name.text()
+    def delete_label_dialog(self,
+                            label_widget: DatasetLabelEntry) -> None:
+        """
+        This function is called when a label delete icon was pressed. A "label delete" dialog will be displayed to the
+        user. If the user decides to delete the label, the label is removed from the label scroll area and the dataset
+        storage. The Spectrum scroll area is cleared, if the deleted label was the currently selected label.
+        =============================================================================
+        :param label_widget: The label widget of which the delete button was pressed.
+        =============================================================================
+        :return: None.
+        """
+        
+        # Get the name of the label.
+        label_name = label_widget.label_name.text()
+        # Define a Yes/No Dialog for the deletion.
         dialog = CustomYesNoDialog(title="Delete label",
                                    message=f"Are you sure you want to delete the '{label_name}' label?",
                                    type="warning",
                                    parent=self)
 
-
-        if dialog.exec() == QtWidgets.QDialog.Accepted:
-            if label == self.current_selected_label:
+        # The user wants to delete the label.
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            # If the label was the currently selected label, the spectra scroll area has to be cleared.
+            if label_widget == self.current_selected_label:
                 self.spectra_container_header.setText("No label selected")
                 self.current_selected_label = None
+                self.current_selected_spectrum = None
+                # TODO ... Clear the spectrum preview here.
 
-            label.deleteLater()
-            self.scrollArea_labels_Contents.layout().removeWidget(label)
+            # Delete the label widget, remove it from the label scroll area and update the label counter.
+            label_widget.deleteLater()
+            self.scrollArea_labels_Contents.layout().removeWidget(label_widget)
             self.update_label_count()
+            # Remove the label from the data storage dictionary and refresh the spectra scroll area.
             del self.dataset_storage[label_name]
             self.refresh_spectra_display()
+            # TODO ... refresh needed!?
+            # Save the adjusted dataset storage.
             self.save_dataset()
 
 
-    def confirm_rename(self, label: DatasetLabelEntry, name: str) -> None:
+    def rename_label_dialog(self,
+                            label_widget: DatasetLabelEntry) -> None:
+        """
+        This function is called when the user clicked on the renaming button of a label inside the label scroll area.
+        This function shows a rename dialog for the user to input a new label name.
+        This new label name is then checked for duplication. If it is not a duplicate the label is renamed.
+        =============================================================================
+        :param label_widget: The label widget of which the rename button was clicked in the label scroll area.
+        =============================================================================
+        :return: None.
+        """
 
-        if self.is_label_duplicate(name, exclude_widget=label):
-            CustomMessageDialog.show_error("Error - Duplication", "Label already exists, please choose another name")
-            label.use_old_label_name()
-            return
+        # Create the label rename dialog.
+        dialog = RenameLabelDialog(label_widget.label_name.text(), self)
 
-        self.dataset_storage[name] = self.dataset_storage.pop(label.old_label_name)
+        # The user chooses to rename the label.
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            # get the new label name from the dialog data.
+            new_label_name = dialog.get_data()['name']
 
-        label.label_name.setText(name)
-        label.old_label_name = name
+            # If the old and the new label name are the same skip renaming.
+            if new_label_name == label_widget.label_name.text():
+                return
 
-        if label == self.current_selected_label:
-            self.spectra_container_header.setText(name)
+            # If the new label name is a duplicate [label name already exits in list] skip renaming and rollback.
+            if self.duplication_check(new_label_name, exclude_widget=label_widget):
+                CustomMessageDialog.show_error("Error - Duplication",
+                                               "Label already exists, please choose another name")
+                label_widget.label_name.setText(label_widget.old_label_name)
+                return
 
-        self.save_dataset()
+            # Exchange the label name in the dataset storage and display the new label name.
+            self.dataset_storage[new_label_name] = self.dataset_storage.pop(label_widget.old_label_name)
+            label_widget.label_name.setText(new_label_name)
+            label_widget.old_label_name = new_label_name
+
+            # If the renamed label is the currently selected label, then change also the header of the spectra scroll area.
+            if label_widget == self.current_selected_label:
+                self.spectra_container_header.setText(new_label_name)
+
+            # Save the adjusted dataset storage.
+            self.save_dataset()
 
 
     def update_label_count(self) -> None:
+        """
+        This function counts the number of label widgets inside the label scroll area and updates this information
+        in the viewspace.
+        =============================================================================
+        :return: None.
+        """
+
+        # Initialize the counter to 0.
         count = 0
 
+        # Walk through all label widgets inside the label scroll area and increase the counter for each label widget.
         for i in range(self.scrollArea_labels_Contents.layout().count()):
-            widget = self.scrollArea_labels_Contents.layout().itemAt(i).widget()
-            if isinstance(widget, DatasetLabelEntry):
+            label_widget = self.scrollArea_labels_Contents.layout().itemAt(i).widget()
+            if isinstance(label_widget, DatasetLabelEntry):
                 count += 1
 
+        # Set the counter.
         self.label_labelcounter.setText(f"{count} labels")
 
 
@@ -194,11 +315,11 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
             for i, path in enumerate(paths, 1):
                 new_entry = DatasetSpectrumEntry(path, layout.count() + 1)
-                new_entry.delete_requested.connect(self.remove_spectrum)
+                new_entry.delete_signal.connect(self.remove_spectrum)
                 new_entry.clicked.connect(self.plot_spectrum)
                 layout.insertWidget(layout.count(), new_entry)
 
-            self.current_selected_label.label_counter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])}x")
+            self.current_selected_label.spectra_counter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])}x")
             self.label_spectracounter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])} spectra")
         else :
             self.label_spectracounter.setText("0 spectra")
@@ -222,7 +343,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                                    type="warning",
                                    parent=self)
 
-        if dialog.exec() == QtWidgets.QDialog.Accepted:
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             spectrum_widget.deleteLater()
             self.scrollArea_spectra_Contents.layout().removeWidget(spectrum_widget)
             QtCore.QTimer.singleShot(10, self.renumber_spectra)
@@ -267,7 +388,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             self.dataset_storage.update(data)
 
             for label_name in self.dataset_storage.keys():
-                self.add_label_entry(label_name)
+                self.add_label(label_name)
 
             # 3. Die Benutzeroberfläche (UI) aktualisieren
             self.refresh_spectra_display()
@@ -303,7 +424,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         toolbar_actions = self.toolbar.actions()
 
         for action in toolbar_actions:
-            if "Subplots" in action.text() or "Back" in action.text() or "Forward" in action.text():
+            if any(word in action.text() for word in ["Subplots", "Back", "Forward", "Customize"]):
                 self.toolbar.removeAction(action)
 
         self.toolbar.setIconSize(QSize(36,36))
@@ -311,7 +432,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.toolbar.setFixedHeight(50)
 
         for button in self.toolbar.findChildren(QtWidgets.QToolButton):
-            button.setCursor(Qt.PointingHandCursor)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
 
         #self.toolbar.hide()
         layout.addWidget(self.toolbar)
@@ -379,9 +500,9 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
 class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
     # Delete signal for the label.
-    delete_requested = QtCore.Signal(object)
+    delete_signal = QtCore.Signal(object)
     # Rename signal.
-    rename_requested = QtCore.Signal(object, str)
+    rename_signal = QtCore.Signal(object)
     # Label was clicked signal.
     clicked = QtCore.Signal(object)
 
@@ -394,13 +515,13 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
 
         # Set the label values.
         self.label_name.setText(label_name.strip())
-        self.label_counter.setText(f"{count}x")
+        self.spectra_counter.setText(f"{count}x")
         self.old_label_name = label_name.strip()
 
         # Connect the delete button.
-        self.button_labelDelete.clicked.connect(lambda: self.delete_requested.emit(self))
-        # Connect the label Edit line.
-        self.button_labelRename.clicked.connect(self.rename_dialog)
+        self.button_labelDelete.clicked.connect(lambda: self.delete_signal.emit(self))
+        # Connect the rename button.
+        self.button_labelRename.clicked.connect(lambda: self.rename_signal.emit(self))
         # Hover effects for the rename button.
         self.button_labelRename.enterEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_orange', True)
         self.button_labelRename.leaveEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_grey', False)
@@ -419,39 +540,24 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
         else:
             button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
 
-    def rename_dialog(self):
-        dialog = RenameLabelDialog(self.label_name.text(), self)
-
-        if dialog.exec() == QtWidgets.QDialog.Accepted:
-            new_label_name = dialog.get_data()['name']
-
-            if new_label_name == self.label_name.text():
-                return
-
-            self.rename_requested.emit(self, new_label_name)
-
-
-    def use_old_label_name(self):
-        self.label_name.setText(self.old_label_name)
-
 
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
-        if event.button() == QtCore.Qt.LeftButton:
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.clicked.emit(self)
 
 
     def set_active(self, active: bool) -> None:
         if active:
             self.label_name.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
-            self.label_counter.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+            self.spectra_counter.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
         else:
             self.label_name.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
-            self.label_counter.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
+            self.spectra_counter.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
 
 
 class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
     # Delete signal
-    delete_requested = QtCore.Signal(object)
+    delete_signal = QtCore.Signal(object)
     # Click signal
     clicked = QtCore.Signal(object)
 
@@ -459,7 +565,7 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
         super().__init__()
         self.setupUi(self)
 
-        self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self.spectrum_path = path
         self.spectrum_name.setText(f"{number} - {Path(self.spectrum_path).parent.name}/{Path(self.spectrum_path).stem}")
@@ -467,10 +573,10 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
         self.button_spectrumDelete.leaveEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_grey.png'))
 
         # Connect the delete button
-        self.button_spectrumDelete.clicked.connect(lambda: self.delete_requested.emit(self))
+        self.button_spectrumDelete.clicked.connect(lambda: self.delete_signal.emit(self))
 
     def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.LeftButton:
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.clicked.emit(self)
 
 

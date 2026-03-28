@@ -82,18 +82,18 @@ class Ui_DatasetLabelEntry(object):
 
         self.horizontalLayout.addWidget(self.label_name)
 
-        self.label_counter = QLabel(DatasetLabelEntry)
-        self.label_counter.setObjectName(u"label_counter")
-        self.label_counter.setMaximumSize(QSize(60, 16777215))
-        self.label_counter.setFont(font)
-        self.label_counter.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.label_counter.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.label_counter.setStyleSheet(u"border: None;\n"
+        self.spectra_counter = QLabel(DatasetLabelEntry)
+        self.spectra_counter.setObjectName(u"spectra_counter")
+        self.spectra_counter.setMaximumSize(QSize(60, 16777215))
+        self.spectra_counter.setFont(font)
+        self.spectra_counter.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.spectra_counter.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self.spectra_counter.setStyleSheet(u"border: None;\n"
 "color: #ebebeb;\n"
 "background-color: transparent;")
-        self.label_counter.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+        self.spectra_counter.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
-        self.horizontalLayout.addWidget(self.label_counter)
+        self.horizontalLayout.addWidget(self.spectra_counter)
 
 
         self.retranslateUi(DatasetLabelEntry)
@@ -106,6 +106,6 @@ class Ui_DatasetLabelEntry(object):
         self.button_labelDelete.setText("")
         self.button_labelRename.setText("")
         self.label_name.setText(QCoreApplication.translate("DatasetLabelEntry", u"TextLabel", None))
-        self.label_counter.setText(QCoreApplication.translate("DatasetLabelEntry", u"0x", None))
+        self.spectra_counter.setText(QCoreApplication.translate("DatasetLabelEntry", u"0x", None))
     # retranslateUi
 

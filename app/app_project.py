@@ -74,13 +74,13 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
     def setup_sidebar_buttons(self):
         # Get the active color palette
         self.palette_active = self.sb_dataset_button.palette()
-        self.palette_active.setColor(QPalette.WindowText, QColor(ACTIVE_COLOR))
+        self.palette_active.setColor(QPalette.ColorRole.WindowText, QColor(ACTIVE_COLOR))
         # Get the deactivated color palette
         self.palette_deactivated = self.sb_dataset_button.palette()
-        self.palette_deactivated.setColor(QPalette.WindowText, QColor(DEACTIVATED_COLOR))
+        self.palette_deactivated.setColor(QPalette.ColorRole.WindowText, QColor(DEACTIVATED_COLOR))
         # Get the normal color palette
         self.palette_normal = self.sb_dataset_button.palette()
-        self.palette_normal.setColor(QPalette.WindowText, QColor(NORMAL_COLOR))
+        self.palette_normal.setColor(QPalette.ColorRole.WindowText, QColor(NORMAL_COLOR))
 
         # Set the dataset as active.
         self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_orange.png"))

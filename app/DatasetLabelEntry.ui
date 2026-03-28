@@ -130,7 +130,7 @@ background-color: transparent;</string>
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="label_counter">
+    <widget class="QLabel" name="spectra_counter">
      <property name="maximumSize">
       <size>
        <width>60</width>

@@ -11,10 +11,10 @@ class CreateLabelDialog(QtWidgets.QDialog, Ui_CreateLabelDialog):
         self.setupUi(self)
         self.setWindowTitle("Create new label")
         self.setWindowFlags(
-            QtCore.Qt.Dialog |
-            QtCore.Qt.CustomizeWindowHint |
-            QtCore.Qt.WindowCloseButtonHint |
-            QtCore.Qt.WindowTitleHint
+            QtCore.Qt.WindowType.Dialog |
+            QtCore.Qt.WindowType.CustomizeWindowHint |
+            QtCore.Qt.WindowType.WindowCloseButtonHint |
+            QtCore.Qt.WindowType.WindowTitleHint
         )
 
         # Connect the buttons.
@@ -37,10 +37,10 @@ class RenameLabelDialog(QtWidgets.QDialog, Ui_RenameLabelDialog):
         self.setupUi(self)
         self.setWindowTitle("Rename label")
         self.setWindowFlags(
-            QtCore.Qt.Dialog |
-            QtCore.Qt.CustomizeWindowHint |
-            QtCore.Qt.WindowCloseButtonHint |
-            QtCore.Qt.WindowTitleHint
+            QtCore.Qt.WindowType.Dialog |
+            QtCore.Qt.WindowType.CustomizeWindowHint |
+            QtCore.Qt.WindowType.WindowCloseButtonHint |
+            QtCore.Qt.WindowType.WindowTitleHint
         )
 
         # Connect the buttons.
@@ -65,10 +65,10 @@ class CustomMessageDialog(QtWidgets.QDialog, Ui_MessageDialog):
         self.setupUi(self)
 
         self.setWindowFlags(
-            QtCore.Qt.Dialog |
-            QtCore.Qt.CustomizeWindowHint |
-            QtCore.Qt.WindowCloseButtonHint |
-            QtCore.Qt.WindowTitleHint
+            QtCore.Qt.WindowType.Dialog |
+            QtCore.Qt.WindowType.CustomizeWindowHint |
+            QtCore.Qt.WindowType.WindowCloseButtonHint |
+            QtCore.Qt.WindowType.WindowTitleHint
         )
 
         # Set the window title
@@ -94,10 +94,10 @@ class CustomYesNoDialog(QtWidgets.QDialog, Ui_YesNoDialog):
         self.setupUi(self)
 
         self.setWindowFlags(
-            QtCore.Qt.Dialog |
-            QtCore.Qt.CustomizeWindowHint |
-            QtCore.Qt.WindowCloseButtonHint |
-            QtCore.Qt.WindowTitleHint
+            QtCore.Qt.WindowType.Dialog |
+            QtCore.Qt.WindowType.CustomizeWindowHint |
+            QtCore.Qt.WindowType.WindowCloseButtonHint |
+            QtCore.Qt.WindowType.WindowTitleHint
         )
 
         # Set default button.

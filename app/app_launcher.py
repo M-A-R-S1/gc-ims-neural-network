@@ -187,7 +187,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
         if is_name_valid and is_path_selected and project_name != "Project name ...":
             # Activate the "create" button and set the stylesheet.
             self.button_create_2.setEnabled(True)
-            self.button_create_2.setCursor(QtCore.Qt.PointingHandCursor)
+            self.button_create_2.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
             self.button_create_2.setStyleSheet(f"""
                                                     QPushButton {{
                                                         border: 1px solid #00eaff;
@@ -200,7 +200,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
         # Conditions are not met. The "create" button can't pre pressed.
         else:
             # Deactivate the "create" button and change the stylesheet.
-            self.button_create_2.setCursor(QtCore.Qt.ForbiddenCursor)
+            self.button_create_2.setCursor(QtCore.Qt.CursorShape.ForbiddenCursor)
             self.button_create_2.setEnabled(False)
             self.button_create_2.setStyleSheet(f"""
                                                     QPushButton {{
@@ -338,7 +338,7 @@ app = QtWidgets.QApplication(sys.argv)
 # Create a window and show it.
 launcher = MainWindow()
 # turns of the minimize and maximize buttons.
-launcher.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowCloseButtonHint)
+launcher.setWindowFlags(QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowCloseButtonHint)
 launcher.show()
 
 # Reference array for the project window.
