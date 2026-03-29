@@ -1,15 +1,4 @@
-- Check if the peak detection was already calculated, if so skip it.
-- After ~1500 epochs the train/test loss stays the same.
-
-----------------------------------------------------------------------------------------------------------------------
-- Use the olive oil trained model, and insert the honey peaks (and later breathing air peaks).
-- Question: Can the model reconstruct these new peaks? Are there new peak forms different from the olive ones?
-    - Answer: Yes, the model can reconstruct peaks. But the test loss is higher, because there are new peak forms which
-              the model did not learn with the olive data.
-- Question 2: Can we train a model with both datasets? What are the results for such a model?
-----------------------------------------------------------------------------------------------------------------------
-Next Steps:
-- Working on the GUI -> PyQT6 | PySide6
-
-- Error!!
-ImportError: libGL.so.1: cannot open shared object file: No such file or directory
+- Dataset Page
+    - Highlight new added spectra [special color and/or the keyword NEW]
+    - Filter options? [Input bar for name filtering]
+    - Add spectra by using a upper folder and deepsearch
