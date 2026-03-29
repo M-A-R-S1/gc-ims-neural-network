@@ -116,11 +116,10 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
         # Create a new instance of the "DatasetLabelEntry" class.
         label = DatasetLabelEntry(name)
-        # Connect to the delete and rename signals.
+        # Connect to the delete/rename/click signals.
         label.delete_signal.connect(self.delete_label_dialog)
         label.rename_signal.connect(self.rename_label_dialog)
-        # Connect the label click to a handling function.
-        label.clicked.connect(self.handle_label_click)
+        label.click_signal.connect(self.handle_label_click)
         # Insert the new label into the label scroll area as a widget.
         self.scrollArea_labels_Contents.layout().insertWidget(self.scrollArea_labels_Contents.layout().count() - 1, label)
         # Update the label counter.
@@ -349,7 +348,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 spectra_widget = DatasetSpectrumEntry(path, spectra_layout.count() + 1)
                 # Connect the widget to a delete and click signal.
                 spectra_widget.delete_signal.connect(self.delete_spectrum)
-                spectra_widget.clicked.connect(self.plot_spectrum)
+                spectra_widget.click_signal.connect(self.plot_spectrum)
                 # Insert the widget to the spectra scroll area.
                 spectra_layout.insertWidget(spectra_layout.count(), spectra_widget)
 
@@ -603,12 +602,10 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
 
 class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
-    # Delete signal for the label.
+    # Signal definitions
     delete_signal = QtCore.Signal(object)
-    # Rename signal.
     rename_signal = QtCore.Signal(object)
-    # Label was clicked signal.
-    clicked = QtCore.Signal(object)
+    click_signal = QtCore.Signal(object)
 
     def __init__(self,
                  label_name: str,
@@ -617,19 +614,19 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
         super().__init__()
         self.setupUi(self)
 
-        # Set the label values.
+        # Set label and spectra counter text.
         self.label_name.setText(label_name.strip())
         self.spectra_counter.setText(f"{count}x")
+        # Save the current label name [important for renaming].
         self.old_label_name = label_name.strip()
 
-        # Connect the delete button.
+        # Connect buttons and emit signals if clicked.
         self.button_labelDelete.clicked.connect(lambda: self.delete_signal.emit(self))
-        # Connect the rename button.
         self.button_labelRename.clicked.connect(lambda: self.rename_signal.emit(self))
-        # Hover effects for the rename button.
+
+        # Hover effects for buttons.
         self.button_labelRename.enterEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_orange', True)
         self.button_labelRename.leaveEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_grey', False)
-        # Hover effects for the delete button.
         self.button_labelDelete.enterEvent = lambda e: self.button_hover_effect(self.button_labelDelete, 'delete_magenta',True)
         self.button_labelDelete.leaveEvent = lambda e: self.button_hover_effect(self.button_labelDelete, 'delete_grey',False)
 
@@ -637,20 +634,54 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
     def button_hover_effect(self,
                             button: QtWidgets.QPushButton,
                             icon_name: str,
-                            hover: bool):
+                            hover: bool) -> None:
+        """
+        This function takes in a PushButton widget and changes the button icon depending on whether the mouse of the user
+        is hovering over the button or not and creates a button hover effect.
+        =============================================================================
+        :param button: The button widget where the mouse is hovering over.
+        :param icon_name: The name of the button icon to display.
+        :param hover: Boolean value for the hovering mouse [True - Mouse is hovering | False - Mouse is not hovering]
+        =============================================================================
+        :return: None.
+        """
 
+        # If the mouse is hovering over the button show this button picture.
         if hover:
             button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
         else:
             button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
 
 
-    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+    def mousePressEvent(self,
+                        event: QtGui.QMouseEvent) -> None:
+        """
+        This function overrides the mousePressEvent function and emits the "click_signal". This signal is fetched
+        by the dataset page and takes care of highlighting the label widget and connects this label to the spectra
+        scroll area to display spectra of this label.
+        =============================================================================
+        :param event: Mouse event object.
+        =============================================================================
+        :return: None.
+        """
+
+        # Check if the label widget is clicked with the left mouse button and emits the click signal.
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
-            self.clicked.emit(self)
+            self.click_signal.emit(self)
 
 
-    def set_active(self, active: bool) -> None:
+    def set_active(self,
+                   active: bool) -> None:
+        """
+        This function is called when a label widget is clicked and changes the label stylesheet to highlight the currently
+        selected label in the label scroll area.
+        =============================================================================
+        :param active: True if a label widget is selected, False if a label widget is deselected.
+        =============================================================================
+        :return: None.
+        """
+
+        # Sets the label stylesheet depending on the state [active = currently selected | not active = not selected]
         if active:
             self.label_name.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
             self.spectra_counter.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
@@ -660,31 +691,57 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
 
 
 class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
-    # Delete signal
+    # Signal definitions
     delete_signal = QtCore.Signal(object)
-    # Click signal
-    clicked = QtCore.Signal(object)
+    click_signal = QtCore.Signal(object)
 
     def __init__(self, path:str, number: int):
         super().__init__()
         self.setupUi(self)
 
+        # Make the background styleable [sometimes needed if a widget is not complex enough].
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
 
+        # Set some basic variables and texts.
         self.spectrum_path = path
         self.spectrum_name.setText(f"{number} - {Path(self.spectrum_path).parent.name}/{Path(self.spectrum_path).stem}")
+        # Hover effects for buttons.
         self.button_spectrumDelete.enterEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_magenta.png'))
         self.button_spectrumDelete.leaveEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_grey.png'))
 
         # Connect the delete button
         self.button_spectrumDelete.clicked.connect(lambda: self.delete_signal.emit(self))
 
-    def mousePressEvent(self, event):
+
+    def mousePressEvent(self,
+                        event: QtGui.QMouseEvent) -> None:
+        """
+        This function overrides the mousePressEvent function and emits the "click_signal". This signal is fetched
+        by the dataset page and takes care of highlighting the spectra widget and displays the selected spectrum in
+        the plot canvas.
+        =============================================================================
+        :param event: Mouse event object.
+        =============================================================================
+        :return: None.
+        """
+
+        # Check if the spectra widget is clicked with the left mouse button and emits the click signal.
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
-            self.clicked.emit(self)
+            self.click_signal.emit(self)
 
 
-    def set_active(self, active: bool) -> None:
+    def set_active(self,
+                   active: bool) -> None:
+        """
+        This function is called when a spectra widget is clicked and changes the spectra stylesheet to highlight the currently
+        selected spectrum in the spectra scroll area.
+        =============================================================================
+        :param active: True if a spectrum widget is selected, False if a sspectrum widget is deselected.
+        =============================================================================
+        :return: None.
+        """
+
+        # Sets the spectrum stylesheet depending on the state [active = currently selected | not active = not selected]
         if active:
             self.spectrum_name.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
         else:
@@ -693,6 +750,7 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
 
 class PlottingCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=50):
+        # Basic settings for the plot canvas.
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.fig.add_subplot(111)
         self.fig.tight_layout()
