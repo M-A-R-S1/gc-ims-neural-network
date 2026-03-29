@@ -21,22 +21,27 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
         # Project save path
         self.project_path = Path(project_path)
-        # Defining the layout.
+        # Currently selected label and spectrum.
+        self.current_selected_label = None
+        self.current_selected_spectrum = None
+        # Saves labels and spectra in a dictionary.
+        self.dataset_storage = {}
+
+        # Defining the scroll area layouts.
         self.scrollArea_labels_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea_labels_Contents.layout().setSpacing(5)
         self.scrollArea_spectra_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea_spectra_Contents.layout().setSpacing(5)
-        # Connect the "add label" button.
+
+        # Button connections.
         self.button_add_label.clicked.connect(self.add_label_dialog)
-        # The selected label.
-        self.current_selected_label = None
-        self.current_selected_spectrum = None
         # Connect the "add spectra" button.
         self.button_add_spectra.clicked.connect(self.add_spectra_dialog)
-        # Saves labels and spectra in a dictionary.
-        self.dataset_storage = {}
-        # Setup the plot area.
-        self.setup_plot()
+
+        # Canvas plot element.
+        self.canvas = PlottingCanvas(self, width=5, height=4, dpi=50)
+        # Initialize the plot canvas.
+        self.init_plot_canvas()
 
         # load dataset from project.
         self.load_dataset()
@@ -437,134 +442,162 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 counter += 1
 
 
-    def save_dataset(self):
-        export_data = {
-            label: [str(p) for p in paths] for label, paths in self.dataset_storage.items()
-        }
-
+    def save_dataset(self) -> None:
+        """
+        This function takes the dataset storage dictionary and saves the label and spectra into the project .gcimsp file.
+        The dictionary is converted into the JSON format.
+        =============================================================================
+        :return: None.
+        """
         try:
-            with open(self.project_path, 'w', encoding='utf-8') as f: json.dump(export_data, f, indent=4)
+            with open(self.project_path, 'w', encoding='utf-8') as f: json.dump(self.dataset_storage, f, indent=4)
         except Exception as e:
             CustomMessageDialog.show_error("Error - Saving", "Something went wrong while saving the dataset!", self)
-            print(f"Fehler beim Speichern: {e}")
+            print(f"Dataset saving error: {e}")
 
 
-    def load_dataset(self):
+    def load_dataset(self) -> None:
+        """
+        This function is called the first time the dataset page is loaded. This function reads all previously saved
+        labels and spectra and loads them into the dataset storage. Each label is then created as a widget for the
+        label scroll area.
+        =============================================================================
+        :return: None.
+        """
         try:
+            # load all label and spectra data from the project .gcimsp file.
             with open(self.project_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+                loaded_data = json.load(f)
 
-            # 1. Alten Speicher komplett leeren
+            # clear the dataset storage and override it with the loaded labels and spectra.
             self.dataset_storage.clear()
-            self.dataset_storage.update(data)
+            self.dataset_storage.update(loaded_data)
 
+            # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
             for label_name in self.dataset_storage.keys():
                 self.add_label(label_name)
 
-            # 3. Die Benutzeroberfläche (UI) aktualisieren
+            # TODO ... select the first label as default
+
+            # Update the spectra scroll area.
             self.update_spectra_list()
         except Exception as e:
+            # Display an error dialog - Something went wrong while loading the data.
+            CustomMessageDialog.show_error("Error - Loading", "Something went wrong while loading the dataset!", self)
             print(f"Dataset loading error: {e}")
 
 
-    def setup_plot(self):
+    def init_plot_canvas(self) -> None:
+        """
+        This function initializes the plot canvas and setups the basic settings like background colors, font sizes ect.
+        =============================================================================
+        :return: None.
+        """
 
-        self.preview_image.setStyleSheet("background-color: #191919; border: none;")
-        self.canvas = MplCanvas(self, width=5, height=4, dpi=50)
+        # Set the figure and exes background colors of the plot canvas.
         self.canvas.fig.set_facecolor('#191919')
         self.canvas.axes.set_facecolor('#191919')
 
+        # Font size definitions for the plot.
         plt.rcParams.update({
-            'font.size': 14,  # Standardgröße für alles
-            'axes.titlesize': 26,  # Größe des Titels
-            'axes.labelsize': 20,  # Größe der Achsenbeschriftungen (X/Y Label)
-            'xtick.labelsize': 16,  # Größe der Zahlen an den Achsen
+            'font.size': 14,
+            'axes.titlesize': 26,
+            'axes.labelsize': 20,
+            'xtick.labelsize': 16,
             'ytick.labelsize': 16
         })
 
-        # Optional: Den Rahmen der Axes (Spines) ebenfalls verstecken oder färben
+        # Set the color for the spines [axes boarder].
         for spine in self.canvas.axes.spines.values():
-            spine.set_edgecolor('#191919')  # Ein dezentes Grau für den Rahmen
+            spine.set_edgecolor('#191919')
 
-        # 2. Layout für dein QWidget erstellen (falls noch keins da ist)
-        layout = QtWidgets.QVBoxLayout(self.preview_image)
-        layout.addWidget(self.canvas)
+        # Create a vertical layout widget for the canvas.
+        canvas_layout = QtWidgets.QVBoxLayout(self.preview_image)
+        canvas_layout.addWidget(self.canvas)
 
+        # Create a toolbar at the bottom of the canvas and set the style.
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.toolbar.setStyleSheet("background-color: #191919; color: white; border: none;")
-        toolbar_actions = self.toolbar.actions()
 
+        # Remove some of the toolbar buttons which are not needed.
+        toolbar_actions = self.toolbar.actions()
         for action in toolbar_actions:
             if any(word in action.text() for word in ["Subplots", "Back", "Forward", "Customize"]):
                 self.toolbar.removeAction(action)
-
+        # Set the toolbar icons size and resize the toolbar height.
         self.toolbar.setIconSize(QSize(36,36))
-        # 2. Die Höhe der Toolbar fixieren
         self.toolbar.setFixedHeight(50)
 
+        # Change the toolbar button hover mouse icon.
         for button in self.toolbar.findChildren(QtWidgets.QToolButton):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        #self.toolbar.hide()
-        layout.addWidget(self.toolbar)
+        # Hide the toolbar during the setup and add the toolbar to the canvas.
+        self.toolbar.hide()
+        canvas_layout.addWidget(self.toolbar)
 
+        # remove the ticks from the axis [only during the setup].
         self.canvas.axes.set_xticks([])
         self.canvas.axes.set_yticks([])
+        # Draw the canvas.
         self.canvas.draw()
 
 
-    def plot_spectrum(self, spectrum_widget):
+    def plot_spectrum(self,
+                      spectrum_widget: DatasetSpectrumEntry) -> None:
+        """
+        This function loads the .mea file of one spectrum and plots it to the canvas.
+        =============================================================================
+        :param spectrum_widget: Widget of the currently selected spectrum in the spectra scroll area.
+        =============================================================================
+        :return: None
+        """
 
+        # Deselect the last selected spectrum and remove the highlight effect from the spectra scroll area.
         if self.current_selected_spectrum:
             self.current_selected_spectrum.set_active(False)
 
+        # Set the highlight to the currently clicked spectrum.
         self.current_selected_spectrum = spectrum_widget
         self.current_selected_spectrum.set_active(True)
 
+        # Set a dark background for the plot.
         plt.style.use('dark_background')
 
-        # 1. Daten laden
-        spec = ims.Spectrum.read_mea(spectrum_widget.spectrum_path)
-        spec.riprel()
+        # Load the spectrum from the .mea file and adjust the drift time coordinates in relation to the RIP.
+        spectrum = ims.Spectrum.read_mea(spectrum_widget.spectrum_path)
+        spectrum.riprel()
 
-        # 2. Bestehende Achsen leeren (verhindert das "Überlagern" von alten Plots)
+        # Clear the axes and set their colors.
         self.canvas.fig.patch.set_facecolor('#191919')
         self.canvas.axes.clear()
         self.canvas.axes.set_facecolor('#191919')
 
-        plt.rcParams.update({
-            'font.size': 14,  # Standardgröße für alles
-            'axes.titlesize': 26,  # Größe des Titels
-            'axes.labelsize': 20,  # Größe der Achsenbeschriftungen (X/Y Label)
-            'xtick.labelsize': 16,  # Größe der Zahlen an den Achsen
-            'ytick.labelsize': 16
-        })
-
-        # 3. Zeichnen (direkt auf self.canvas.axes)
-        # Nutze spec.values und die berechneten Extents
-        img = self.canvas.axes.imshow(
-            spec.values,
+        # Draw the spectrum to the canvas.
+        self.canvas.axes.imshow(
+            spectrum.values,
             origin="lower",
             aspect="auto",
             cmap="RdBu_r",
-            vmin=30,  # Hintergrundrauschen unterdrücken
-            vmax=400,  # RIP-Peak deckeln für besseren Kontrast
+            vmin=30,
+            vmax=400,
             extent=(
-                min(spec.drift_time),
-                max(spec.drift_time),
-                min(spec.ret_time),
-                max(spec.ret_time),
+                min(spectrum.drift_time),
+                max(spectrum.drift_time),
+                min(spectrum.ret_time),
+                max(spectrum.ret_time),
             ),
         )
 
-        # 4. Beschriftung (Nur über das axes-Objekt!)
+        # Set the axis labels.
         self.canvas.axes.set_xlabel("Drift Time [ms]", labelpad=15)
         self.canvas.axes.set_ylabel("Retention Time [s]", labelpad=15)
-
+        # Adjust the visual spacing of the canvas.
         self.canvas.fig.subplots_adjust(left=0.069, bottom=0.058, right=0.094, top=0.995)
+        # Show the toolbar.
         self.toolbar.show()
 
-        # 5. Layout anpassen und neu zeichnen
+        # Apply a tight layout and draw the canvas.
         self.canvas.fig.tight_layout()
         self.canvas.draw()
 
@@ -658,7 +691,7 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
             self.spectrum_name.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
 
 
-class MplCanvas(FigureCanvas):
+class PlottingCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=50):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = self.fig.add_subplot(111)

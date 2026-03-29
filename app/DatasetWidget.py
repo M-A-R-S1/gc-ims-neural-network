@@ -293,7 +293,8 @@ class Ui_DatasetWidget(object):
 
         self.preview_image = QWidget(self.preview_container)
         self.preview_image.setObjectName(u"preview_image")
-        self.preview_image.setStyleSheet(u"background-color: #232323;")
+        self.preview_image.setStyleSheet(u"background-color: #191919;\n"
+" border: none;")
 
         self.verticalLayout_8.addWidget(self.preview_image)
 
