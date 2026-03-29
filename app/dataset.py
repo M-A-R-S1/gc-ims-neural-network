@@ -24,6 +24,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # Currently selected label and spectrum.
         self.current_selected_label = None
         self.current_selected_spectrum = None
+        self.current_selected_spectrum_path = None
         # Saves labels and spectra in a dictionary.
         self.dataset_storage = {}
 
@@ -125,6 +126,11 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # Update the label counter.
         self.update_label_count()
 
+        # If this is the first label to be added select it automatically.
+        if self.scrollArea_labels_Contents.layout().count() == 2:
+            self.current_selected_label = label
+            self.handle_label_click(label)
+
         # Check if the label is already saved in the dataset storage directory. If not add it.
         if name not in self.dataset_storage:
             self.dataset_storage[name] = []
@@ -198,7 +204,8 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 self.spectra_container_header.setText("No label selected")
                 self.current_selected_label = None
                 self.current_selected_spectrum = None
-                # TODO ... Clear the spectrum preview here.
+                self.current_selected_spectrum_path = None
+                self.clear_canvas()
 
             # Delete the label widget, remove it from the label scroll area and update the label counter.
             label_widget.deleteLater()
@@ -352,6 +359,10 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 # Insert the widget to the spectra scroll area.
                 spectra_layout.insertWidget(spectra_layout.count(), spectra_widget)
 
+                if path == self.current_selected_spectrum_path:
+                    spectra_widget.set_active(True)
+                    self.current_selected_spectrum = spectra_widget
+
             # Update the spectra counter inside the label scroll area and the counter beneath the spectra scroll area.
             self.current_selected_label.spectra_counter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])}x")
             self.label_spectracounter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])} spectra")
@@ -401,6 +412,13 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
         # The user really wants to delete to spectrum.
         if delete_dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+
+            # This spectrum is currently selected. This is why the canvas has to be cleared after deletion.
+            if self.current_selected_spectrum == spectrum_widget:
+                self.clear_canvas()
+                self.current_selected_spectrum = None
+                self.current_selected_spectrum_path = None
+
             # Delete the spectrum widget and remove it from the spectra scroll area.
             spectrum_widget.deleteLater()
             self.scrollArea_spectra_Contents.layout().removeWidget(spectrum_widget)
@@ -475,8 +493,6 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
             for label_name in self.dataset_storage.keys():
                 self.add_label(label_name)
-
-            # TODO ... select the first label as default
 
             # Update the spectra scroll area.
             self.update_spectra_list()
@@ -559,6 +575,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # Set the highlight to the currently clicked spectrum.
         self.current_selected_spectrum = spectrum_widget
         self.current_selected_spectrum.set_active(True)
+        self.current_selected_spectrum_path = spectrum_widget.spectrum_path
 
         # Set a dark background for the plot.
         plt.style.use('dark_background')
@@ -598,6 +615,21 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
         # Apply a tight layout and draw the canvas.
         self.canvas.fig.tight_layout()
+        self.canvas.draw()
+
+
+    def clear_canvas(self) -> None:
+        """
+        This function is called when a label or spectrum is deleted which is currently displayed on the canvas.
+        This will reset the canvas to its default empty state.
+        =============================================================================
+        :return: None
+        """
+
+        self.toolbar.hide()
+        self.canvas.axes.clear()
+        self.canvas.axes.set_xticks([])
+        self.canvas.axes.set_yticks([])
         self.canvas.draw()
 
 
