@@ -1,9 +1,9 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import QSize, Qt
-from DatasetWidget import Ui_DatasetWidget
-from DatasetLabelEntry import Ui_DatasetLabelEntry
-from DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
+from ui.dataset_ui.DatasetWidget import Ui_DatasetWidget
+from ui.dataset_ui.DatasetLabelEntry import Ui_DatasetLabelEntry
+from ui.dataset_ui.DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from pathlib import Path
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas

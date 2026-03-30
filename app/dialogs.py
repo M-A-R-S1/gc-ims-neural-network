@@ -1,9 +1,9 @@
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QPixmap
-from CreateLabelDialog import Ui_CreateLabelDialog
-from MessageDialog import Ui_MessageDialog
-from YesNoDialog import Ui_YesNoDialog
-from RenameLabelDialog import Ui_RenameLabelDialog
+from ui.dataset_ui.CreateLabelDialog import Ui_CreateLabelDialog
+from ui.dataset_ui.RenameLabelDialog import Ui_RenameLabelDialog
+from ui.MessageDialog import Ui_MessageDialog
+from ui.YesNoDialog import Ui_YesNoDialog
 
 class CreateLabelDialog(QtWidgets.QDialog, Ui_CreateLabelDialog):
     def __init__(self, parent=None):
