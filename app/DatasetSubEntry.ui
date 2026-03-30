@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DatasetLabelEntry</class>
- <widget class="QWidget" name="DatasetLabelEntry">
+ <class>DatasetSubEntry</class>
+ <widget class="QWidget" name="DatasetSubEntry">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -32,6 +32,7 @@
    <string notr="true">QWidget {
 	background-color: #2e2e2e;
 	border-bottom: 1px solid #666666;
+	border-radius: 0px;
 }
 
 QWidget:hover {
@@ -42,12 +43,16 @@ QWidget:hover {
    <property name="spacing">
     <number>15</number>
    </property>
+   <property name="leftMargin">
+    <number>30</number>
+   </property>
    <item>
     <widget class="QLabel" name="label_name">
      <property name="font">
       <font>
        <family>Lato</family>
        <pointsize>15</pointsize>
+       <italic>true</italic>
        <fontweight>Light</fontweight>
       </font>
      </property>
@@ -60,40 +65,7 @@ color: #ebebeb;
 background-color: transparent;</string>
      </property>
      <property name="text">
-      <string>Main Label</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="button_open_close">
-     <property name="maximumSize">
-      <size>
-       <width>30</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="cursor">
-      <cursorShape>PointingHandCursor</cursorShape>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QPushButton {
-    background-color: transparent;
-    border: none;
-	background-image: url(&quot;ui/_pics/icons/classifier_grey.png&quot;);
-}</string>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>ui/_pics/icons/chevron_right_white.png</normaloff>ui/_pics/icons/chevron_right_white.png</iconset>
-     </property>
-     <property name="iconSize">
-      <size>
-       <width>30</width>
-       <height>30</height>
-      </size>
+      <string>- Sub Textlabel</string>
      </property>
     </widget>
    </item>

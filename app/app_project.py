@@ -55,7 +55,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.dataset_page = DatasetPage(self.current_project)
         self.Main_container.addWidget(self.dataset_page)
         # Preprocessing
-        self.preprocessing_page = PreprocessingPage()
+        self.preprocessing_page = PreprocessingPage(self.current_project)
         self.Main_container.addWidget(self.preprocessing_page)
         # Peak Explorer
         self.peak_explorer_page = PeakExplorerPage()
