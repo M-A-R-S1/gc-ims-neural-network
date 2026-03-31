@@ -1,6 +1,7 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QDoubleValidator
+from PySide6.QtCore import QSize, Qt, QTimer
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from PreprocessingWidget import Ui_PreprocessingWidget
 from DatasetSubEntry import Ui_DatasetSubEntry
@@ -30,6 +31,25 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.scrollArea_dataset_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea_dataset_Contents.layout().setSpacing(5)
         self.scrollArea_dataset.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+
+        retention_validator = QDoubleValidator(0, 1200, 0)
+        retention_validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+        self.lineEdit_retention_start_cut.setValidator(retention_validator)
+        self.lineEdit_retention_end_cut.setValidator(retention_validator)
+
+        drift_validator = QDoubleValidator(0.0, 3.0, 2)
+        drift_validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+        self.lineEdit_drift_start_cut.setValidator(drift_validator)
+        self.lineEdit_drift_end_cut.setValidator(drift_validator)
+
+        self.cut_timer = QTimer()
+        self.cut_timer.setSingleShot(True)
+        self.cut_timer.timeout.connect(self.update_cut_lines)
+
+        self.lineEdit_retention_start_cut.textChanged.connect(lambda: self.cut_timer.start(500))
+        self.lineEdit_retention_end_cut.textChanged.connect(lambda: self.cut_timer.start(500))
+        self.lineEdit_drift_start_cut.textChanged.connect(lambda: self.cut_timer.start(500))
+        self.lineEdit_drift_end_cut.textChanged.connect(lambda: self.cut_timer.start(500))
 
         # Canvas plot element.
         self.canvas = PlottingCanvas(self, width=5, height=4, dpi=50)
@@ -252,7 +272,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
         # Apply a tight layout and draw the canvas.
         self.canvas.fig.tight_layout()
-        self.canvas.draw()
+        self.update_cut_lines()
 
 
     def clear_canvas(self) -> None:
@@ -267,6 +287,39 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.canvas.axes.clear()
         self.canvas.axes.set_xticks([])
         self.canvas.axes.set_yticks([])
+        self.canvas.draw()
+
+
+    def update_cut_lines(self):
+        # 1. Den Plot säubern (aber nur die Linien, nicht das ganze Bild, falls möglich)
+        # Einfacher für den Anfang: Den Plot neu zeichnen oder vorhandene Linien entfernen
+        for line in getattr(self, 'temp_cut_lines', []):
+            line.remove()
+        self.temp_cut_lines = []
+
+        # 2. Werte aus den LineEdits holen (mit Fehlerbehandlung, falls leer)
+        try:
+            r_start = float(self.lineEdit_retention_start_cut.text() or 0)
+            r_end = float(self.lineEdit_retention_end_cut.text() or 0)
+            d_start = float(self.lineEdit_drift_start_cut.text() or 0)
+            d_end = float(self.lineEdit_drift_end_cut.text() or 0)
+        except ValueError:
+            return  # Falls der User Buchstaben tippt
+
+        # 3. Linien zeichnen (z.B. in Rot und gestrichelt)
+        ax = self.canvas.axes
+        style = {'color': '#da05ab', 'linestyle': '--', 'linewidth': 3, 'alpha': 0.8}
+
+        if r_start > 0:
+            self.temp_cut_lines.append(ax.axhline(y=r_start, **style))
+        if r_end > 0:
+            self.temp_cut_lines.append(ax.axhline(y=r_end, **style))
+        if d_start > 0:
+            self.temp_cut_lines.append(ax.axvline(x=d_start, **style))
+        if d_end > 0:
+            self.temp_cut_lines.append(ax.axvline(x=d_end, **style))
+
+        # 4. Canvas aktualisieren
         self.canvas.draw()
 
 
