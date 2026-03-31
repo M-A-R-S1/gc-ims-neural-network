@@ -135,9 +135,10 @@ class Ui_PreprocessingWidget(object):
 
         self.options_container = QWidget(self.preprocessing_container)
         self.options_container.setObjectName(u"options_container")
-        self.options_container.setMaximumSize(QSize(450, 16777215))
+        self.options_container.setMaximumSize(QSize(400, 16777215))
         self.options_container.setStyleSheet(u"")
         self.verticalLayout_7 = QVBoxLayout(self.options_container)
+        self.verticalLayout_7.setSpacing(15)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.verticalLayout_7.setContentsMargins(-1, 100, -1, -1)
         self.options_inner_container = QWidget(self.options_container)
@@ -146,7 +147,7 @@ class Ui_PreprocessingWidget(object):
         self.options_inner_container.setFont(font)
         self.options_inner_container.setStyleSheet(u"")
         self.verticalLayout_5 = QVBoxLayout(self.options_inner_container)
-        self.verticalLayout_5.setSpacing(0)
+        self.verticalLayout_5.setSpacing(6)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.verticalLayout_5.setContentsMargins(1, 1, 1, 1)
         self.label_retentiontime = QLabel(self.options_inner_container)
@@ -161,7 +162,7 @@ class Ui_PreprocessingWidget(object):
 
         self.widget_retentiontime_inputs = QWidget(self.options_inner_container)
         self.widget_retentiontime_inputs.setObjectName(u"widget_retentiontime_inputs")
-        self.widget_retentiontime_inputs.setMinimumSize(QSize(0, 70))
+        self.widget_retentiontime_inputs.setMinimumSize(QSize(0, 0))
         self.widget_retentiontime_inputs.setMaximumSize(QSize(16777215, 16777215))
         self.horizontalLayout_2 = QHBoxLayout(self.widget_retentiontime_inputs)
         self.horizontalLayout_2.setSpacing(20)
@@ -219,8 +220,8 @@ class Ui_PreprocessingWidget(object):
 
         self.widget_drifttime_inputs = QWidget(self.options_inner_container)
         self.widget_drifttime_inputs.setObjectName(u"widget_drifttime_inputs")
-        self.widget_drifttime_inputs.setMinimumSize(QSize(0, 70))
-        self.widget_drifttime_inputs.setStyleSheet(u"border-bottom: 1px solid #666666;")
+        self.widget_drifttime_inputs.setMinimumSize(QSize(0, 0))
+        self.widget_drifttime_inputs.setStyleSheet(u"")
         self.horizontalLayout_3 = QHBoxLayout(self.widget_drifttime_inputs)
         self.horizontalLayout_3.setSpacing(20)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
@@ -257,7 +258,7 @@ class Ui_PreprocessingWidget(object):
 
         self.horizontalLayout_3.addWidget(self.lineEdit_drift_end_cut)
 
-        self.horizontalSpacer_2 = QSpacerItem(87, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer_2)
 
@@ -337,6 +338,25 @@ class Ui_PreprocessingWidget(object):
 
         self.verticalLayout_8.addWidget(self.preview_image)
 
+        self.pushButton_toggle_canvas_area = QPushButton(self.preview_container)
+        self.pushButton_toggle_canvas_area.setObjectName(u"pushButton_toggle_canvas_area")
+        self.pushButton_toggle_canvas_area.setEnabled(False)
+        self.pushButton_toggle_canvas_area.setMinimumSize(QSize(0, 50))
+        self.pushButton_toggle_canvas_area.setFont(font4)
+        self.pushButton_toggle_canvas_area.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.pushButton_toggle_canvas_area.setStyleSheet(u"QPushButton {\n"
+"    border: 1px solid #666666;\n"
+"    background-color: #232323; \n"
+"    color: #666666;\n"
+"    border-radius: 10px;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: #131313;\n"
+"}")
+
+        self.verticalLayout_8.addWidget(self.pushButton_toggle_canvas_area)
+
 
         self.horizontalLayout.addWidget(self.preview_container)
 
@@ -366,5 +386,6 @@ class Ui_PreprocessingWidget(object):
         self.pushButton_start_processing.setText(QCoreApplication.translate("PreprocessingWidget", u"Start preprocessing", None))
         self.label_processing_info.setText(QCoreApplication.translate("PreprocessingWidget", u"This will start the preprocessing of the dataset. Notice that this task may take a while, depending on the size of the dataset and the used computer.", None))
         self.label_preview.setText(QCoreApplication.translate("PreprocessingWidget", u"Spectrum preview", None))
+        self.pushButton_toggle_canvas_area.setText(QCoreApplication.translate("PreprocessingWidget", u"Show cutted spectrum", None))
     # retranslateUi
 

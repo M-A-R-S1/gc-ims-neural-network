@@ -51,6 +51,9 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.lineEdit_drift_start_cut.textChanged.connect(lambda: self.cut_timer.start(500))
         self.lineEdit_drift_end_cut.textChanged.connect(lambda: self.cut_timer.start(500))
 
+        self.canvas_fullscreen = True
+        self.pushButton_toggle_canvas_area.clicked.connect(self.handle_canvas_toggle)
+
         # Canvas plot element.
         self.canvas = PlottingCanvas(self, width=5, height=4, dpi=50)
         # Initialize the plot canvas.
@@ -122,7 +125,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         for index, path in enumerate(paths):
             spectrum = DatasetSubEntry(path, index, label_widget)
             self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
-            spectrum.click_signal.connect(self.plot_spectrum)
+            spectrum.click_signal.connect(self.handle_spectrum_click)
             spectrum.hide()
 
 
@@ -272,7 +275,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
         # Apply a tight layout and draw the canvas.
         self.canvas.fig.tight_layout()
-        self.update_cut_lines()
+        #self.update_cut_lines()
 
 
     def clear_canvas(self) -> None:
@@ -319,8 +322,90 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         if d_end > 0:
             self.temp_cut_lines.append(ax.axvline(x=d_end, **style))
 
+        if (r_start > 0 and r_end > 0 and d_start > 0 and d_end > 0) or not self.canvas_fullscreen:
+            self.pushButton_toggle_canvas_area.setEnabled(True)
+            self.pushButton_toggle_canvas_area.setStyleSheet(f"""
+                                                                QPushButton {{
+                                                                    border: 1px solid #ff9000;
+                                                                    background-color: #232323; 
+                                                                    color: #ff9000;
+                                                                    border-radius: 10px;
+                                                                }}
+                                                                
+                                                                QPushButton:hover {{
+                                                                    background-color: #131313;
+                                                                }}
+                                                            """)
+
+        else:
+            self.pushButton_toggle_canvas_area.setEnabled(False)
+            self.pushButton_toggle_canvas_area.setStyleSheet(f"""
+                                                                QPushButton {{
+                                                                    border: 1px solid #666666;
+                                                                    background-color: #232323; 
+                                                                    color: #666666;
+                                                                    border-radius: 10px;
+                                                                }}
+
+                                                                QPushButton:hover {{
+                                                                    background-color: #131313;
+                                                                }}
+                                                            """)
+
         # 4. Canvas aktualisieren
         self.canvas.draw()
+
+
+    def handle_canvas_toggle(self):
+        if self.canvas_fullscreen:
+            self.canvas_fullscreen = False
+            self.zoom_to_cut()
+            self.pushButton_toggle_canvas_area.setText("Show full spectrum")
+        else:
+            self.canvas_fullscreen = True
+            self.reset_zoom()
+            self.pushButton_toggle_canvas_area.setText("Show cutted spectrum")
+
+
+    def handle_spectrum_click(self, spectrum_widget: DatasetSubEntry):
+        self.plot_spectrum(spectrum_widget)
+
+        if self.canvas_fullscreen:
+            self.reset_zoom()
+        else:
+            d_start = float(self.lineEdit_drift_start_cut.text() or 0)
+            d_end = float(self.lineEdit_drift_end_cut.text() or 0)
+            r_start = float(self.lineEdit_retention_start_cut.text() or 0)
+            r_end = float(self.lineEdit_retention_end_cut.text() or 0)
+
+            if r_start > 0 and r_end > 0 and d_start > 0 and d_end > 0:
+                self.zoom_to_cut()
+            else:
+                self.reset_zoom()
+
+
+    def zoom_to_cut(self):
+        # 1. Werte aus den LineEdits holen
+        # Wir nutzen 0 als Fallback, falls ein Feld leer ist
+        d_start = float(self.lineEdit_drift_start_cut.text())
+        d_end = float(self.lineEdit_drift_end_cut.text())
+        r_start = float(self.lineEdit_retention_start_cut.text())
+        r_end = float(self.lineEdit_retention_end_cut.text())
+
+        # 2. Die Achsenbegrenzungen setzen
+        ax = self.canvas.axes
+        ax.set_xlim(d_start, d_end)
+        ax.set_ylim(r_start, r_end)  # Beachte: Bei IMS oft r_end unten, r_start oben?
+        # Matplotlib spiegelt das, falls nötig.
+
+        # 3. Canvas aktualisieren
+        self.update_cut_lines()
+
+
+    def reset_zoom(self):
+        ax = self.canvas.axes
+        ax.autoscale(enable=True, axis='both', tight=True)
+        self.update_cut_lines()
 
 
 class DatasetMainEntry(QtWidgets.QLabel, Ui_DatasetMainEntry):
