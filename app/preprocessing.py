@@ -1,7 +1,7 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QDoubleValidator
-from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtCore import QSize, Qt, QTimer, QLocale
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from PreprocessingWidget import Ui_PreprocessingWidget
 from DatasetSubEntry import Ui_DatasetSubEntry
@@ -37,8 +37,9 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.lineEdit_retention_start_cut.setValidator(retention_validator)
         self.lineEdit_retention_end_cut.setValidator(retention_validator)
 
-        drift_validator = QDoubleValidator(0.0, 3.0, 2)
+        drift_validator = QDoubleValidator(0.0, 3.0, 3)
         drift_validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+        drift_validator.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
         self.lineEdit_drift_start_cut.setValidator(drift_validator)
         self.lineEdit_drift_end_cut.setValidator(drift_validator)
 
@@ -352,7 +353,13 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                                                                 }}
                                                             """)
 
-        # 4. Canvas aktualisieren
+
+        if not self.canvas_fullscreen:
+            ax = self.canvas.axes
+            ax.set_xlim(d_start, d_end)
+            ax.set_ylim(r_start, r_end)
+
+            # 4. Canvas aktualisieren
         self.canvas.draw()
 
 
