@@ -1,7 +1,7 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QDoubleValidator
-from PySide6.QtCore import QSize, Qt, QTimer, QLocale
+from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from PreprocessingWidget import Ui_PreprocessingWidget
 from DatasetSubEntry import Ui_DatasetSubEntry
@@ -16,7 +16,10 @@ import json
 
 
 class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
-    def __init__(self, project_path: str):
+    # Define signal
+    save_signal = Signal()
+
+    def __init__(self, project_path: str, dataset: dict, cutting_data: dict):
         super().__init__()
         self.setupUi(self)
 
@@ -61,7 +64,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.init_plot_canvas()
 
         # load dataset from project.
-        self.load_dataset()
+        self.load_data(dataset, cutting_data)
 
 
     def load_dataset(self) -> None:
@@ -89,6 +92,34 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
             # Display an error dialog - Something went wrong while loading the data.
             CustomMessageDialog.show_error("Error - Loading", "Something went wrong while loading the dataset!", self)
             print(f"Dataset loading error: {e}")
+
+
+    def save_data(self):
+        return {
+            "rt_start": self.lineEdit_retention_start_cut.text() or 0,
+            "rt_end": self.lineEdit_retention_end_cut.text() or 0,
+            "dt_start": self.lineEdit_drift_start_cut.text() or 0,
+            "dt_end": self.lineEdit_drift_end_cut.text() or 0
+        }
+
+    def load_data(self, dataset, cutting_data):
+        """Setzt die UI-Werte aus dem geladenen Dictionary."""
+
+        self.current_selected_spectrum = None
+
+        # 1. Den aktuellen Speicher leeren
+        self.dataset_storage.clear()
+        # 2. Mit den neuen Daten füllen
+        self.dataset_storage.update(dataset)
+
+        # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
+        for label_name in self.dataset_storage.keys():
+            self.add_label(label_name)
+
+        self.lineEdit_retention_start_cut.setText(str(cutting_data.get("rt_start", "")))
+        self.lineEdit_retention_end_cut.setText(str(cutting_data.get("rt_end", "")))
+        self.lineEdit_drift_start_cut.setText(str(cutting_data.get("dt_start", "")))
+        self.lineEdit_drift_end_cut.setText(str(cutting_data.get("dt_end", "")))
 
 
     def add_label(self,
