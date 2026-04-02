@@ -11,20 +11,20 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
+from project_manager import *
 import ims
 import json
 
 
 class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
-    # Define signal
-    save_signal = Signal()
-
-    def __init__(self, project_path: str, dataset: dict, cutting_data: dict):
+    def __init__(self, project_path: str, project_manager: ProjectManager):
         super().__init__()
         self.setupUi(self)
 
         # Project save path
         self.project_path = Path(project_path)
+        # The project manager
+        self.project_manager = project_manager
         # Currently selected spectrum.
         self.current_selected_spectrum = None
         # Saves labels and spectra in a dictionary.
@@ -64,7 +64,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.init_plot_canvas()
 
         # load dataset from project.
-        self.load_data(dataset, cutting_data)
+        self.load_data()
 
 
     def load_dataset(self) -> None:
@@ -102,7 +102,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
             "dt_end": self.lineEdit_drift_end_cut.text() or 0
         }
 
-    def load_data(self, dataset, cutting_data):
+    def load_data(self):
         """Setzt die UI-Werte aus dem geladenen Dictionary."""
 
         self.current_selected_spectrum = None
@@ -110,12 +110,28 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # 1. Den aktuellen Speicher leeren
         self.dataset_storage.clear()
         # 2. Mit den neuen Daten füllen
-        self.dataset_storage.update(dataset)
+        self.dataset_storage.update(self.project_manager.get_dataset())
+        # Clear the canvas.
+        self.clear_canvas()
+
+        # Remove all widgets.
+        layout = self.scrollArea_dataset_Contents.layout()
+        # Remove all widgets from the spectra scroll area.
+        for i in reversed(range(layout.count())):
+            item = layout.itemAt(i)
+            widget = item.widget()
+
+            # Prüfen, ob ein Widget existiert UND ob es die richtige Klasse ist
+            if widget is not None and isinstance(widget, DatasetMainEntry) or isinstance(widget, DatasetSubEntry):
+                layout.removeWidget(widget)  # Aus dem Layout nehmen
+                widget.setParent(None)  # Sofort vom Parent trennen
+                widget.deleteLater()  # Speicher freigeben
 
         # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
         for label_name in self.dataset_storage.keys():
             self.add_label(label_name)
 
+        cutting_data = self.project_manager.get_preprocessing()
         self.lineEdit_retention_start_cut.setText(str(cutting_data.get("rt_start", "")))
         self.lineEdit_retention_end_cut.setText(str(cutting_data.get("rt_end", "")))
         self.lineEdit_drift_start_cut.setText(str(cutting_data.get("dt_start", "")))

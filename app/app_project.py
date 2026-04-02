@@ -41,6 +41,9 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.palette_deactivated = None
         self.palette_normal = None
 
+        # Create project manager object.
+        self.project_manager = ProjectManager(project_path)
+
         # Pages Setup.
         self.setup_pages()
         # Load the project data.
@@ -54,17 +57,12 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
 
     def setup_pages(self):
-
-        # Load the project data.
-        loaded_data = ProjectManager.load_project(self.current_project)
         # Dataset
-        self.dataset_page = DatasetPage(self.current_project, loaded_data.get("datasets", {}))
+        self.dataset_page = DatasetPage(self.current_project, self.project_manager)
         self.Main_container.addWidget(self.dataset_page)
-        self.dataset_page.save_signal.connect(self.save_project)
         # Preprocessing
-        self.preprocessing_page = PreprocessingPage(self.current_project, loaded_data.get("datasets", {}), loaded_data.get("preprocessing", {}))
+        self.preprocessing_page = PreprocessingPage(self.current_project, self.project_manager)
         self.Main_container.addWidget(self.preprocessing_page)
-        self.preprocessing_page.save_signal.connect(self.save_project)
         # Peak Explorer
         self.peak_explorer_page = PeakExplorerPage()
         self.Main_container.addWidget(self.peak_explorer_page)
@@ -131,6 +129,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         elif page == self.preprocessing_page:
             self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_orange.png"))
             self.sb_preprocessing_label.setPalette(self.palette_active)
+            self.preprocessing_page.load_data()
         elif page == self.peak_explorer_page:
             self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_orange.png"))
             self.sb_peak_explorer_label.setPalette(self.palette_active)
@@ -148,23 +147,6 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.Main_container.setCurrentWidget(page)
 
         self.current_page = page
-
-
-    def save_project(self):
-        if not self.current_project:
-            return
-
-        # 1. Daten von den einzelnen Pages einsammeln
-        datasets = self.dataset_page.save_data()
-        # In PreprocessingPage müsstest du eine Methode 'get_settings()' haben
-        preprocessing_settings = self.preprocessing_page.save_data()
-
-        # 2. Den ProjectManager nutzen
-        ProjectManager.save_project(
-            self.current_project,
-            datasets,
-            preprocessing_settings
-        )
 
 
 if __name__ == "__main__":

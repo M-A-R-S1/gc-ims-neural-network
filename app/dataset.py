@@ -10,20 +10,20 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
+from project_manager import *
 import ims
 import json
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
-    # Define a signal
-    save_signal = Signal()
-
-    def __init__(self, project_path: str, loaded_data: dict) -> None   :
+    def __init__(self, project_path: str, project_manager: ProjectManager) -> None   :
         super().__init__()
         self.setupUi(self)
 
         # Project save path
         self.project_path = Path(project_path)
+        # The project manager
+        self.project_manager = project_manager
         # Currently selected label and spectrum.
         self.current_selected_label = None
         self.current_selected_spectrum = None
@@ -48,7 +48,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.init_plot_canvas()
 
         # load dataset from project.
-        self.load_data(loaded_data)
+        self.load_data()
 
 
     def add_label_dialog(self) -> None:
@@ -121,7 +121,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         # Check if the label is already saved in the dataset storage directory. If not add it.
         if name not in self.dataset_storage:
             self.dataset_storage[name] = []
-            self.save_signal.emit()
+            self.save_data()
 
         # Create a new instance of the "DatasetLabelEntry" class.
         label = DatasetLabelEntry(name)
@@ -218,7 +218,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             del self.dataset_storage[label_name]
             self.update_spectra_list()
             # Save the adjusted dataset storage.
-            self.save_signal.emit()
+            self.save_data()
 
 
     def rename_label_dialog(self,
@@ -262,7 +262,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 self.spectra_container_header.setText(new_label_name)
 
             # Save the adjusted dataset storage.
-            self.save_signal.emit()
+            self.save_data()
 
 
     def update_label_count(self) -> None:
@@ -327,7 +327,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 self.dataset_storage[self.current_selected_label.label_name.text()].append(path)
 
         # Save the adjusted dataset storage.
-        self.save_signal.emit()
+        self.save_data()
         # 2. UI aktualisieren (Liste neu zeichnen)
         self.update_spectra_list()
 
@@ -462,79 +462,32 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 counter += 1
 
 
-    def save_dataset(self) -> None:
-        """
-        This function takes the dataset storage dictionary and saves the label and spectra into the project .gcimsp file.
-        The dictionary is converted into the JSON format.
-        =============================================================================
-        :return: None.
-        """
-
-        try:
-            with open(self.project_path, 'w', encoding='utf-8') as f: json.dump(self.dataset_storage, f, indent=4)
-        except Exception as e:
-            CustomMessageDialog.show_error("Error - Saving", "Something went wrong while saving the dataset!", self)
-            print(f"Dataset saving error: {e}")
-
-
-    def load_dataset(self) -> None:
-        """
-        This function is called the first time the dataset page is loaded. This function reads all previously saved
-        labels and spectra and loads them into the dataset storage. Each label is then created as a widget for the
-        label scroll area.
-        =============================================================================
-        :return: None.
-        """
-        try:
-            # load all label and spectra data from the project .gcimsp file.
-            with open(self.project_path, 'r', encoding='utf-8') as f:
-                loaded_data = json.load(f)
-
-            # clear the dataset storage and override it with the loaded labels and spectra.
-            self.dataset_storage.clear()
-            self.dataset_storage.update(loaded_data)
-
-            # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
-            for label_name in self.dataset_storage.keys():
-                self.add_label(label_name)
-
-            # Update the spectra scroll area.
-            self.update_spectra_list()
-        except Exception as e:
-            # Display an error dialog - Something went wrong while loading the data.
-            CustomMessageDialog.show_error("Error - Loading", "Something went wrong while loading the dataset!", self)
-            print(f"Dataset loading error: {e}")
-
-
-    def save_data(self) -> dict:
+    def save_data(self) -> None:
         """
         Gibt den aktuellen Stand des dataset_storage zurück,
         damit der ProjectManager ihn speichern kann.
         """
-        return self.dataset_storage
+
+        self.project_manager.save_dataset(self.dataset_storage)
 
 
-    def load_data(self, data: dict) -> None:
+    def load_data(self) -> None:
         """
         Übernimmt die geladenen Daten, aktualisiert den Speicher
         und baut die grafische Oberfläche der Label-Liste neu auf.
         """
-        try:
-            # 1. Den aktuellen Speicher leeren
-            self.dataset_storage.clear()
-            # 2. Mit den neuen Daten füllen
-            self.dataset_storage.update(data)
 
-            # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
-            for label_name in self.dataset_storage.keys():
-                self.add_label(label_name)
+        # 1. Den aktuellen Speicher leeren
+        self.dataset_storage.clear()
+        # 2. Mit den neuen Daten füllen
+        self.dataset_storage.update(self.project_manager.get_dataset())
 
-            # 5. Optional: Die Liste der Spektren (rechts) aktualisieren
-            self.update_spectra_list()
+        # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
+        for label_name in self.dataset_storage.keys():
+            self.add_label(label_name)
 
-        except Exception as e:
-            CustomMessageDialog.show_error("Error - Loading", "Something went wrong while loading the dataset!", self)
-            print(f"Dataset loading error: {e}")
+        # 5. Optional: Die Liste der Spektren (rechts) aktualisieren
+        self.update_spectra_list()
 
 
     def init_plot_canvas(self) -> None:
