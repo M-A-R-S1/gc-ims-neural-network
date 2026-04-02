@@ -27,6 +27,8 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.project_manager = project_manager
         # Currently selected spectrum.
         self.current_selected_spectrum = None
+        self.selected_spectrum_name = None
+        self.selected_label_name = None
         # Saves labels and spectra in a dictionary.
         self.dataset_storage = {}
 
@@ -95,12 +97,13 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
 
     def save_data(self):
-        return {
-            "rt_start": self.lineEdit_retention_start_cut.text() or 0,
-            "rt_end": self.lineEdit_retention_end_cut.text() or 0,
-            "dt_start": self.lineEdit_drift_start_cut.text() or 0,
-            "dt_end": self.lineEdit_drift_end_cut.text() or 0
-        }
+        region_of_interest = { "rt_start": self.lineEdit_retention_start_cut.text() or 0,
+                                "rt_end": self.lineEdit_retention_end_cut.text() or 0,
+                                "dt_start": self.lineEdit_drift_start_cut.text() or 0,
+                                "dt_end": self.lineEdit_drift_end_cut.text() or 0}
+
+        self.project_manager.save_preprocessing(region_of_interest)
+
 
     def load_data(self):
         """Setzt die UI-Werte aus dem geladenen Dictionary."""
@@ -156,6 +159,9 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, label)
         self.add_spectra(label)
 
+        if self.selected_label_name == label.label_name.text():
+            self.handle_label_click(label)
+
 
     def add_spectra(self,
                     label_widget: DatasetMainEntry) -> None:
@@ -175,6 +181,11 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
             self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
             spectrum.click_signal.connect(self.handle_spectrum_click)
             spectrum.hide()
+
+            if self.selected_spectrum_name == spectrum.label_name.text():
+                self.handle_spectrum_click(spectrum)
+
+
 
 
     def handle_label_click(self,
@@ -198,6 +209,8 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                     if widget.parent == label_widget:
                         widget.hide()
 
+            self.selected_label_name = None
+
         else:
             label_widget.extend_label(True)
 
@@ -207,6 +220,8 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                 if isinstance(widget, DatasetSubEntry):
                     if widget.parent == label_widget:
                         widget.show()
+
+            self.selected_label_name = label_widget.label_name.text()
 
 
 
@@ -357,6 +372,9 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         except ValueError:
             return  # Falls der User Buchstaben tippt
 
+        # Save the values
+        self.save_data()
+
         # 3. Linien zeichnen (z.B. in Rot und gestrichelt)
         ax = self.canvas.axes
         style = {'color': '#da05ab', 'linestyle': '--', 'linewidth': 3, 'alpha': 0.8}
@@ -423,6 +441,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
     def handle_spectrum_click(self, spectrum_widget: DatasetSubEntry):
         self.plot_spectrum(spectrum_widget)
+        self.selected_spectrum_name = spectrum_widget.label_name.text()
 
         if self.canvas_fullscreen:
             self.reset_zoom()
