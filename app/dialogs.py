@@ -4,6 +4,7 @@ from ui.dataset_ui.CreateLabelDialog import Ui_CreateLabelDialog
 from ui.dataset_ui.RenameLabelDialog import Ui_RenameLabelDialog
 from ui.MessageDialog import Ui_MessageDialog
 from ui.YesNoDialog import Ui_YesNoDialog
+from ProgressDialog import Ui_ProgressDialog
 
 class CreateLabelDialog(QtWidgets.QDialog, Ui_CreateLabelDialog):
     def __init__(self, parent=None):
@@ -113,3 +114,29 @@ class CustomYesNoDialog(QtWidgets.QDialog, Ui_YesNoDialog):
         # Connect the buttons.
         self.button_yes.clicked.connect(self.accept)
         self.button_no.clicked.connect(self.reject)
+
+
+class CustomProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
+
+        self.setWindowFlags(
+            QtCore.Qt.WindowType.Dialog |
+            QtCore.Qt.WindowType.CustomizeWindowHint |
+            QtCore.Qt.WindowType.WindowCloseButtonHint |
+            QtCore.Qt.WindowType.WindowTitleHint
+        )
+
+        # Set the window title
+        self.setWindowTitle(title)
+        # Connect the buttons.
+        self.button_no.clicked.connect(self.reject)
+        # Initialize the progress bar.
+        self.progressBar.setValue(0)
+        self.progressBar.setMaximum(100)
+
+    def update_progress(self, value, time, percent):
+        self.progressBar.setValue(value)
+        self.label_time_remaining.setText(f"time remaining: {time}")
+        self.label_percent.setText(f"{percent} %")

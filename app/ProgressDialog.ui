@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ProgressDialog</class>
+ <widget class="QDialog" name="ProgressDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>350</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>800</width>
+    <height>350</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>800</width>
+    <height>350</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: #1d1d1d;</string>
+  </property>
+  <widget class="QPushButton" name="button_no">
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>260</y>
+     <width>151</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Lato</family>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="cursor">
+    <cursorShape>PointingHandCursor</cursorShape>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QPushButton {
+    border: 1px solid #9e9e9e;
+    background-color: #232323; 
+    color: #9e9e9e;
+    border-radius: 10px;
+}
+
+QPushButton:hover {
+	background-color: #131313;
+}
+</string>
+   </property>
+   <property name="text">
+    <string>Cancle</string>
+   </property>
+  </widget>
+  <widget class="QProgressBar" name="progressBar">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>160</y>
+     <width>731</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>0</width>
+     <height>0</height>
+    </size>
+   </property>
+   <property name="font">
+    <font>
+     <family>Lato</family>
+    </font>
+   </property>
+   <property name="value">
+    <number>24</number>
+   </property>
+   <property name="textVisible">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_header">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>40</y>
+     <width>791</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Lato</family>
+     <pointsize>25</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Dataset preprocessing</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignmentFlag::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_subheader">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>90</y>
+     <width>791</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Lato</family>
+     <pointsize>14</pointsize>
+     <fontweight>Light</fontweight>
+    </font>
+   </property>
+   <property name="text">
+    <string>This may take a while, please wait.</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignmentFlag::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_percent">
+   <property name="geometry">
+    <rect>
+     <x>430</x>
+     <y>180</y>
+     <width>331</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Lato</family>
+     <pointsize>12</pointsize>
+     <bold>false</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>27 %</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_time_remaining">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>180</y>
+     <width>361</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Lato</family>
+     <pointsize>12</pointsize>
+     <stylestrategy>PreferDefault</stylestrategy>
+     <fontweight>Light</fontweight>
+    </font>
+   </property>
+   <property name="text">
+    <string>time remaining: 5 min</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

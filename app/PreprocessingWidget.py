@@ -23,7 +23,7 @@ class Ui_PreprocessingWidget(object):
     def setupUi(self, PreprocessingWidget):
         if not PreprocessingWidget.objectName():
             PreprocessingWidget.setObjectName(u"PreprocessingWidget")
-        PreprocessingWidget.resize(1536, 992)
+        PreprocessingWidget.resize(1546, 992)
         font = QFont()
         font.setWeight(QFont.Black)
         PreprocessingWidget.setFont(font)
@@ -140,7 +140,7 @@ class Ui_PreprocessingWidget(object):
         self.verticalLayout_7 = QVBoxLayout(self.options_container)
         self.verticalLayout_7.setSpacing(15)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.verticalLayout_7.setContentsMargins(-1, 100, -1, -1)
+        self.verticalLayout_7.setContentsMargins(-1, 80, -1, -1)
         self.options_inner_container = QWidget(self.options_container)
         self.options_inner_container.setObjectName(u"options_inner_container")
         self.options_inner_container.setMaximumSize(QSize(16777215, 16777215))
@@ -150,13 +150,27 @@ class Ui_PreprocessingWidget(object):
         self.verticalLayout_5.setSpacing(6)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.verticalLayout_5.setContentsMargins(1, 1, 1, 1)
-        self.label_retentiontime = QLabel(self.options_inner_container)
-        self.label_retentiontime.setObjectName(u"label_retentiontime")
-        self.label_retentiontime.setMaximumSize(QSize(16777215, 40))
+        self.options_container_header = QLabel(self.options_inner_container)
+        self.options_container_header.setObjectName(u"options_container_header")
+        self.options_container_header.setMinimumSize(QSize(0, 60))
         font4 = QFont()
         font4.setFamilies([u"Lato"])
-        font4.setPointSize(20)
-        self.label_retentiontime.setFont(font4)
+        font4.setPointSize(25)
+        font4.setBold(False)
+        self.options_container_header.setFont(font4)
+        self.options_container_header.setStyleSheet(u"border-bottom: 1px solid #666666;")
+
+        self.verticalLayout_5.addWidget(self.options_container_header)
+
+        self.label_retentiontime = QLabel(self.options_inner_container)
+        self.label_retentiontime.setObjectName(u"label_retentiontime")
+        self.label_retentiontime.setMinimumSize(QSize(0, 50))
+        self.label_retentiontime.setMaximumSize(QSize(16777215, 40))
+        font5 = QFont()
+        font5.setFamilies([u"Lato"])
+        font5.setPointSize(20)
+        font5.setWeight(QFont.Light)
+        self.label_retentiontime.setFont(font5)
 
         self.verticalLayout_5.addWidget(self.label_retentiontime)
 
@@ -172,10 +186,10 @@ class Ui_PreprocessingWidget(object):
         self.lineEdit_retention_start_cut.setObjectName(u"lineEdit_retention_start_cut")
         self.lineEdit_retention_start_cut.setMinimumSize(QSize(0, 40))
         self.lineEdit_retention_start_cut.setMaximumSize(QSize(150, 16777215))
-        font5 = QFont()
-        font5.setFamilies([u"Lato"])
-        font5.setPointSize(13)
-        self.lineEdit_retention_start_cut.setFont(font5)
+        font6 = QFont()
+        font6.setFamilies([u"Lato"])
+        font6.setPointSize(13)
+        self.lineEdit_retention_start_cut.setFont(font6)
         self.lineEdit_retention_start_cut.setStyleSheet(u"QLineEdit {\n"
 "    border: 1px solid #ff9000;\n"
 "    background-color: #232323; \n"
@@ -191,7 +205,7 @@ class Ui_PreprocessingWidget(object):
         self.lineEdit_retention_end_cut.setObjectName(u"lineEdit_retention_end_cut")
         self.lineEdit_retention_end_cut.setMinimumSize(QSize(0, 40))
         self.lineEdit_retention_end_cut.setMaximumSize(QSize(150, 16777215))
-        self.lineEdit_retention_end_cut.setFont(font5)
+        self.lineEdit_retention_end_cut.setFont(font6)
         self.lineEdit_retention_end_cut.setStyleSheet(u"QLineEdit {\n"
 "    border: 1px solid #ff9000;\n"
 "    background-color: #232323; \n"
@@ -213,7 +227,7 @@ class Ui_PreprocessingWidget(object):
         self.label_drifttime = QLabel(self.options_inner_container)
         self.label_drifttime.setObjectName(u"label_drifttime")
         self.label_drifttime.setMinimumSize(QSize(0, 50))
-        self.label_drifttime.setFont(font4)
+        self.label_drifttime.setFont(font5)
         self.label_drifttime.setAlignment(Qt.AlignmentFlag.AlignBottom|Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft)
 
         self.verticalLayout_5.addWidget(self.label_drifttime)
@@ -230,7 +244,7 @@ class Ui_PreprocessingWidget(object):
         self.lineEdit_drift_start_cut.setObjectName(u"lineEdit_drift_start_cut")
         self.lineEdit_drift_start_cut.setMinimumSize(QSize(0, 40))
         self.lineEdit_drift_start_cut.setMaximumSize(QSize(150, 16777215))
-        self.lineEdit_drift_start_cut.setFont(font5)
+        self.lineEdit_drift_start_cut.setFont(font6)
         self.lineEdit_drift_start_cut.setStyleSheet(u"QLineEdit {\n"
 "    border: 1px solid #ff9000;\n"
 "    background-color: #232323; \n"
@@ -246,7 +260,7 @@ class Ui_PreprocessingWidget(object):
         self.lineEdit_drift_end_cut.setObjectName(u"lineEdit_drift_end_cut")
         self.lineEdit_drift_end_cut.setMinimumSize(QSize(0, 40))
         self.lineEdit_drift_end_cut.setMaximumSize(QSize(150, 16777215))
-        self.lineEdit_drift_end_cut.setFont(font5)
+        self.lineEdit_drift_end_cut.setFont(font6)
         self.lineEdit_drift_end_cut.setStyleSheet(u"QLineEdit {\n"
 "    border: 1px solid #ff9000;\n"
 "    background-color: #232323; \n"
@@ -279,7 +293,10 @@ class Ui_PreprocessingWidget(object):
         self.pushButton_start_processing = QPushButton(self.start_processing_container)
         self.pushButton_start_processing.setObjectName(u"pushButton_start_processing")
         self.pushButton_start_processing.setMinimumSize(QSize(0, 50))
-        self.pushButton_start_processing.setFont(font4)
+        font7 = QFont()
+        font7.setFamilies([u"Lato"])
+        font7.setPointSize(20)
+        self.pushButton_start_processing.setFont(font7)
         self.pushButton_start_processing.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.pushButton_start_processing.setStyleSheet(u"QPushButton {\n"
 "    border: 1px solid #00eaff;\n"
@@ -296,10 +313,10 @@ class Ui_PreprocessingWidget(object):
 
         self.label_processing_info = QLabel(self.start_processing_container)
         self.label_processing_info.setObjectName(u"label_processing_info")
-        font6 = QFont()
-        font6.setFamilies([u"Lato"])
-        font6.setPointSize(10)
-        self.label_processing_info.setFont(font6)
+        font8 = QFont()
+        font8.setFamilies([u"Lato"])
+        font8.setPointSize(10)
+        self.label_processing_info.setFont(font8)
         self.label_processing_info.setStyleSheet(u"color: #9e9e9e;")
         self.label_processing_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label_processing_info.setWordWrap(True)
@@ -342,7 +359,7 @@ class Ui_PreprocessingWidget(object):
         self.pushButton_toggle_canvas_area.setObjectName(u"pushButton_toggle_canvas_area")
         self.pushButton_toggle_canvas_area.setEnabled(False)
         self.pushButton_toggle_canvas_area.setMinimumSize(QSize(0, 50))
-        self.pushButton_toggle_canvas_area.setFont(font4)
+        self.pushButton_toggle_canvas_area.setFont(font7)
         self.pushButton_toggle_canvas_area.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.pushButton_toggle_canvas_area.setStyleSheet(u"QPushButton {\n"
 "    border: 1px solid #666666;\n"
@@ -373,19 +390,20 @@ class Ui_PreprocessingWidget(object):
     def retranslateUi(self, PreprocessingWidget):
         PreprocessingWidget.setWindowTitle(QCoreApplication.translate("PreprocessingWidget", u"Form", None))
         self.label_header.setText(QCoreApplication.translate("PreprocessingWidget", u"Preprocessing", None))
-        self.label_subheader.setText(QCoreApplication.translate("PreprocessingWidget", u"<html><head/><body><p>This step processes the raw spectra of the dataset. Preprocessing involves the following tasks:<br/>- Retention- and Drifttime cut<br/>- Background noise reduction<br/>- Application of a smoothing filter</p></body></html>", None))
+        self.label_subheader.setText(QCoreApplication.translate("PreprocessingWidget", u"<html><head/><body><p>This step processes the raw spectra of the dataset. Preprocessing involves the following tasks:<br/>- Retention- and Drifttime region of interest<br/>- Background noise reduction<br/>- Application of a smoothing filter</p></body></html>", None))
         self.label_container_header.setText(QCoreApplication.translate("PreprocessingWidget", u"Dataset", None))
-        self.label_retentiontime.setText(QCoreApplication.translate("PreprocessingWidget", u"Retentiontime cut [s]", None))
+        self.options_container_header.setText(QCoreApplication.translate("PreprocessingWidget", u"Region of interest (ROI)", None))
+        self.label_retentiontime.setText(QCoreApplication.translate("PreprocessingWidget", u"Retentiontime [s]", None))
         self.lineEdit_retention_start_cut.setPlaceholderText(QCoreApplication.translate("PreprocessingWidget", u"Start ", None))
         self.lineEdit_retention_end_cut.setText("")
         self.lineEdit_retention_end_cut.setPlaceholderText(QCoreApplication.translate("PreprocessingWidget", u"End", None))
-        self.label_drifttime.setText(QCoreApplication.translate("PreprocessingWidget", u"Drifttime cut [ms]", None))
+        self.label_drifttime.setText(QCoreApplication.translate("PreprocessingWidget", u"Drifttime [ms]", None))
         self.lineEdit_drift_start_cut.setPlaceholderText(QCoreApplication.translate("PreprocessingWidget", u"Start ", None))
         self.lineEdit_drift_end_cut.setText("")
         self.lineEdit_drift_end_cut.setPlaceholderText(QCoreApplication.translate("PreprocessingWidget", u"End", None))
         self.pushButton_start_processing.setText(QCoreApplication.translate("PreprocessingWidget", u"Start preprocessing", None))
         self.label_processing_info.setText(QCoreApplication.translate("PreprocessingWidget", u"This will start the preprocessing of the dataset. Notice that this task may take a while, depending on the size of the dataset and the used computer.", None))
         self.label_preview.setText(QCoreApplication.translate("PreprocessingWidget", u"Spectrum preview", None))
-        self.pushButton_toggle_canvas_area.setText(QCoreApplication.translate("PreprocessingWidget", u"Show cutted spectrum", None))
+        self.pushButton_toggle_canvas_area.setText(QCoreApplication.translate("PreprocessingWidget", u"Show region of interest", None))
     # retranslateUi
 

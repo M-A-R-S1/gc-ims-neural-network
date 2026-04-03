@@ -599,3 +599,35 @@ class PlottingCanvas(FigureCanvas):
         self.axes = self.fig.add_subplot(111)
         self.fig.tight_layout()
         super().__init__(self.fig)
+
+
+
+class PreprocessingWorker(QtCore.QObject):
+    # Signale für die Kommunikation mit der GUI
+    progress_update = Signal(int, int, int)
+    finished = Signal(tuple)  # Übergibt am Ende (preprocessed_data, spectra_paths)
+
+    def __init__(self, input_dir, output_dir, drift_cut, retention_cut):
+        super().__init__()
+        self.input_dir = input_dir
+        self.output_dir = output_dir
+        self.drift_cut = drift_cut
+        self.retention_cut = retention_cut
+
+    def run(self):
+        # Hier rufst du einfach deine bestehende Funktion auf!
+        # Tipp: Du könntest in deine 'start' Funktion ein Callback einbauen,
+        # um echte Prozentwerte zu senden.
+
+        try:
+            # Deine Funktion (importiert aus deinem alten Skript)
+            results = start(
+                input_dir=self.input_dir,
+                output_dir=self.output_dir,
+                drift_cut=self.drift_cut,
+                retention_cut=self.retention_cut
+            )
+            self.finished.emit(results)
+        except Exception as e:
+            print(f"Preprocessing error: {e}")
+            self.finished.emit(([], []))

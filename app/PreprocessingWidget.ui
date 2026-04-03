@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1536</width>
+    <width>1546</width>
     <height>992</height>
    </rect>
   </property>
@@ -83,7 +83,7 @@
       <string notr="true">color: #9e9e9e;</string>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This step processes the raw spectra of the dataset. Preprocessing involves the following tasks:&lt;br/&gt;- Retention- and Drifttime cut&lt;br/&gt;- Background noise reduction&lt;br/&gt;- Application of a smoothing filter&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This step processes the raw spectra of the dataset. Preprocessing involves the following tasks:&lt;br/&gt;- Retention- and Drifttime region of interest&lt;br/&gt;- Background noise reduction&lt;br/&gt;- Application of a smoothing filter&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="scaledContents">
       <bool>false</bool>
@@ -268,7 +268,7 @@ background-color: transparent;
           <number>15</number>
          </property>
          <property name="topMargin">
-          <number>100</number>
+          <number>80</number>
          </property>
          <item>
           <widget class="QWidget" name="options_inner_container" native="true">
@@ -286,7 +286,7 @@ background-color: transparent;
            <property name="styleSheet">
             <string notr="true"/>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,0,0,0,0">
+           <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,0,0,0,0,0">
             <property name="spacing">
              <number>6</number>
             </property>
@@ -303,7 +303,36 @@ background-color: transparent;
              <number>1</number>
             </property>
             <item>
+             <widget class="QLabel" name="options_container_header">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>60</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>Lato</family>
+                <pointsize>25</pointsize>
+                <bold>false</bold>
+               </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">border-bottom: 1px solid #666666;</string>
+              </property>
+              <property name="text">
+               <string>Region of interest (ROI)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QLabel" name="label_retentiontime">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>50</height>
+               </size>
+              </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
@@ -314,10 +343,11 @@ background-color: transparent;
                <font>
                 <family>Lato</family>
                 <pointsize>20</pointsize>
+                <fontweight>Light</fontweight>
                </font>
               </property>
               <property name="text">
-               <string>Retentiontime cut [s]</string>
+               <string>Retentiontime [s]</string>
               </property>
              </widget>
             </item>
@@ -449,10 +479,11 @@ background-color: transparent;
                <font>
                 <family>Lato</family>
                 <pointsize>20</pointsize>
+                <fontweight>Light</fontweight>
                </font>
               </property>
               <property name="text">
-               <string>Drifttime cut [ms]</string>
+               <string>Drifttime [ms]</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
@@ -752,7 +783,7 @@ background-color: #131313;
 }</string>
            </property>
            <property name="text">
-            <string>Show cutted spectrum</string>
+            <string>Show region of interest</string>
            </property>
           </widget>
          </item>
