@@ -619,15 +619,153 @@ class PreprocessingWorker(QtCore.QObject):
         # Tipp: Du könntest in deine 'start' Funktion ein Callback einbauen,
         # um echte Prozentwerte zu senden.
 
-        try:
-            # Deine Funktion (importiert aus deinem alten Skript)
-            results = start(
-                input_dir=self.input_dir,
-                output_dir=self.output_dir,
-                drift_cut=self.drift_cut,
-                retention_cut=self.retention_cut
-            )
-            self.finished.emit(results)
-        except Exception as e:
-            print(f"Preprocessing error: {e}")
-            self.finished.emit(([], []))
+        results = self.start(
+            self.input_dir,
+            self.output_dir,
+            self.drift_cut,
+            self.retention_cut
+        )
+        self.finished.emit(results)
+
+
+    def start(self,
+              input_dir: Path,
+              output_dir: Path,
+              drift_cut: tuple[float, float],
+              retention_cut: tuple[int, int],
+              load_existing: bool) -> tuple[list[ims.Spectrum], list[Path]]:
+        """
+        This function takes care of the preprocess steps for .mea files.
+        All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as datasets.
+
+        This functions computes a baseline correction for drift- and retention time and forwards the interpolated spectra
+        files to the "preprocess_spectra" function for parallel computation. Each cpu core acts on one spectrum.
+        This function then returns all preprocessed spectra as a list and another list with their output paths.
+
+        :param input_dir: The directory where the .mea files are located in.
+        :param output_dir: Saving path of the plotting image.
+        :param create_plots: Specifies which images to create. [none = no images | single = one image for each .mea file |
+        overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
+        :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
+        :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
+        :param load_existing: If set to True the algorithm trys to load an already preprocessed hdf5 spectrum file.
+        This will then skip the preprocessing step for this spectrum.
+
+        :return: Tuple with a list of preprocessed spectra and a list of their paths.
+        """
+
+        print("=======================================================")
+        print(f"I: PREPROCESSING")
+
+        # List of processed spectra.
+        preprocessed_data = []
+        # List of paths to the spectra directories.
+        spectra_paths = []
+        # List of loaded spectra [Spectra which were preprocessed earlier].
+        loaded_spectra = []
+
+        dataset = ims.Dataset.read_mea(path=str(input_dir))
+
+        # Try to load .hdf5 files for each spectrum. An .hdf5 file indicates that a spectrum was already processed.
+        if load_existing:
+            for idx, spectrum in enumerate(dataset.data):
+                spectrum_path = output_dir / dataset.labels[idx] / "hdf5" / f"{spectrum.name}.hdf5"
+                if spectrum_path.exists():
+                    loaded_spectrum = ims.Spectrum.read_hdf5(spectrum_path)
+                    loaded_spectra.append(loaded_spectrum)
+                    # Save the output directory of the spektrum
+                    spectra_paths.append(output_dir / dataset.labels[idx])
+                    print(f"\t- Spectrum {idx + 1}/{len(dataset.data)} - Save file found [loaded]")
+
+        # Skip processing this folder if all dictionary spectra could be loaded from .hdf5 files.
+        if len(loaded_spectra) == len(dataset.data):
+            return loaded_spectra, spectra_paths
+
+        # Collect needed arguments for each spectrum.
+        for idx, spectrum in enumerate(dataset.data):
+            if spectrum.values.size == 0:
+                continue
+
+            spectrum_path = output_dir / dataset.labels[idx]
+
+            # Check if the spectrum has already a save file, if so skip the preprocessing step for this spectrum.
+            if load_existing:
+                hdf5_path = spectrum_path / "hdf5" / f"{spectrum.name}.hdf5"
+                if hdf5_path.exists():
+                    continue
+
+            # Save the spektrum path.
+            spectra_paths.append(spectrum_path)
+
+            spectrum_data = self.preprocess_spectra(spectrum,
+                                                    spectrum_path,
+                                                    drift_cut,
+                                                    retention_cut)
+
+
+
+        preprocessed_data.extend(spectrum_data)
+        # Add the loaded spectra to the newly preprocessed spectra.
+        preprocessed_data.extend(loaded_spectra)
+
+        return preprocessed_data, spectra_paths
+
+
+    def preprocess_spectra(self,
+                           spectrum: ims.Spectrum,
+                           output_dir: Path,
+                           drift_cut: tuple[float, float],
+                           retention_cut: tuple[int, int]) -> ims.Spectrum:
+        """
+        This function takes care of the parallel preprocessing of gc-ims spectra. Each cpu core acts on one spectrum.
+        All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as a dataset.
+        Each spectrum is preprocessed by the following:
+        - 1. Smoothing the spectrum -> Savitzky–Golay filter.
+        - 2. Remove negative intensities by setting them to 0.
+        - 3. Saves the preprocessed data as a .hdf5 file.
+
+        This function then returns the preprocessed spectrum.
+
+        The gc-ims spectrum can be plotted and saved as .png files if the function parameter is set accordingly:
+        - "single" -> Creates a plot image for each individual .mea file.
+        - "overview" -> Creates a plot image for up to 16 .mea files inside the same directory.
+        - "all" -> Creates both single and overview plot images.
+        - "none" -> Creates no plot images.
+
+        :param spectrum: The spectrum which is about to be preprocessed.
+        :param output_dir: Saving path of the plotting image.
+        :param idx: The index of this spectrum in the current dataset.
+        :param dataset_length: The length of the current dataset (Number of spectra in the dataset).
+        :param create_plots: Specifies which images to create. [none = no images | single = one image for each .mea file |
+        overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
+        :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
+        :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
+
+        :return: preprocessed spectra.
+        """
+
+        # Baseline correction - removing the noisy background by subtracting the mean of an empty area.
+        spectrum.sub_first_rows(50)
+        spectrum.cut_dt(start=drift_cut[0], stop=drift_cut[1])
+        spectrum.cut_rt(start=retention_cut[0], stop=retention_cut[1])
+
+        # Smoothing the spectrum with the Savitzky–Golay filter.
+        spectrum.savgol(window_length=10, polyorder=4)
+
+        # Remove negative values after applying the smooth filter.
+        spectrum.values[spectrum.values < 0] = 0.0
+
+        # Before saving, check if the file already exists. The file must be deleted first! Overriding does not work.
+        spectrum_path = output_dir / "hdf5"
+        if not spectrum_path.exists():
+            spectrum_path.mkdir(parents=True, exist_ok=True)
+
+        spectrum_file = spectrum_path / f"{spectrum.name}.hdf5"
+        if spectrum_file.exists():
+            spectrum_file.unlink()
+
+        # Save the processed spectrum.
+        spectrum.to_hdf5(spectrum_path)
+
+        # Return the preprocessed spectrum.
+        return spectrum

@@ -84,7 +84,7 @@ QPushButton:hover {
     </font>
    </property>
    <property name="value">
-    <number>24</number>
+    <number>0</number>
    </property>
    <property name="textVisible">
     <bool>false</bool>
@@ -152,7 +152,7 @@ QPushButton:hover {
     </font>
    </property>
    <property name="text">
-    <string>27 %</string>
+    <string>0 %</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -176,7 +176,7 @@ QPushButton:hover {
     </font>
    </property>
    <property name="text">
-    <string>time remaining: 5 min</string>
+    <string>time remaining: calculating ...</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>

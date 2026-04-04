@@ -52,7 +52,7 @@ class Ui_ProgressDialog(object):
         font1 = QFont()
         font1.setFamilies([u"Lato"])
         self.progressBar.setFont(font1)
-        self.progressBar.setValue(24)
+        self.progressBar.setValue(0)
         self.progressBar.setTextVisible(False)
         self.label_header = QLabel(ProgressDialog)
         self.label_header.setObjectName(u"label_header")
@@ -101,7 +101,7 @@ class Ui_ProgressDialog(object):
         self.button_no.setText(QCoreApplication.translate("ProgressDialog", u"Cancle", None))
         self.label_header.setText(QCoreApplication.translate("ProgressDialog", u"Dataset preprocessing", None))
         self.label_subheader.setText(QCoreApplication.translate("ProgressDialog", u"This may take a while, please wait.", None))
-        self.label_percent.setText(QCoreApplication.translate("ProgressDialog", u"27 %", None))
-        self.label_time_remaining.setText(QCoreApplication.translate("ProgressDialog", u"time remaining: 5 min", None))
+        self.label_percent.setText(QCoreApplication.translate("ProgressDialog", u"0 %", None))
+        self.label_time_remaining.setText(QCoreApplication.translate("ProgressDialog", u"time remaining: calculating ...", None))
     # retranslateUi
 
