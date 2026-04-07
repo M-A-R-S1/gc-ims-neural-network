@@ -2,7 +2,7 @@ from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QDoubleValidator
 from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
-from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
+from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog, CustomProgressDialog
 from PreprocessingWidget import Ui_PreprocessingWidget
 from DatasetSubEntry import Ui_DatasetSubEntry
 from DatasetMainEntry import Ui_DatasetMainEntry
@@ -65,6 +65,8 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # Initialize the plot canvas.
         self.init_plot_canvas()
 
+        # Connect the button
+        self.pushButton_start_processing.clicked.connect(self.start_preprocessing)
         # load dataset from project.
         self.load_data()
 
@@ -488,6 +490,34 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.update_cut_lines()
 
 
+    def start_preprocessing(self):
+        # 1. Dialog erstellen und anzeigen
+        self.loading_dialog = CustomProgressDialog("Preprocessing...")
+        self.loading_dialog.show()
+
+        # 2. Thread und Worker vorbereiten
+        self.thread = QtCore.QThread()
+        self.worker = PreprocessingWorker(path=self.project_path,
+                                          dataset=self.dataset_storage,
+                                          drift_cut=[self.lineEdit_drift_start_cut.text(), self.lineEdit_drift_end_cut.text()],
+                                          retention_cut=[self.lineEdit_retention_start_cut.text(), self.lineEdit_retention_end_cut.text()])
+
+        self.worker.moveToThread(self.thread)
+
+        # 3. Signale verbinden
+        self.thread.started.connect(self.worker.run)
+        self.worker.progress_update.connect(self.loading_dialog.update_progress)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.loading_dialog.accept)
+
+        # Aufräumen nach Abschluss
+        self.thread.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        # 4. Starten
+        self.thread.start()
+
+
 class DatasetMainEntry(QtWidgets.QLabel, Ui_DatasetMainEntry):
     # Signal definitions
     click_signal = QtCore.Signal(object)
@@ -611,28 +641,62 @@ class PlottingCanvas(FigureCanvas):
 
 class PreprocessingWorker(QtCore.QObject):
     # Signale für die Kommunikation mit der GUI
-    progress_update = Signal(int, int, int)
-    finished = Signal(tuple)  # Übergibt am Ende (preprocessed_data, spectra_paths)
+    finished = Signal()
+    progress_update = Signal(int, int)
 
-    def __init__(self, input_dir, output_dir, drift_cut, retention_cut):
+    def __init__(self, path: Path, dataset, drift_cut, retention_cut):
         super().__init__()
-        self.input_dir = input_dir
-        self.output_dir = output_dir
+        self.dataset = dataset
         self.drift_cut = drift_cut
         self.retention_cut = retention_cut
+        self.project_path = path.parent
 
     def run(self):
-        # Hier rufst du einfach deine bestehende Funktion auf!
-        # Tipp: Du könntest in deine 'start' Funktion ein Callback einbauen,
-        # um echte Prozentwerte zu senden.
+        total_spectra = sum(len(spectra) for spectra in self.dataset.values())
+        counter = 0
 
-        results = self.start(
-            self.input_dir,
-            self.output_dir,
-            self.drift_cut,
-            self.retention_cut
-        )
-        self.finished.emit(results)
+        for label, spectra_paths in self.dataset.items():
+            for spectrum_path in spectra_paths:
+                # 1. Kopie erstellen, um die Originaldaten nicht zu zerstören!
+                # (Falls dein ims-Framework eine .copy() Methode hat)
+
+                spec = ims.Spectrum.read_mea(spectrum_path)
+                spectrum = spec.copy()
+                spectrum.riprel()
+                # 2. Deine Operationen
+                spectrum.sub_first_rows(50)
+
+                d_start = float(self.drift_cut[0])
+                d_stop = float(self.drift_cut[1])
+                r_start = float(self.retention_cut[0])
+                r_stop = float(self.retention_cut[1])
+
+                spectrum.cut_dt(start=d_start, stop=d_stop)
+                spectrum.cut_rt(start=r_start, stop=r_stop)
+
+                # Smoothing
+                spectrum.savgol(window_length=10, polyorder=4)
+
+                # Negative Werte eliminieren
+                # Achtung: Falls 'values' ein numpy-array ist, ist das korrekt:
+                spectrum.values[spectrum.values < 0] = 0.0
+
+                # Before saving, check if the file already exists. The file must be deleted first! Overriding does not work.
+                spectrum_path =  self.project_path / "dataset" / label / "hdf5"
+                if not spectrum_path.exists():
+                    spectrum_path.mkdir(parents=True, exist_ok=True)
+
+                spectrum_file = spectrum_path / f"{spectrum.name}.hdf5"
+                if spectrum_file.exists():
+                    spectrum_file.unlink()
+
+                # Save the processed spectrum.
+                spectrum.to_hdf5(spectrum_path)
+
+                counter += 1
+                self.progress_update.emit(counter, total_spectra)
+
+        self.finished.emit()
 
 
     def start(self,

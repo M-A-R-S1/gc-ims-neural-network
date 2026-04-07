@@ -69,7 +69,7 @@ QPushButton:hover {
      <x>30</x>
      <y>160</y>
      <width>731</width>
-     <height>23</height>
+     <height>16</height>
     </rect>
    </property>
    <property name="minimumSize">

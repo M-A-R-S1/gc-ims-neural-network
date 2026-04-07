@@ -47,7 +47,7 @@ class Ui_ProgressDialog(object):
 "")
         self.progressBar = QProgressBar(ProgressDialog)
         self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setGeometry(QRect(30, 160, 731, 23))
+        self.progressBar.setGeometry(QRect(30, 160, 731, 16))
         self.progressBar.setMinimumSize(QSize(0, 0))
         font1 = QFont()
         font1.setFamilies([u"Lato"])

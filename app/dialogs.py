@@ -136,7 +136,9 @@ class CustomProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
         self.progressBar.setValue(0)
         self.progressBar.setMaximum(100)
 
-    def update_progress(self, value, time, percent):
-        self.progressBar.setValue(value)
-        self.label_time_remaining.setText(f"time remaining: {time}")
-        self.label_percent.setText(f"{percent} %")
+
+    def update_progress(self, current, total):
+        percentage = int((current / total) * 100)
+        self.progressBar.setMaximum(total)
+        self.progressBar.setValue(current)
+        self.label_percent.setText(f"{percentage} %")
