@@ -322,7 +322,7 @@ background-color: transparent;
 color: #ebebeb;</string>
               </property>
               <property name="text">
-               <string>Region of interest (ROI)</string>
+               <string>Region of interest</string>
               </property>
              </widget>
             </item>

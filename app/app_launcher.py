@@ -1,10 +1,12 @@
 import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtGui import QPalette, QColor
 from ui.LauncherWindow import Ui_StartWidget
 from app_project import ProjectWindow
 from pathlib import Path
 import re
+import json
 
 class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
     # Signal for project opening.
@@ -113,9 +115,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
             project_folder.mkdir(parents=True, exist_ok=False)
 
             # Create the content for the .gcimsp file and create the file.
-            content = (f"Project: {project_name}\n"
-                       f"Created: {QtCore.QDate.currentDate().toString()}")
-            project_file.write_text(content, encoding="utf-8")
+            content = {
+                "version": "1.0",
+                "datasets": {},
+                "preprocessing": {
+                    "rt_start": 0,
+                    "rt_end": 0,
+                    "dt_start": 0,
+                    "dt_end": 0
+                }
+            }
+
+            #project_file.write_text(content, encoding="utf-8")
+
+            with open(project_file, 'w', encoding='utf-8') as f:
+                json.dump(content, f, indent=4)
 
             # Change to the project main window
             self.open_project_signal.emit(project_file)
@@ -334,6 +348,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
 
 # Create an application instance!
 app = QtWidgets.QApplication(sys.argv)
+
+# Set the standard text colors to white [Needed for linux and possibly other os].
+palette = app.palette()
+palette.setColor(QPalette.Text, QColor(235, 235, 235))
+palette.setColor(QPalette.WindowText, QColor(235, 235, 235))
+palette.setColor(QPalette.ButtonText, QColor(235, 235, 235))
+palette.setColor(QPalette.ColorRole.Button, QColor(45, 45, 45))
+palette.setColor(QPalette.ColorRole.Base, QColor(30, 30, 30))
+palette.setColor(QPalette.ColorRole.Window, QColor(45, 45, 45))
+# BrightText wird oft für Highlights auf dunklem Grund genutzt
+palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 255, 255))
+app.setPalette(palette)
 
 # Create a window and show it.
 launcher = MainWindow()

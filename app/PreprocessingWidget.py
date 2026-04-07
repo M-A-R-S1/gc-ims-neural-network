@@ -395,7 +395,7 @@ class Ui_PreprocessingWidget(object):
         self.label_header.setText(QCoreApplication.translate("PreprocessingWidget", u"Preprocessing", None))
         self.label_subheader.setText(QCoreApplication.translate("PreprocessingWidget", u"<html><head/><body><p>This step processes the raw spectra of the dataset. Preprocessing involves the following tasks:<br/>- Retention- and Drifttime region of interest<br/>- Background noise reduction<br/>- Application of a smoothing filter</p></body></html>", None))
         self.label_container_header.setText(QCoreApplication.translate("PreprocessingWidget", u"Dataset", None))
-        self.options_container_header.setText(QCoreApplication.translate("PreprocessingWidget", u"Region of interest (ROI)", None))
+        self.options_container_header.setText(QCoreApplication.translate("PreprocessingWidget", u"Region of interest", None))
         self.label_retentiontime.setText(QCoreApplication.translate("PreprocessingWidget", u"Retentiontime [s]", None))
         self.lineEdit_retention_start_cut.setPlaceholderText(QCoreApplication.translate("PreprocessingWidget", u"Start ", None))
         self.lineEdit_retention_end_cut.setText("")
