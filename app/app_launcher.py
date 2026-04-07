@@ -1,7 +1,7 @@
 import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtGui import QPalette, QColor
+from PySide6.QtGui import QPalette, QColor, QFontDatabase, QFont
 from ui.LauncherWindow import Ui_StartWidget
 from app_project import ProjectWindow
 from pathlib import Path
@@ -346,6 +346,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
         button.background_animation.start()
 
 
+def load_custom_fonts():
+    # Path to the fonts.
+    font_path =  Path(__file__).parent / "assets" / "fonts"
+
+    # Load and register all fonts from the path.
+    for font_file in font_path.glob("*.ttf"):
+        QFontDatabase.addApplicationFont(str(font_file))
+
 # Create an application instance!
 app = QtWidgets.QApplication(sys.argv)
 
@@ -360,6 +368,9 @@ palette.setColor(QPalette.ColorRole.Window, QColor(45, 45, 45))
 # BrightText wird oft für Highlights auf dunklem Grund genutzt
 palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 255, 255))
 app.setPalette(palette)
+
+# Load the custom fonts of this app [Lato...]
+load_custom_fonts()
 
 # Create a window and show it.
 launcher = MainWindow()
@@ -383,7 +394,6 @@ def launch_main_project(path: Path) -> None:
     project_window = ProjectWindow(path)
     project_window_reference.append(project_window)
     project_window.showMaximized()
-
 
 # Connect the "open project" signal.
 launcher.open_project_signal.connect(launch_main_project)
