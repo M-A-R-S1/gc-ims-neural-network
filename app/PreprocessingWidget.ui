@@ -225,7 +225,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>430</width>
-                 <height>679</height>
+                 <height>680</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -318,7 +318,8 @@ background-color: transparent;
                </font>
               </property>
               <property name="styleSheet">
-               <string notr="true">border-bottom: 1px solid #666666;</string>
+               <string notr="true">border-bottom: 1px solid #666666;
+color: #ebebeb;</string>
               </property>
               <property name="text">
                <string>Region of interest (ROI)</string>
@@ -345,6 +346,9 @@ background-color: transparent;
                 <pointsize>20</pointsize>
                 <fontweight>Light</fontweight>
                </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">color: #ebebeb;</string>
               </property>
               <property name="text">
                <string>Retentiontime [s]</string>
@@ -481,6 +485,9 @@ background-color: transparent;
                 <pointsize>20</pointsize>
                 <fontweight>Light</fontweight>
                </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">color: #ebebeb;</string>
               </property>
               <property name="text">
                <string>Drifttime [ms]</string>

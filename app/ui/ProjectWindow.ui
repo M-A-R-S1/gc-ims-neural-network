@@ -183,7 +183,7 @@
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true"/>
+                <string notr="true">color: #ebebeb;</string>
                </property>
                <property name="text">
                 <string>Dataset</string>
@@ -252,7 +252,7 @@
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true"/>
+                <string notr="true">color: #ebebeb;</string>
                </property>
                <property name="text">
                 <string>Pre-processing</string>
@@ -317,7 +317,7 @@
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true"/>
+                <string notr="true">color: #ebebeb;</string>
                </property>
                <property name="text">
                 <string>Peak Explorer</string>
@@ -382,7 +382,7 @@
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true"/>
+                <string notr="true">color: #ebebeb;</string>
                </property>
                <property name="text">
                 <string>Consensus Peaks</string>
@@ -447,7 +447,7 @@
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true"/>
+                <string notr="true">color: #ebebeb;</string>
                </property>
                <property name="text">
                 <string>Classifier</string>
@@ -576,7 +576,7 @@
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true"/>
+                <string notr="true">color: #ebebeb;</string>
                </property>
                <property name="text">
                 <string>Settings</string>

@@ -87,7 +87,7 @@ class Ui_ProjectWindow(object):
         font.setFamilies([u"Lato"])
         font.setPointSize(10)
         self.sb_dataset_label.setFont(font)
-        self.sb_dataset_label.setStyleSheet(u"")
+        self.sb_dataset_label.setStyleSheet(u"color: #ebebeb;")
         self.sb_dataset_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sb_dataset_label.setWordWrap(True)
 
@@ -123,7 +123,7 @@ class Ui_ProjectWindow(object):
         self.sb_preprocessing_label = QLabel(self.sb_preprocessing_container)
         self.sb_preprocessing_label.setObjectName(u"sb_preprocessing_label")
         self.sb_preprocessing_label.setFont(font)
-        self.sb_preprocessing_label.setStyleSheet(u"")
+        self.sb_preprocessing_label.setStyleSheet(u"color: #ebebeb;")
         self.sb_preprocessing_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sb_preprocessing_label.setWordWrap(True)
 
@@ -157,7 +157,7 @@ class Ui_ProjectWindow(object):
         self.sb_peak_explorer_label = QLabel(self.sb_peak_explorer_container)
         self.sb_peak_explorer_label.setObjectName(u"sb_peak_explorer_label")
         self.sb_peak_explorer_label.setFont(font)
-        self.sb_peak_explorer_label.setStyleSheet(u"")
+        self.sb_peak_explorer_label.setStyleSheet(u"color: #ebebeb;")
         self.sb_peak_explorer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sb_peak_explorer_label.setWordWrap(True)
 
@@ -191,7 +191,7 @@ class Ui_ProjectWindow(object):
         self.sb_consensus_label = QLabel(self.sb_consensus_container)
         self.sb_consensus_label.setObjectName(u"sb_consensus_label")
         self.sb_consensus_label.setFont(font)
-        self.sb_consensus_label.setStyleSheet(u"")
+        self.sb_consensus_label.setStyleSheet(u"color: #ebebeb;")
         self.sb_consensus_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sb_consensus_label.setWordWrap(True)
 
@@ -225,7 +225,7 @@ class Ui_ProjectWindow(object):
         self.sb_classifier_label = QLabel(self.sb_classifier_container)
         self.sb_classifier_label.setObjectName(u"sb_classifier_label")
         self.sb_classifier_label.setFont(font)
-        self.sb_classifier_label.setStyleSheet(u"")
+        self.sb_classifier_label.setStyleSheet(u"color: #ebebeb;")
         self.sb_classifier_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sb_classifier_label.setWordWrap(True)
 
@@ -278,7 +278,7 @@ class Ui_ProjectWindow(object):
         self.sb_settings_label = QLabel(self.sb_settings_container)
         self.sb_settings_label.setObjectName(u"sb_settings_label")
         self.sb_settings_label.setFont(font)
-        self.sb_settings_label.setStyleSheet(u"")
+        self.sb_settings_label.setStyleSheet(u"color: #ebebeb;")
         self.sb_settings_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sb_settings_label.setWordWrap(True)
 

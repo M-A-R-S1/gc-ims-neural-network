@@ -83,6 +83,9 @@ QPushButton:hover {
      <family>Lato</family>
     </font>
    </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
    <property name="value">
     <number>0</number>
    </property>
@@ -104,6 +107,9 @@ QPushButton:hover {
      <family>Lato</family>
      <pointsize>25</pointsize>
     </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: #ebebeb;</string>
    </property>
    <property name="text">
     <string>Dataset preprocessing</string>
@@ -128,6 +134,9 @@ QPushButton:hover {
      <fontweight>Light</fontweight>
     </font>
    </property>
+   <property name="styleSheet">
+    <string notr="true">color: #ebebeb;</string>
+   </property>
    <property name="text">
     <string>This may take a while, please wait.</string>
    </property>
@@ -150,6 +159,9 @@ QPushButton:hover {
      <pointsize>12</pointsize>
      <bold>false</bold>
     </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: #ebebeb;</string>
    </property>
    <property name="text">
     <string>0 %</string>
@@ -174,6 +186,9 @@ QPushButton:hover {
      <stylestrategy>PreferDefault</stylestrategy>
      <fontweight>Light</fontweight>
     </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: #ebebeb;</string>
    </property>
    <property name="text">
     <string>time remaining: calculating ...</string>

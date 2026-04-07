@@ -115,7 +115,7 @@ class Ui_PreprocessingWidget(object):
         self.scrollArea_dataset.setWidgetResizable(True)
         self.scrollArea_dataset_Contents = QWidget()
         self.scrollArea_dataset_Contents.setObjectName(u"scrollArea_dataset_Contents")
-        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 679))
+        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 680))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_dataset_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -158,7 +158,8 @@ class Ui_PreprocessingWidget(object):
         font4.setPointSize(25)
         font4.setBold(False)
         self.options_container_header.setFont(font4)
-        self.options_container_header.setStyleSheet(u"border-bottom: 1px solid #666666;")
+        self.options_container_header.setStyleSheet(u"border-bottom: 1px solid #666666;\n"
+"color: #ebebeb;")
 
         self.verticalLayout_5.addWidget(self.options_container_header)
 
@@ -171,6 +172,7 @@ class Ui_PreprocessingWidget(object):
         font5.setPointSize(20)
         font5.setWeight(QFont.Light)
         self.label_retentiontime.setFont(font5)
+        self.label_retentiontime.setStyleSheet(u"color: #ebebeb;")
 
         self.verticalLayout_5.addWidget(self.label_retentiontime)
 
@@ -228,6 +230,7 @@ class Ui_PreprocessingWidget(object):
         self.label_drifttime.setObjectName(u"label_drifttime")
         self.label_drifttime.setMinimumSize(QSize(0, 50))
         self.label_drifttime.setFont(font5)
+        self.label_drifttime.setStyleSheet(u"color: #ebebeb;")
         self.label_drifttime.setAlignment(Qt.AlignmentFlag.AlignBottom|Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft)
 
         self.verticalLayout_5.addWidget(self.label_drifttime)
