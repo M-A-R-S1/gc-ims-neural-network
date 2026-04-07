@@ -307,6 +307,13 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         spectrum = ims.Spectrum.read_mea(spectrum_widget.spectrum_path)
         spectrum.riprel()
 
+        # TODO ... show a preview of the spectrum post preprocessing?
+        #spectrum.sub_first_rows(50)
+        # Smoothing the spectrum with the Savitzky–Golay filter.
+        #spectrum.savgol(window_length=10, polyorder=4)
+        # Remove negative values after applying the smooth filter.
+        #spectrum.values[spectrum.values < 0] = 0.0
+
         # Clear the axes and set their colors.
         self.canvas.fig.patch.set_facecolor('#191919')
         self.canvas.axes.clear()
@@ -579,7 +586,7 @@ class DatasetSubEntry(QtWidgets.QWidget, Ui_DatasetSubEntry):
         This function is called when a spectra widget is clicked and changes the spectra stylesheet to highlight the currently
         selected spectrum in the spectra scroll area.
         =============================================================================
-        :param active: True if a spectrum widget is selected, False if a sspectrum widget is deselected.
+        :param active: True if a spectrum widget is selected, False if a spectrum widget is deselected.
         =============================================================================
         :return: None.
         """
