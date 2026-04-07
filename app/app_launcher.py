@@ -394,6 +394,8 @@ def launch_main_project(path: Path) -> None:
     project_window = ProjectWindow(path)
     project_window_reference.append(project_window)
     project_window.showMaximized()
+    project_window.raise_()
+    project_window.activateWindow()
 
 # Connect the "open project" signal.
 launcher.open_project_signal.connect(launch_main_project)
