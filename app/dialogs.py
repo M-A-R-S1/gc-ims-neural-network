@@ -122,6 +122,8 @@ class CustomProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
         super().__init__(parent)
         self.setupUi(self)
 
+        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+
         self.setWindowFlags(
             QtCore.Qt.WindowType.Dialog |
             QtCore.Qt.WindowType.CustomizeWindowHint |
