@@ -130,6 +130,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
             self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_orange.png"))
             self.sb_preprocessing_label.setPalette(self.palette_active)
             self.preprocessing_page.load_data()
+            self.preprocessing_page.check_processed_spectra()
         elif page == self.peak_explorer_page:
             self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_orange.png"))
             self.sb_peak_explorer_label.setPalette(self.palette_active)

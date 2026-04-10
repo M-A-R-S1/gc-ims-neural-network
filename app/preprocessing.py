@@ -2,15 +2,17 @@ from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QDoubleValidator
 from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
-from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog, CustomProgressDialog
+from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog, CustomProgressDialog, CustomTwoChoiceDialog
 from PreprocessingWidget import Ui_PreprocessingWidget
 from DatasetSubEntry import Ui_DatasetSubEntry
 from DatasetMainEntry import Ui_DatasetMainEntry
 from pathlib import Path
+import shutil
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
+from collections import defaultdict
 from project_manager import *
 import ims
 import json
@@ -486,6 +488,50 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
 
     def start_preprocessing(self):
+
+        path = self.project_path.parent / "dataset"
+        processed_spectra = 0
+        total_spectra = sum(len(spectra) for spectra in self.dataset_storage.values())
+
+        if path.exists():
+            # Findet alle .hdf5 Dateien in allen Unterordnern
+            hdf5_files = list(path.rglob("*.hdf5"))
+            processed_spectra += len(hdf5_files)
+
+        process_all = True
+
+        if total_spectra > 0 and processed_spectra > 0 and total_spectra != processed_spectra:
+            dialog = CustomTwoChoiceDialog(title="Which spectra do you want to process?",
+                                           message="It looks like some of the spectra are already processed. Do you want to continue with"
+                                                   " the remaining spectra, or do you want to restart and process all spectra?",
+                                           type="warning",
+                                           button_a_label="Continue",
+                                           button_b_label="Restart",
+                                           parent=self)
+
+            dialog_result = dialog.exec_()
+
+            if dialog_result == 1:
+                # Continue
+                process_all = False
+            elif dialog_result == 2:
+                # Restart
+                process_all = True
+            else:
+                # Cancel
+                return
+
+        elif total_spectra > 0 and processed_spectra > 0 and total_spectra == processed_spectra:
+            dialog = CustomYesNoDialog(title="Override processed spectra?",
+                                       message="All spectare are already processed. Do you want to restart the preprocessing and override the processed spectra?",
+                                       type="warning",
+                                       parent=self)
+
+            if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+                process_all = True
+            else:
+                return
+
         # 1. Dialog erstellen und anzeigen
         self.loading_dialog = CustomProgressDialog("Preprocessing...")
         self.loading_dialog.show()
@@ -495,7 +541,8 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.worker = PreprocessingWorker(path=self.project_path,
                                           dataset=self.dataset_storage,
                                           drift_cut=[self.lineEdit_drift_start_cut.text(), self.lineEdit_drift_end_cut.text()],
-                                          retention_cut=[self.lineEdit_retention_start_cut.text(), self.lineEdit_retention_end_cut.text()])
+                                          retention_cut=[self.lineEdit_retention_start_cut.text(), self.lineEdit_retention_end_cut.text()],
+                                          process_all=process_all)
 
         self.worker.moveToThread(self.thread)
 
@@ -518,7 +565,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
     def check_processed_spectra(self):
         path = self.project_path.parent / "dataset"
         processed_spectra = 0
-        spectra_total_count = sum(len(spectra) for spectra in self.dataset_storage.values())
+        total_spectra = sum(len(spectra) for spectra in self.dataset_storage.values())
 
         if path.exists():
             # Findet alle .hdf5 Dateien in allen Unterordnern
@@ -527,7 +574,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
         if processed_spectra == 0:
             self.label_process_info.hide()
-        elif processed_spectra == spectra_total_count:
+        elif processed_spectra == total_spectra:
             self.label_process_info.show()
             self.label_process_info.setText("All spectra processed")
             self.label_process_info.setStyleSheet(f"""
@@ -537,7 +584,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                                                         margin-bottom: 10px;
                                                 """)
         else:
-            new_spectra_count = spectra_total_count - processed_spectra
+            new_spectra_count = total_spectra - processed_spectra
             self.label_process_info.show()
             if new_spectra_count == 1:
                 self.label_process_info.setText(f"{new_spectra_count} unprocessed spectrum")
@@ -677,23 +724,54 @@ class PreprocessingWorker(QtCore.QObject):
     finished = Signal()
     progress_update = Signal(int, int)
 
-    def __init__(self, path: Path, dataset, drift_cut, retention_cut):
+    def __init__(self, path: Path, dataset, drift_cut, retention_cut, process_all):
         super().__init__()
         self.dataset = dataset
         self.drift_cut = drift_cut
         self.retention_cut = retention_cut
         self.project_path = path.parent
         self.worker_stopped = False
+        self.process_all = process_all
 
     @QtCore.Slot()
     def stop(self):
         self.worker_stopped = True
 
     def run(self):
-        total_spectra = sum(len(spectra) for spectra in self.dataset.values())
-        counter = 0
+        # 1. Aufgabenliste erstellen (Filtern)
+        filtered_dataset = defaultdict(list)
+        spectra_to_process = 0
 
         for label, spectra_paths in self.dataset.items():
+            for spectrum_path in spectra_paths:
+                spec_name = Path(spectrum_path).stem
+                target_folder = self.project_path / "dataset" / label / spec_name
+                target_file = target_folder / f"{spec_name}.hdf5"
+
+                if self.process_all or not target_file.exists():
+                    # FALLS "Alles verarbeiten" gewählt wurde: Alte Datei löschen
+                    if self.process_all and target_file.exists():
+                        try:
+                            shutil.rmtree(target_folder)
+                        except Exception as e:
+                            print(f"Error while deleting {target_file}: {e}")
+
+                    # Zum neuen Dataset hinzufügen
+                    if label not in filtered_dataset:
+                        filtered_dataset[label] = []
+
+                    filtered_dataset[label].append(spectrum_path)
+                    spectra_to_process += 1
+
+        # 2. Gesamtzahl der TATSÄCHLICHEN Arbeit
+        counter = 0
+
+        # Falls gar nichts zu tun ist, sofort fertig melden
+        if spectra_to_process == 0:
+            self.finished.emit()
+            return
+
+        for label, spectra_paths in filtered_dataset.items():
             for spectrum_path in spectra_paths:
 
                 QtCore.QCoreApplication.processEvents()
@@ -735,149 +813,6 @@ class PreprocessingWorker(QtCore.QObject):
                 spectrum.to_hdf5(spectrum_path)
 
                 counter += 1
-                self.progress_update.emit(counter, total_spectra)
+                self.progress_update.emit(counter, spectra_to_process)
 
         self.finished.emit()
-
-
-    def start(self,
-              input_dir: Path,
-              output_dir: Path,
-              drift_cut: tuple[float, float],
-              retention_cut: tuple[int, int],
-              load_existing: bool) -> tuple[list[ims.Spectrum], list[Path]]:
-        """
-        This function takes care of the preprocess steps for .mea files.
-        All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as datasets.
-
-        This functions computes a baseline correction for drift- and retention time and forwards the interpolated spectra
-        files to the "preprocess_spectra" function for parallel computation. Each cpu core acts on one spectrum.
-        This function then returns all preprocessed spectra as a list and another list with their output paths.
-
-        :param input_dir: The directory where the .mea files are located in.
-        :param output_dir: Saving path of the plotting image.
-        :param create_plots: Specifies which images to create. [none = no images | single = one image for each .mea file |
-        overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
-        :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
-        :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
-        :param load_existing: If set to True the algorithm trys to load an already preprocessed hdf5 spectrum file.
-        This will then skip the preprocessing step for this spectrum.
-
-        :return: Tuple with a list of preprocessed spectra and a list of their paths.
-        """
-
-        print("=======================================================")
-        print(f"I: PREPROCESSING")
-
-        # List of processed spectra.
-        preprocessed_data = []
-        # List of paths to the spectra directories.
-        spectra_paths = []
-        # List of loaded spectra [Spectra which were preprocessed earlier].
-        loaded_spectra = []
-
-        dataset = ims.Dataset.read_mea(path=str(input_dir))
-
-        # Try to load .hdf5 files for each spectrum. An .hdf5 file indicates that a spectrum was already processed.
-        if load_existing:
-            for idx, spectrum in enumerate(dataset.data):
-                spectrum_path = output_dir / dataset.labels[idx] / "hdf5" / f"{spectrum.name}.hdf5"
-                if spectrum_path.exists():
-                    loaded_spectrum = ims.Spectrum.read_hdf5(spectrum_path)
-                    loaded_spectra.append(loaded_spectrum)
-                    # Save the output directory of the spektrum
-                    spectra_paths.append(output_dir / dataset.labels[idx])
-                    print(f"\t- Spectrum {idx + 1}/{len(dataset.data)} - Save file found [loaded]")
-
-        # Skip processing this folder if all dictionary spectra could be loaded from .hdf5 files.
-        if len(loaded_spectra) == len(dataset.data):
-            return loaded_spectra, spectra_paths
-
-        # Collect needed arguments for each spectrum.
-        for idx, spectrum in enumerate(dataset.data):
-            if spectrum.values.size == 0:
-                continue
-
-            spectrum_path = output_dir / dataset.labels[idx]
-
-            # Check if the spectrum has already a save file, if so skip the preprocessing step for this spectrum.
-            if load_existing:
-                hdf5_path = spectrum_path / "hdf5" / f"{spectrum.name}.hdf5"
-                if hdf5_path.exists():
-                    continue
-
-            # Save the spektrum path.
-            spectra_paths.append(spectrum_path)
-
-            spectrum_data = self.preprocess_spectra(spectrum,
-                                                    spectrum_path,
-                                                    drift_cut,
-                                                    retention_cut)
-
-
-
-        preprocessed_data.extend(spectrum_data)
-        # Add the loaded spectra to the newly preprocessed spectra.
-        preprocessed_data.extend(loaded_spectra)
-
-        return preprocessed_data, spectra_paths
-
-
-    def preprocess_spectra(self,
-                           spectrum: ims.Spectrum,
-                           output_dir: Path,
-                           drift_cut: tuple[float, float],
-                           retention_cut: tuple[int, int]) -> ims.Spectrum:
-        """
-        This function takes care of the parallel preprocessing of gc-ims spectra. Each cpu core acts on one spectrum.
-        All .mea files inside a given input directory (input_dir), as well as their subdirectories are used as a dataset.
-        Each spectrum is preprocessed by the following:
-        - 1. Smoothing the spectrum -> Savitzky–Golay filter.
-        - 2. Remove negative intensities by setting them to 0.
-        - 3. Saves the preprocessed data as a .hdf5 file.
-
-        This function then returns the preprocessed spectrum.
-
-        The gc-ims spectrum can be plotted and saved as .png files if the function parameter is set accordingly:
-        - "single" -> Creates a plot image for each individual .mea file.
-        - "overview" -> Creates a plot image for up to 16 .mea files inside the same directory.
-        - "all" -> Creates both single and overview plot images.
-        - "none" -> Creates no plot images.
-
-        :param spectrum: The spectrum which is about to be preprocessed.
-        :param output_dir: Saving path of the plotting image.
-        :param idx: The index of this spectrum in the current dataset.
-        :param dataset_length: The length of the current dataset (Number of spectra in the dataset).
-        :param create_plots: Specifies which images to create. [none = no images | single = one image for each .mea file |
-        overview = one overview image for each folder which contains .mea files | all = combination of 'overview' + 'single']
-        :param drift_cut: Tuple of cutting coordinates for the drifttime (x-axis) in milliseconds (Start , End).
-        :param retention_cut: Tuple of cutting coordinates for the retentiontime (y-axis) in seconds (Start, End).
-
-        :return: preprocessed spectra.
-        """
-
-        # Baseline correction - removing the noisy background by subtracting the mean of an empty area.
-        spectrum.sub_first_rows(50)
-        spectrum.cut_dt(start=drift_cut[0], stop=drift_cut[1])
-        spectrum.cut_rt(start=retention_cut[0], stop=retention_cut[1])
-
-        # Smoothing the spectrum with the Savitzky–Golay filter.
-        spectrum.savgol(window_length=10, polyorder=4)
-
-        # Remove negative values after applying the smooth filter.
-        spectrum.values[spectrum.values < 0] = 0.0
-
-        # Before saving, check if the file already exists. The file must be deleted first! Overriding does not work.
-        spectrum_path = output_dir / "hdf5"
-        if not spectrum_path.exists():
-            spectrum_path.mkdir(parents=True, exist_ok=True)
-
-        spectrum_file = spectrum_path / f"{spectrum.name}.hdf5"
-        if spectrum_file.exists():
-            spectrum_file.unlink()
-
-        # Save the processed spectrum.
-        spectrum.to_hdf5(spectrum_path)
-
-        # Return the preprocessed spectrum.
-        return spectrum

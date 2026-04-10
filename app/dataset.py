@@ -6,6 +6,7 @@ from ui.dataset_ui.DatasetLabelEntry import Ui_DatasetLabelEntry
 from ui.dataset_ui.DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from pathlib import Path
+import shutil
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -202,6 +203,15 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
         # The user wants to delete the label.
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+
+            # Try to delete the label folder from the "dataset" folder.
+            try:
+                label_folder = self.project_path.parent / "dataset" / label_name
+                if label_folder.exists() and label_folder.is_dir():
+                    shutil.rmtree(label_folder)
+            except Exception as e:
+                print(f"Error while deleting: {e}")
+
             # If the label was the currently selected label, the spectra scroll area has to be cleared.
             if label_widget == self.current_selected_label:
                 self.spectra_container_header.setText("No label selected")
@@ -251,6 +261,22 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                                                "Label already exists, please choose another name")
                 label_widget.label_name.setText(label_widget.old_label_name)
                 return
+
+            # Try to rename the label folder in the dataset folder.
+            try:
+                base_path = self.project_path.parent / "dataset"
+                old_folder = base_path / label_widget.old_label_name
+                new_folder = base_path / new_label_name
+
+                # Nur umbenennen, wenn der alte Ordner überhaupt existiert
+                if old_folder.exists() and old_folder.is_dir():
+                    if not new_folder.exists():
+                        old_folder.rename(new_folder)
+                    else:
+                        print("Error - new label folder already exists!")
+
+            except Exception as e:
+                print(f"Error while renaming: {e}")
 
             # Exchange the label name in the dataset storage and display the new label name.
             self.dataset_storage[new_label_name] = self.dataset_storage.pop(label_widget.old_label_name)
@@ -415,6 +441,17 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
         # The user really wants to delete to spectrum.
         if delete_dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+
+            # Try to delete the spectrum folder from the "dataset" folder.
+            try:
+                label = self.current_selected_label.label_name.text()
+                mea_path = Path(spectrum_widget.spectrum_path)
+                processed_folder = self.project_path.parent / "dataset" / label / mea_path.stem
+
+                if processed_folder.exists() and processed_folder.is_dir():
+                    shutil.rmtree(processed_folder)
+            except Exception as e:
+                print(f"Error while deleting: {e}")
 
             # This spectrum is currently selected. This is why the canvas has to be cleared after deletion.
             if self.current_selected_spectrum == spectrum_widget:
