@@ -70,6 +70,8 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # load dataset from project.
         self.load_data()
 
+        self.check_processed_spectra()
+
 
     def load_dataset(self) -> None:
         """
@@ -309,13 +311,6 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         spectrum = ims.Spectrum.read_mea(spectrum_widget.spectrum_path)
         spectrum.riprel()
 
-        # TODO ... show a preview of the spectrum post preprocessing?
-        #spectrum.sub_first_rows(50)
-        # Smoothing the spectrum with the Savitzky–Golay filter.
-        #spectrum.savgol(window_length=10, polyorder=4)
-        # Remove negative values after applying the smooth filter.
-        #spectrum.values[spectrum.values < 0] = 0.0
-
         # Clear the axes and set their colors.
         self.canvas.fig.patch.set_facecolor('#191919')
         self.canvas.axes.clear()
@@ -509,6 +504,8 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.worker.progress_update.connect(self.loading_dialog.update_progress)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.loading_dialog.accept)
+        self.worker.finished.connect(self.check_processed_spectra)
+        self.loading_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
 
         # Aufräumen nach Abschluss
         self.thread.finished.connect(self.worker.deleteLater)
@@ -516,6 +513,42 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
         # 4. Starten
         self.thread.start()
+
+
+    def check_processed_spectra(self):
+        path = self.project_path.parent / "dataset"
+        processed_spectra = 0
+        spectra_total_count = sum(len(spectra) for spectra in self.dataset_storage.values())
+
+        if path.exists():
+            # Findet alle .hdf5 Dateien in allen Unterordnern
+            hdf5_files = list(path.rglob("*.hdf5"))
+            processed_spectra += len(hdf5_files)
+
+        if processed_spectra == 0:
+            self.label_process_info.hide()
+        elif processed_spectra == spectra_total_count:
+            self.label_process_info.show()
+            self.label_process_info.setText("All spectra processed")
+            self.label_process_info.setStyleSheet(f"""
+                                                        border: 1.5px dashed #00eaff;
+                                                        background-color: #232323; 
+                                                        color: #00eaff;
+                                                        margin-bottom: 10px;
+                                                """)
+        else:
+            new_spectra_count = spectra_total_count - processed_spectra
+            self.label_process_info.show()
+            if new_spectra_count == 1:
+                self.label_process_info.setText(f"{new_spectra_count} unprocessed spectrum")
+            else:
+                self.label_process_info.setText(f"{new_spectra_count} unprocessed spectra")
+            self.label_process_info.setStyleSheet(f"""
+                                                       border: 1.5px dashed #ff00c6;
+                                                       background-color: #232323; 
+                                                       color: #ff00c6;
+                                                       margin-bottom: 10px;
+                                               """)
 
 
 class DatasetMainEntry(QtWidgets.QLabel, Ui_DatasetMainEntry):
@@ -650,6 +683,11 @@ class PreprocessingWorker(QtCore.QObject):
         self.drift_cut = drift_cut
         self.retention_cut = retention_cut
         self.project_path = path.parent
+        self.worker_stopped = False
+
+    @QtCore.Slot()
+    def stop(self):
+        self.worker_stopped = True
 
     def run(self):
         total_spectra = sum(len(spectra) for spectra in self.dataset.values())
@@ -657,8 +695,11 @@ class PreprocessingWorker(QtCore.QObject):
 
         for label, spectra_paths in self.dataset.items():
             for spectrum_path in spectra_paths:
-                # 1. Kopie erstellen, um die Originaldaten nicht zu zerstören!
-                # (Falls dein ims-Framework eine .copy() Methode hat)
+
+                QtCore.QCoreApplication.processEvents()
+                if self.worker_stopped:
+                    self.finished.emit()
+                    return
 
                 spec = ims.Spectrum.read_mea(spectrum_path)
                 spectrum = spec.copy()
@@ -682,7 +723,7 @@ class PreprocessingWorker(QtCore.QObject):
                 spectrum.values[spectrum.values < 0] = 0.0
 
                 # Before saving, check if the file already exists. The file must be deleted first! Overriding does not work.
-                spectrum_path =  self.project_path / "dataset" / label / "hdf5"
+                spectrum_path =  self.project_path / "dataset" / label / spectrum.name
                 if not spectrum_path.exists():
                     spectrum_path.mkdir(parents=True, exist_ok=True)
 

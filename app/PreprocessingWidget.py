@@ -47,6 +47,7 @@ class Ui_PreprocessingWidget(object):
 
         self.label_subheader = QLabel(PreprocessingWidget)
         self.label_subheader.setObjectName(u"label_subheader")
+        self.label_subheader.setMinimumSize(QSize(0, 40))
         self.label_subheader.setMaximumSize(QSize(1500, 200))
         font2 = QFont()
         font2.setFamilies([u"Lato"])
@@ -115,7 +116,7 @@ class Ui_PreprocessingWidget(object):
         self.scrollArea_dataset.setWidgetResizable(True)
         self.scrollArea_dataset_Contents = QWidget()
         self.scrollArea_dataset_Contents.setObjectName(u"scrollArea_dataset_Contents")
-        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 680))
+        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 679))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_dataset_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -332,6 +333,22 @@ class Ui_PreprocessingWidget(object):
 
         self.verticalLayout_7.addWidget(self.options_inner_container)
 
+        self.label_process_info = QLabel(self.options_container)
+        self.label_process_info.setObjectName(u"label_process_info")
+        self.label_process_info.setMinimumSize(QSize(0, 70))
+        font9 = QFont()
+        font9.setFamilies([u"Lato"])
+        font9.setPointSize(12)
+        font9.setItalic(False)
+        self.label_process_info.setFont(font9)
+        self.label_process_info.setStyleSheet(u"border: 1.5px dashed #00eaff;\n"
+"background-color: #232323; \n"
+"color: #00eaff;\n"
+"margin-bottom: 10px;")
+        self.label_process_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.verticalLayout_7.addWidget(self.label_process_info)
+
 
         self.horizontalLayout.addWidget(self.options_container)
 
@@ -406,6 +423,7 @@ class Ui_PreprocessingWidget(object):
         self.lineEdit_drift_end_cut.setPlaceholderText(QCoreApplication.translate("PreprocessingWidget", u"End", None))
         self.pushButton_start_processing.setText(QCoreApplication.translate("PreprocessingWidget", u"Start preprocessing", None))
         self.label_processing_info.setText(QCoreApplication.translate("PreprocessingWidget", u"This will start the preprocessing of the dataset. Notice that this task may take a while, depending on the size of the dataset and the used computer.", None))
+        self.label_process_info.setText(QCoreApplication.translate("PreprocessingWidget", u"All spectra processed", None))
         self.label_preview.setText(QCoreApplication.translate("PreprocessingWidget", u"Spectrum preview", None))
         self.pushButton_toggle_canvas_area.setText(QCoreApplication.translate("PreprocessingWidget", u"Show region of interest", None))
     # retranslateUi
