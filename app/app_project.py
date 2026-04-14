@@ -46,8 +46,6 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
         # Pages Setup.
         self.setup_pages()
-        # Load the project data.
-        #self.load_project()
         # Set the default page [Dataset].
         self.Main_container.setCurrentWidget(self.dataset_page)
         # Reference to the current page.
