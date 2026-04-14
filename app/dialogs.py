@@ -6,6 +6,7 @@ from ui.MessageDialog import Ui_MessageDialog
 from ui.YesNoDialog import Ui_YesNoDialog
 from ProgressDialog import Ui_ProgressDialog
 from ui.TwoChoiceDialog import Ui_TwoChoiceDialog
+import time
 
 class CreateLabelDialog(QtWidgets.QDialog, Ui_CreateLabelDialog):
     def __init__(self, parent=None):
@@ -121,6 +122,7 @@ class CustomProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
     def __init__(self, title, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+        self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
 
         self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
 
@@ -131,6 +133,7 @@ class CustomProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
             QtCore.Qt.WindowType.WindowTitleHint
         )
 
+        self.start_time = None
         # Set the window title
         self.setWindowTitle(title)
         # Connect the buttons.
@@ -141,10 +144,32 @@ class CustomProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
 
 
     def update_progress(self, current, total):
+        if self.start_time is None:
+            self.start_time = time.time()
+
         percentage = int((current / total) * 100)
         self.progressBar.setMaximum(total)
         self.progressBar.setValue(current)
         self.label_percent.setText(f"{percentage} %")
+
+        if current > 0:
+            elapsed_time = time.time() - self.start_time
+            time_per_item = elapsed_time / current
+            remaining_items = total - current
+            remaining_seconds = int(time_per_item * remaining_items)
+
+            # Formatierung in MM:SS oder HH:MM:SS
+            time_string = self.format_time(remaining_seconds)
+            self.label_time_remaining.setText(f"time remaining: {time_string}")
+
+
+    def format_time(self, seconds):
+        if seconds < 0: return "00:00"
+        mins, secs = divmod(seconds, 60)
+        hours, mins = divmod(mins, 60)
+        if hours > 0:
+            return f"{hours:02d}:{mins:02d}:{secs:02d}"
+        return f"{mins:02d}:{secs:02d}"
 
 
 class CustomTwoChoiceDialog(QtWidgets.QDialog, Ui_TwoChoiceDialog):

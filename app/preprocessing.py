@@ -39,29 +39,29 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.scrollArea_dataset_Contents.layout().setSpacing(5)
         self.scrollArea_dataset.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
 
+        # Validators for the retentiontime input fields.
         retention_validator = QDoubleValidator(0, 1200, 0)
         retention_validator.setNotation(QDoubleValidator.Notation.StandardNotation)
         self.lineEdit_retention_start_cut.setValidator(retention_validator)
         self.lineEdit_retention_end_cut.setValidator(retention_validator)
-
+        # Validators for the drifttime input fields.
         drift_validator = QDoubleValidator(0.0, 3.0, 3)
         drift_validator.setNotation(QDoubleValidator.Notation.StandardNotation)
         drift_validator.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
         self.lineEdit_drift_start_cut.setValidator(drift_validator)
         self.lineEdit_drift_end_cut.setValidator(drift_validator)
-
+        # Defines a timer so that changes in the drift- and retentionttime fields are only checked every x milliseconds.
         self.cut_timer = QTimer()
         self.cut_timer.setSingleShot(True)
-        self.cut_timer.timeout.connect(self.update_cut_lines)
-
+        self.cut_timer.timeout.connect(self.update_region_of_interest)
         self.lineEdit_retention_start_cut.textChanged.connect(lambda: self.cut_timer.start(500))
         self.lineEdit_retention_end_cut.textChanged.connect(lambda: self.cut_timer.start(500))
         self.lineEdit_drift_start_cut.textChanged.connect(lambda: self.cut_timer.start(500))
         self.lineEdit_drift_end_cut.textChanged.connect(lambda: self.cut_timer.start(500))
 
+        # Toogle option of the plotting canvas -> Fullscreen vs region of interest.
         self.canvas_fullscreen = True
-        self.pushButton_toggle_canvas_area.clicked.connect(self.handle_canvas_toggle)
-
+        self.pushButton_toggle_canvas_area.clicked.connect(self.toggle_canvas)
         # Canvas plot element.
         self.canvas = PlottingCanvas(self, width=5, height=4, dpi=50)
         # Initialize the plot canvas.
@@ -71,18 +71,19 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.pushButton_start_processing.clicked.connect(self.start_preprocessing)
         # load dataset from project.
         self.load_data()
-
+        # Check if any spectra are already processed.
         self.check_processed_spectra()
 
 
     def load_dataset(self) -> None:
         """
-        This function is called the first time the dataset page is loaded. This function reads all previously saved
+        This function is called the first time the preprocessing page is loaded. This function reads all previously saved
         labels and spectra and loads them into the dataset storage. Each label is then created as a widget for the
-        label scroll area.
+        scroll area.
         =============================================================================
         :return: None.
         """
+
         try:
             # load all label and spectra data from the project .gcimsp file.
             with open(self.project_path, 'r', encoding='utf-8') as f:
@@ -103,6 +104,13 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
 
     def save_data(self):
+        """
+        This function saves the state of the currently set region of interest.
+        It is connected to the project manager and calls the save_processing method.
+        =============================================================================
+        :return: None.
+        """
+
         region_of_interest = { "rt_start": self.lineEdit_retention_start_cut.text() or 0,
                                 "rt_end": self.lineEdit_retention_end_cut.text() or 0,
                                 "dt_start": self.lineEdit_drift_start_cut.text() or 0,
@@ -112,34 +120,39 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
 
     def load_data(self):
-        """Setzt die UI-Werte aus dem geladenen Dictionary."""
+        """
+        This function is called every time the user enters this page. It reloads all label and spectra of the dataset,
+        recreates the widgets of the scroll area and sets the region of interest values into the input fields.
+        =============================================================================
+        :return: None
+        """
 
         self.current_selected_spectrum = None
 
-        # 1. Den aktuellen Speicher leeren
+        # Clear the dataset storage and load the new one.
         self.dataset_storage.clear()
-        # 2. Mit den neuen Daten füllen
         self.dataset_storage.update(self.project_manager.get_dataset())
         # Clear the canvas.
         self.clear_canvas()
 
-        # Remove all widgets.
+        # Remove all widgets from the scroll area to clear it.
         layout = self.scrollArea_dataset_Contents.layout()
-        # Remove all widgets from the spectra scroll area.
         for i in reversed(range(layout.count())):
             item = layout.itemAt(i)
             widget = item.widget()
 
-            # Prüfen, ob ein Widget existiert UND ob es die richtige Klasse ist
+            # Check if the widget is an instnace of the DatasetMainEntry or DatasetSubEntry, if so remove it from the
+            # layout and delete it.
             if widget is not None and isinstance(widget, DatasetMainEntry) or isinstance(widget, DatasetSubEntry):
-                layout.removeWidget(widget)  # Aus dem Layout nehmen
-                widget.setParent(None)  # Sofort vom Parent trennen
-                widget.deleteLater()  # Speicher freigeben
+                layout.removeWidget(widget)
+                widget.setParent(None)
+                widget.deleteLater()
 
-        # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
+        # Now walk through all labels in the dataset storage and add all labels to the scroll area.
         for label_name in self.dataset_storage.keys():
             self.add_label(label_name)
 
+        # Load and set the region of interest values.
         cutting_data = self.project_manager.get_preprocessing()
         self.lineEdit_retention_start_cut.setText(str(cutting_data.get("rt_start", "")))
         self.lineEdit_retention_end_cut.setText(str(cutting_data.get("rt_end", "")))
@@ -164,7 +177,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # Insert the new label into the scroll area as a main widget.
         self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, label)
         self.add_spectra(label)
-
+        # Set this label as active.
         if self.selected_label_name == label.label_name.text():
             self.handle_label_click(label)
 
@@ -180,8 +193,10 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         :return: None.
         """
 
+        # Get all spectra paths for the current label.
         paths = self.dataset_storage[label_widget.label_name.text()]
 
+        # Loop through all spectra and add them as a widget to the scroll area.
         for index, path in enumerate(paths):
             spectrum = DatasetSubEntry(path, index, label_widget)
             self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
@@ -190,8 +205,6 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
             if self.selected_spectrum_name == spectrum.label_name.text():
                 self.handle_spectrum_click(spectrum)
-
-
 
 
     def handle_label_click(self,
@@ -205,31 +218,34 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         :return: None.
         """
 
+        # Collapse the clicked widget.
         if label_widget.extended:
             label_widget.extend_label(False)
 
+            # Loop through all spectra widgets of the clicked label and hide them in the scroll area.
             for index in range(self.scrollArea_dataset_Contents.layout().count()):
                 item = self.scrollArea_dataset_Contents.layout().itemAt(index)
-                widget = item.widget()
-                if isinstance(widget, DatasetSubEntry):
-                    if widget.parent == label_widget:
-                        widget.hide()
+                spectrum_widget = item.widget()
+                if isinstance(spectrum_widget, DatasetSubEntry):
+                    if spectrum_widget.parent == label_widget:
+                        spectrum_widget.hide()
 
+            # Reset the selected label name variable.
             self.selected_label_name = None
 
+        # Extend the clicked widget.
         else:
             label_widget.extend_label(True)
 
+            # Loop through all spectra widget of the clickd label and show them in the scoll area.
             for index in range(self.scrollArea_dataset_Contents.layout().count()):
                 item = self.scrollArea_dataset_Contents.layout().itemAt(index)
-                widget = item.widget()
-                if isinstance(widget, DatasetSubEntry):
-                    if widget.parent == label_widget:
-                        widget.show()
+                spectrum_widget = item.widget()
+                if isinstance(spectrum_widget, DatasetSubEntry):
+                    if spectrum_widget.parent == label_widget:
+                        spectrum_widget.show()
 
             self.selected_label_name = label_widget.label_name.text()
-
-
 
 
     def init_plot_canvas(self) -> None:
@@ -239,7 +255,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         :return: None.
         """
 
-        # Set the figure and exes background colors of the plot canvas.
+        # Set the figure and axes background colors of the plot canvas.
         self.canvas.fig.set_facecolor('#191919')
         self.canvas.axes.set_facecolor('#191919')
 
@@ -344,7 +360,6 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
         # Apply a tight layout and draw the canvas.
         self.canvas.fig.tight_layout()
-        #self.update_cut_lines()
 
 
     def clear_canvas(self) -> None:
@@ -362,38 +377,45 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.canvas.draw()
 
 
-    def update_cut_lines(self):
-        # 1. Den Plot säubern (aber nur die Linien, nicht das ganze Bild, falls möglich)
-        # Einfacher für den Anfang: Den Plot neu zeichnen oder vorhandene Linien entfernen
-        for line in getattr(self, 'temp_cut_lines', []):
-            line.remove()
-        self.temp_cut_lines = []
+    def update_region_of_interest(self) -> None:
+        """
+        This function updates the region of interest of the canvas. This function is called when the user entered
+        a region of interest value for the drift- or retentiontime.
+        Each value is displayed as a red dashed line on the canvas and highlights the currently set region of interest.
+        Additionally, this function takes care of the toggle button underneath the canvas which lets the user switch
+        between the fullscreen and cropped canvas.
+        =============================================================================
+        :return: None.
+        """
 
-        # 2. Werte aus den LineEdits holen (mit Fehlerbehandlung, falls leer)
-        try:
-            r_start = float(self.lineEdit_retention_start_cut.text() or 0)
-            r_end = float(self.lineEdit_retention_end_cut.text() or 0)
-            d_start = float(self.lineEdit_drift_start_cut.text() or 0)
-            d_end = float(self.lineEdit_drift_end_cut.text() or 0)
-        except ValueError:
-            return  # Falls der User Buchstaben tippt
+        # Clear the canvas of all region of interest lines.
+        for line in getattr(self, 'roi_lines', []):
+            line.remove()
+        self.roi_lines = []
+
+        # Get the region of interest values from the input fields.
+        r_start = float(self.lineEdit_retention_start_cut.text() or 0)
+        r_end = float(self.lineEdit_retention_end_cut.text() or 0)
+        d_start = float(self.lineEdit_drift_start_cut.text() or 0)
+        d_end = float(self.lineEdit_drift_end_cut.text() or 0)
 
         # Save the values
         self.save_data()
 
-        # 3. Linien zeichnen (z.B. in Rot und gestrichelt)
+        # Define red dashed lines of each region of interest value.
         ax = self.canvas.axes
         style = {'color': '#da05ab', 'linestyle': '--', 'linewidth': 3, 'alpha': 0.8}
 
         if r_start > 0:
-            self.temp_cut_lines.append(ax.axhline(y=r_start, **style))
+            self.roi_lines.append(ax.axhline(y=r_start, **style))
         if r_end > 0:
-            self.temp_cut_lines.append(ax.axhline(y=r_end, **style))
+            self.roi_lines.append(ax.axhline(y=r_end, **style))
         if d_start > 0:
-            self.temp_cut_lines.append(ax.axvline(x=d_start, **style))
+            self.roi_lines.append(ax.axvline(x=d_start, **style))
         if d_end > 0:
-            self.temp_cut_lines.append(ax.axvline(x=d_end, **style))
+            self.roi_lines.append(ax.axvline(x=d_end, **style))
 
+        # Enable the toggle canvas button to switch between fullscreen and region of interest.
         if (r_start > 0 and r_end > 0 and d_start > 0 and d_end > 0) or not self.canvas_fullscreen:
             self.pushButton_toggle_canvas_area.setEnabled(True)
             self.pushButton_toggle_canvas_area.setStyleSheet(f"""
@@ -424,17 +446,23 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                                                                 }}
                                                             """)
 
-
+        # Show only the region of interest area.
         if not self.canvas_fullscreen:
             ax = self.canvas.axes
             ax.set_xlim(d_start, d_end)
             ax.set_ylim(r_start, r_end)
 
-            # 4. Canvas aktualisieren
         self.canvas.draw()
 
 
-    def handle_canvas_toggle(self):
+    def toggle_canvas(self):
+        """
+        This function is called when the 'toggle canvas button' is pressed and handels the change of view of
+        the canvas. Show fullscreen or show the cropped region.
+        =============================================================================
+        :return: None.
+        """
+        
         if self.canvas_fullscreen:
             self.canvas_fullscreen = False
             self.zoom_to_cut()
@@ -445,10 +473,22 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
             self.pushButton_toggle_canvas_area.setText("Show cutted spectrum")
 
 
-    def handle_spectrum_click(self, spectrum_widget: DatasetSubEntry):
+    def handle_spectrum_click(self,
+                              spectrum_widget: DatasetSubEntry) -> None:
+        """
+        This function is called when a spectrum in the scroll area is clicked. It displays the selected spectrum to the
+        canvas and shows either the fullscreen or the cropped region of interest.
+        =============================================================================
+        :param spectrum_widget: The widget of the clicked spectrum.
+        =============================================================================
+        :return: None.
+        """
+
+        # Plot the clicked spectrum to the canvas.
         self.plot_spectrum(spectrum_widget)
         self.selected_spectrum_name = spectrum_widget.label_name.text()
 
+        # If in fullscreen mode show the complete canvas, otheriese show the cropped region of interest.
         if self.canvas_fullscreen:
             self.reset_zoom()
         else:
@@ -463,43 +503,71 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                 self.reset_zoom()
 
 
-    def zoom_to_cut(self):
-        # 1. Werte aus den LineEdits holen
-        # Wir nutzen 0 als Fallback, falls ein Feld leer ist
+    def zoom_to_cut(self) -> None:
+        """
+        This function loads the region of interest values which are set by the user in the input fields and
+        adjusts the axes of the canvas to these values [It zooms the canvas within the region of interest].
+        =============================================================================
+        :return: None.
+        """
+
+        # Get the region of interest values the user used in the input fields.
         d_start = float(self.lineEdit_drift_start_cut.text())
         d_end = float(self.lineEdit_drift_end_cut.text())
         r_start = float(self.lineEdit_retention_start_cut.text())
         r_end = float(self.lineEdit_retention_end_cut.text())
 
-        # 2. Die Achsenbegrenzungen setzen
+        # Set the axis limitations
         ax = self.canvas.axes
         ax.set_xlim(d_start, d_end)
-        ax.set_ylim(r_start, r_end)  # Beachte: Bei IMS oft r_end unten, r_start oben?
-        # Matplotlib spiegelt das, falls nötig.
+        ax.set_ylim(r_start, r_end)
 
-        # 3. Canvas aktualisieren
-        self.update_cut_lines()
+        # Update the canvas.
+        self.update_region_of_interest()
 
 
-    def reset_zoom(self):
+    def reset_zoom(self) -> None:
+        """
+        This function removes the region of interest zoom and shows the fullscreen canvas.
+        =============================================================================
+        :return: None.
+        """
+
         ax = self.canvas.axes
         ax.autoscale(enable=True, axis='both', tight=True)
-        self.update_cut_lines()
+        self.update_region_of_interest()
 
 
-    def start_preprocessing(self):
+    def start_preprocessing(self) -> None:
+        """
+        This function starts the preprocessing of the spectra and is called upon clicking the "start preprocessing"
+        button. This function creates a custom dialog on a thread and displays it to the user until all spectra have
+        been processed.
 
+        Before starting preprocessing this function looks if and how many spectra are already processed.
+        The user may be prompted to choose between continuing or restarting the preprocessing.
+        =============================================================================
+        :return: None.
+        """
+
+        # Path where the dataset is saved.
         path = self.project_path.parent / "dataset"
+        # Number of processed spectra.
         processed_spectra = 0
+        # The total number of spectra of the dataset.
         total_spectra = sum(len(spectra) for spectra in self.dataset_storage.values())
 
+        # Check if the dataset path exists. If so look for already processed spectra which are saved as .hdf5 files.
         if path.exists():
-            # Findet alle .hdf5 Dateien in allen Unterordnern
+            # Find all hdf5 files in the dataset directory and all subdirectories.
             hdf5_files = list(path.rglob("*.hdf5"))
             processed_spectra += len(hdf5_files)
 
+        # Normally all spectra a processed.
         process_all = True
 
+        # Show a dialog to the user that there are already saved spectra files which were processed.
+        # The user can choose between continuing with the remaining unsaved spectra or restart and process all spectra.
         if total_spectra > 0 and processed_spectra > 0 and total_spectra != processed_spectra:
             dialog = CustomTwoChoiceDialog(title="Which spectra do you want to process?",
                                            message="It looks like some of the spectra are already processed. Do you want to continue with"
@@ -509,18 +577,19 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                                            button_b_label="Restart",
                                            parent=self)
 
+            # Get the dialog results.
             dialog_result = dialog.exec_()
-
+            # Continue with remining spectra.
             if dialog_result == 1:
-                # Continue
                 process_all = False
+            # Restart with all spectra.
             elif dialog_result == 2:
-                # Restart
                 process_all = True
+            # The user canceled.
             else:
-                # Cancel
                 return
 
+        # Notify the user that all spectra have already been processed and ask if the user wants to process the spectra again.
         elif total_spectra > 0 and processed_spectra > 0 and total_spectra == processed_spectra:
             dialog = CustomYesNoDialog(title="Override processed spectra?",
                                        message="All spectare are already processed. Do you want to restart the preprocessing and override the processed spectra?",
@@ -532,48 +601,60 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
             else:
                 return
 
-        # 1. Dialog erstellen und anzeigen
+        # Open the progress dialog which informs the user about the current state of the preprocessing.
         self.loading_dialog = CustomProgressDialog("Preprocessing...")
+        # Reset the start time.
+        self.loading_dialog.start_time = None
         self.loading_dialog.show()
 
-        # 2. Thread und Worker vorbereiten
+        # Create a thread and worker for the progress dialog.
         self.thread = QtCore.QThread()
         self.worker = PreprocessingWorker(path=self.project_path,
                                           dataset=self.dataset_storage,
-                                          drift_cut=[self.lineEdit_drift_start_cut.text(), self.lineEdit_drift_end_cut.text()],
-                                          retention_cut=[self.lineEdit_retention_start_cut.text(), self.lineEdit_retention_end_cut.text()],
+                                          drift_cut=(self.lineEdit_drift_start_cut.text(), self.lineEdit_drift_end_cut.text()),
+                                          retention_cut=(self.lineEdit_retention_start_cut.text(), self.lineEdit_retention_end_cut.text()),
                                           process_all=process_all)
 
         self.worker.moveToThread(self.thread)
 
-        # 3. Signale verbinden
+        # Connect some signals to the worker and thread.
         self.thread.started.connect(self.worker.run)
         self.worker.progress_update.connect(self.loading_dialog.update_progress)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.loading_dialog.accept)
         self.worker.finished.connect(self.check_processed_spectra)
         self.loading_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
-
-        # Aufräumen nach Abschluss
         self.thread.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
 
-        # 4. Starten
+        # Start the thread.
         self.thread.start()
 
 
-    def check_processed_spectra(self):
+    def check_processed_spectra(self) -> None:
+        """
+        This function updates a label and shows the notifies the user about the number of processed spectra.
+        - It will either show the message "All spectra processed" if all spectra were successfully processed.
+        - Or it will notify the user that some spectra aren't processed yet -> "x unprocessed spectra"
+        =============================================================================
+        :return: None.
+        """
+
+        # Set the path to the saved dataset files.
         path = self.project_path.parent / "dataset"
         processed_spectra = 0
+        # Get the total number of spectra which are in the dataset.
         total_spectra = sum(len(spectra) for spectra in self.dataset_storage.values())
 
+        # Check if the dataset folder exists and if so check how many spectra are already processed.
         if path.exists():
-            # Findet alle .hdf5 Dateien in allen Unterordnern
             hdf5_files = list(path.rglob("*.hdf5"))
             processed_spectra += len(hdf5_files)
 
+        # Dont show the user notification of non spectra are processed.
         if processed_spectra == 0:
             self.label_process_info.hide()
+        # Show this info if all spectra are processed.
         elif processed_spectra == total_spectra:
             self.label_process_info.show()
             self.label_process_info.setText("All spectra processed")
@@ -583,6 +664,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                                                         color: #00eaff;
                                                         margin-bottom: 10px;
                                                 """)
+        # Show this info only when a subset of all spectra are processed.
         else:
             new_spectra_count = total_spectra - processed_spectra
             self.label_process_info.show()
@@ -599,11 +681,10 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
 
 class DatasetMainEntry(QtWidgets.QLabel, Ui_DatasetMainEntry):
-    # Signal definitions
+    # Signal definitions.
     click_signal = QtCore.Signal(object)
 
     def __init__(self, label_name: str) -> None:
-
         super().__init__()
         self.setupUi(self)
 
@@ -720,99 +801,128 @@ class PlottingCanvas(FigureCanvas):
 
 
 class PreprocessingWorker(QtCore.QObject):
-    # Signale für die Kommunikation mit der GUI
+    # Signal definitions.
     finished = Signal()
     progress_update = Signal(int, int)
 
-    def __init__(self, path: Path, dataset, drift_cut, retention_cut, process_all):
+    def __init__(self,
+                 path: Path,
+                 dataset: dict,
+                 drift_cut: tuple,
+                 retention_cut: tuple,
+                 process_all: bool):
+
         super().__init__()
         self.dataset = dataset
         self.drift_cut = drift_cut
         self.retention_cut = retention_cut
         self.project_path = path.parent
-        self.worker_stopped = False
         self.process_all = process_all
+        # Worker stopped signal [The user has canceled the preprocessing].
+        self.worker_stopped = False
 
     @QtCore.Slot()
     def stop(self):
         self.worker_stopped = True
 
     def run(self):
-        # 1. Aufgabenliste erstellen (Filtern)
-        filtered_dataset = defaultdict(list)
+        """
+        this function overrides the run function and is called when the preprocessing thread has started.
+        This function takes care of loading the spectra .mea files and processes them by the following:
+        - Set the drifttime coordinate at the RIP to 0.
+        - Removes background noise.
+        - Cuts the spectrum to the region of interest.
+        - Applies a smoothing filter [Savitzky-Golay].
+        - Removes negative intensities.
+        - Saves the spectrum as a hdf5 file.
+        =============================================================================
+        :return: None.
+        """
+
+        # Create a new dataset list of labels and spectra which should be preprocessed.
+        used_dataset = defaultdict(list)
         spectra_to_process = 0
 
+        # Loop through the dataset.
         for label, spectra_paths in self.dataset.items():
             for spectrum_path in spectra_paths:
+                # Get the spectrum name.
                 spec_name = Path(spectrum_path).stem
+                # Set the folder where the processed spectrum will be saved.
                 target_folder = self.project_path / "dataset" / label / spec_name
                 target_file = target_folder / f"{spec_name}.hdf5"
 
+                # Add the spectrum to the used dataset list for processing.
                 if self.process_all or not target_file.exists():
-                    # FALLS "Alles verarbeiten" gewählt wurde: Alte Datei löschen
+                    # Remove the already saved hdf5 file if the user wants to process this spectrum again.
                     if self.process_all and target_file.exists():
                         try:
                             shutil.rmtree(target_folder)
                         except Exception as e:
                             print(f"Error while deleting {target_file}: {e}")
 
-                    # Zum neuen Dataset hinzufügen
-                    if label not in filtered_dataset:
-                        filtered_dataset[label] = []
+                    # Add the label to the used dataset.
+                    if label not in used_dataset:
+                        used_dataset[label] = []
 
-                    filtered_dataset[label].append(spectrum_path)
+                    # Add the spectrum to the used dataset.
+                    used_dataset[label].append(spectrum_path)
                     spectra_to_process += 1
 
-        # 2. Gesamtzahl der TATSÄCHLICHEN Arbeit
-        counter = 0
+        # The number of processed spectra during this preprocessing.
+        processed_spectra_counter = 0
 
-        # Falls gar nichts zu tun ist, sofort fertig melden
+        # Looks like there are no spectra to work with ...
         if spectra_to_process == 0:
             self.finished.emit()
             return
 
-        for label, spectra_paths in filtered_dataset.items():
+        # Loop through all labels and spectra of the used dataset.
+        for label, spectra_paths in used_dataset.items():
             for spectrum_path in spectra_paths:
 
+                # Check during each loop if the user wants so cancel the processing.
                 QtCore.QCoreApplication.processEvents()
                 if self.worker_stopped:
                     self.finished.emit()
                     return
 
+                # Load the ims spectrum and create a copy.
                 spec = ims.Spectrum.read_mea(spectrum_path)
                 spectrum = spec.copy()
+                # Set the drifttime coordinate of the RIP to 0.
                 spectrum.riprel()
-                # 2. Deine Operationen
+                # Background noise reduction by using the mean values of the first 50 rows.
                 spectrum.sub_first_rows(50)
-
+                # Get region of interest values for cutting.
+                # TODO ... Maybe add a condition. What if NO region of interest is set?
                 d_start = float(self.drift_cut[0])
                 d_stop = float(self.drift_cut[1])
                 r_start = float(self.retention_cut[0])
                 r_stop = float(self.retention_cut[1])
-
+                # Cut the spectrum.
                 spectrum.cut_dt(start=d_start, stop=d_stop)
                 spectrum.cut_rt(start=r_start, stop=r_stop)
 
-                # Smoothing
+                # Smooth the spectrum by the use of the Savitzky-Golay filter.
                 spectrum.savgol(window_length=10, polyorder=4)
-
-                # Negative Werte eliminieren
-                # Achtung: Falls 'values' ein numpy-array ist, ist das korrekt:
+                # Remove all negative intensities and set them to 0.
                 spectrum.values[spectrum.values < 0] = 0.0
 
-                # Before saving, check if the file already exists. The file must be deleted first! Overriding does not work.
+                # Create the path where the spectrum should be saved and create the folders if neccessary.
                 spectrum_path =  self.project_path / "dataset" / label / spectrum.name
                 if not spectrum_path.exists():
                     spectrum_path.mkdir(parents=True, exist_ok=True)
 
+                # Specify the file name and delete the old file (if an old file exists).
                 spectrum_file = spectrum_path / f"{spectrum.name}.hdf5"
                 if spectrum_file.exists():
                     spectrum_file.unlink()
 
-                # Save the processed spectrum.
+                # Save the processed spectrum, increase the counter and update the progress dialog.
                 spectrum.to_hdf5(spectrum_path)
+                processed_spectra_counter += 1
+                self.progress_update.emit(processed_spectra_counter, spectra_to_process)
 
-                counter += 1
-                self.progress_update.emit(counter, spectra_to_process)
-
+        # Send the finished signal.
         self.finished.emit()
