@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1546</width>
-    <height>992</height>
+    <height>993</height>
    </rect>
   </property>
   <property name="font">
@@ -231,7 +231,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>430</width>
-                 <height>679</height>
+                 <height>680</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_4">
