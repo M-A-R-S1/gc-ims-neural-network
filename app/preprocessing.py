@@ -58,8 +58,12 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.lineEdit_retention_end_cut.textChanged.connect(lambda: self.cut_timer.start(500))
         self.lineEdit_drift_start_cut.textChanged.connect(lambda: self.cut_timer.start(500))
         self.lineEdit_drift_end_cut.textChanged.connect(lambda: self.cut_timer.start(500))
+        self.lineEdit_drift_start_cut.textChanged.connect(self.check_comma)
+        self.lineEdit_drift_end_cut.textChanged.connect(self.check_comma)
+        self.lineEdit_retention_start_cut.textChanged.connect(self.check_comma)
+        self.lineEdit_retention_end_cut.textChanged.connect(self.check_comma)
 
-        # Toogle option of the plotting canvas -> Fullscreen vs region of interest.
+        # Toggle option of the plotting canvas -> Fullscreen vs region of interest.
         self.canvas_fullscreen = True
         self.pushButton_toggle_canvas_area.clicked.connect(self.toggle_canvas)
         # Canvas plot element.
@@ -453,6 +457,22 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
             ax.set_ylim(r_start, r_end)
 
         self.canvas.draw()
+
+
+    def check_comma(self) -> None:
+        """
+        This function checks if the user entered a ',' into the region of interest input fields and replaces
+        the ',' with a '.'.
+        =============================================================================
+        :return: None.
+        """
+
+        input_field = self.sender()
+        text = input_field.text()
+        if "," in text:
+            pos = input_field.cursorPosition()
+            input_field.setText(text.replace(",", "."))
+            input_field.setCursorPosition(pos)
 
 
     def toggle_canvas(self):
