@@ -62,7 +62,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.preprocessing_page = PreprocessingPage(self.current_project, self.project_manager)
         self.Main_container.addWidget(self.preprocessing_page)
         # Peak Explorer
-        self.peak_explorer_page = PeakExplorerPage()
+        self.peak_explorer_page = PeakExplorerPage(self.current_project, self.project_manager)
         self.Main_container.addWidget(self.peak_explorer_page)
         # Consensus Peak
         self.consensus_peak_page = ConsensusPeakPage()
@@ -132,6 +132,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         elif page == self.peak_explorer_page:
             self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_orange.png"))
             self.sb_peak_explorer_label.setPalette(self.palette_active)
+            self.peak_explorer_page.load_data()
         elif page == self.consensus_peak_page:
             self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_orange.png"))
             self.sb_consensus_label.setPalette(self.palette_active)

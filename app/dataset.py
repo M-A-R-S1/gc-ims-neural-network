@@ -499,8 +499,10 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
     def save_data(self) -> None:
         """
-        Gibt den aktuellen Stand des dataset_storage zurück,
-        damit der ProjectManager ihn speichern kann.
+        This function saves the state of the currently available labels and spectra.
+        It is connected to the project manager and calls the save_dataset method.
+        =============================================================================
+        :return: None.
         """
 
         self.project_manager.save_dataset(self.dataset_storage)
@@ -508,8 +510,11 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
     def load_data(self) -> None:
         """
-        Übernimmt die geladenen Daten, aktualisiert den Speicher
-        und baut die grafische Oberfläche der Label-Liste neu auf.
+        This function loads all labels and spectra paths from the project file and saves them in the dataset storage
+        directory. It will als call the add_label function to create all label widgets, as well as the update_spectra_list
+        method to create all spectra widgets for the scroll area.
+        =============================================================================
+        :return: None.
         """
 
         # 1. Den aktuellen Speicher leeren
