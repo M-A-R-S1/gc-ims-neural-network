@@ -4,7 +4,7 @@ from ui.dataset_ui.CreateLabelDialog import Ui_CreateLabelDialog
 from ui.dataset_ui.RenameLabelDialog import Ui_RenameLabelDialog
 from ui.MessageDialog import Ui_MessageDialog
 from ui.YesNoDialog import Ui_YesNoDialog
-from ProgressDialog import Ui_ProgressDialog
+from ui.ProgressDialog import Ui_ProgressDialog
 from ui.TwoChoiceDialog import Ui_TwoChoiceDialog
 import time
 

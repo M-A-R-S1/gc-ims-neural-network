@@ -1,6 +1,6 @@
 import sys
 from config import *
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6 import QtWidgets
 from PySide6.QtGui import QIcon, QPalette, QColor
 from ui.ProjectWindow import Ui_ProjectWindow
 from dataset import DatasetPage

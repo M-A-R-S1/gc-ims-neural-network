@@ -1,7 +1,7 @@
 import sys
 from config import *
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtGui import QPalette, QColor, QFontDatabase, QFont
+from PySide6.QtGui import QPalette, QColor, QFontDatabase
 from ui.LauncherWindow import Ui_StartWidget
 from app_project import ProjectWindow
 from pathlib import Path

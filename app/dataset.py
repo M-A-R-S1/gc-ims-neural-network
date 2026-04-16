@@ -1,19 +1,17 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt
 from ui.dataset_ui.DatasetWidget import Ui_DatasetWidget
 from ui.dataset_ui.DatasetLabelEntry import Ui_DatasetLabelEntry
 from ui.dataset_ui.DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
 from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
-from pathlib import Path
-import shutil
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
 from project_manager import *
+import shutil
 import ims
-import json
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):

@@ -2,18 +2,17 @@ from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QDoubleValidator
 from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
-from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog, CustomProgressDialog, CustomTwoChoiceDialog
-from PreprocessingWidget import Ui_PreprocessingWidget
-from DatasetSubEntry import Ui_DatasetSubEntry
-from DatasetMainEntry import Ui_DatasetMainEntry
-from pathlib import Path
-import shutil
+from dialogs import CustomMessageDialog, CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
+from ui.preprocessing_ui.PreprocessingWidget import Ui_PreprocessingWidget
+from ui.preprocessing_ui.DatasetSubEntry import Ui_DatasetSubEntry
+from ui.preprocessing_ui.DatasetMainEntry import Ui_DatasetMainEntry
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
 from collections import defaultdict
 from project_manager import *
+import shutil
 import ims
 import json
 
