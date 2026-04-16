@@ -264,6 +264,6 @@ class Ui_PeakExplorerWidget(object):
         self.label_container_header_2.setText(QCoreApplication.translate("PeakExplorerWidget", u"Peaks", None))
         self.label_preview.setText(QCoreApplication.translate("PeakExplorerWidget", u"Spectrum preview", None))
         self.pushButton_recalculate_peaks.setText(QCoreApplication.translate("PeakExplorerWidget", u"Recalculate peaks", None))
-        self.label_recalculation_info.setText(QCoreApplication.translate("PeakExplorerWidget", u"Attention! Recalculation will reset all peak information of the currently selected spectrum.", None))
+        self.label_recalculation_info.setText(QCoreApplication.translate("PeakExplorerWidget", u"Attention! Recalculation will reset all peaks of the currently selected spectrum.", None))
     # retranslateUi
 

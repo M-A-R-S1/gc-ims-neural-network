@@ -472,7 +472,7 @@ background-color: #131313;
             <string notr="true">color: #9e9e9e;</string>
            </property>
            <property name="text">
-            <string>Attention! Recalculation will reset all peak information of the currently selected spectrum.</string>
+            <string>Attention! Recalculation will reset all peaks of the currently selected spectrum.</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignmentFlag::AlignCenter</set>

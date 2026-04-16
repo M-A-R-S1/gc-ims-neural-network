@@ -202,7 +202,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
         # Loop through all spectra and add them as a widget to the scroll area.
         for index, path in enumerate(paths):
-            spectrum = DatasetSubEntry(path, index, label_widget)
+            spectrum = DatasetSubEntry(path, index, label_widget, 'preprocessing')
             self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
             spectrum.click_signal.connect(self.handle_spectrum_click)
             spectrum.hide()
@@ -762,10 +762,19 @@ class DatasetSubEntry(QtWidgets.QWidget, Ui_DatasetSubEntry):
     # Signal definitions
     click_signal = QtCore.Signal(object)
 
-    def __init__(self, path: str, index: int, parent: DatasetMainEntry):
+    def __init__(self, path: str, index: int, parent: DatasetMainEntry, page: str):
         super().__init__()
         self.setupUi(self)
 
+        if page == 'preprocessing':
+            # Hide the peak counter for the preprocessing page.
+            self.label_peak_counter.hide()
+        elif page == 'peak_explorer':
+            # Show the peak counter for the peak explorer page.
+            self.label_peak_counter.show()
+
+        # The page where this widget belongs to.
+        self.page = page
         # Parent entry widget.
         self.parent = parent
         # Spectrum save path.
@@ -807,8 +816,12 @@ class DatasetSubEntry(QtWidgets.QWidget, Ui_DatasetSubEntry):
         # Sets the spectrum stylesheet depending on the state [active = currently selected | not active = not selected]
         if active:
             self.label_name.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+            if self.page == 'peak_explorer':
+                self.label_peak_counter.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
         else:
             self.label_name.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
+            if self.page == 'peak_explorer':
+                self.label_peak_counter.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
 
 
 

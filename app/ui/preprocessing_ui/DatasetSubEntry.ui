@@ -40,11 +40,8 @@ QWidget:hover {
 }</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
-   <property name="spacing">
-    <number>15</number>
-   </property>
    <property name="leftMargin">
-    <number>30</number>
+    <number>20</number>
    </property>
    <item>
     <widget class="QLabel" name="label_name">
@@ -66,6 +63,41 @@ background-color: transparent;</string>
      </property>
      <property name="text">
       <string>- Sub Textlabel</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_peak_counter">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>55</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>15</pointsize>
+       <italic>true</italic>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border: None;
+color: #ebebeb;
+background-color: transparent;</string>
+     </property>
+     <property name="text">
+      <string>0x</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
      </property>
     </widget>
    </item>

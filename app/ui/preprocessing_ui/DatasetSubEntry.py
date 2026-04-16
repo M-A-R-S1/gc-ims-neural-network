@@ -36,9 +36,8 @@ class Ui_DatasetSubEntry(object):
 "	background-color: #131313;\n"
 "}")
         self.horizontalLayout = QHBoxLayout(DatasetSubEntry)
-        self.horizontalLayout.setSpacing(15)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(30, -1, -1, -1)
+        self.horizontalLayout.setContentsMargins(20, -1, -1, -1)
         self.label_name = QLabel(DatasetSubEntry)
         self.label_name.setObjectName(u"label_name")
         font = QFont()
@@ -54,6 +53,19 @@ class Ui_DatasetSubEntry(object):
 
         self.horizontalLayout.addWidget(self.label_name)
 
+        self.label_peak_counter = QLabel(DatasetSubEntry)
+        self.label_peak_counter.setObjectName(u"label_peak_counter")
+        self.label_peak_counter.setEnabled(True)
+        self.label_peak_counter.setMaximumSize(QSize(55, 16777215))
+        self.label_peak_counter.setFont(font)
+        self.label_peak_counter.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.label_peak_counter.setStyleSheet(u"border: None;\n"
+"color: #ebebeb;\n"
+"background-color: transparent;")
+        self.label_peak_counter.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.horizontalLayout.addWidget(self.label_peak_counter)
+
 
         self.retranslateUi(DatasetSubEntry)
 
@@ -63,5 +75,6 @@ class Ui_DatasetSubEntry(object):
     def retranslateUi(self, DatasetSubEntry):
         DatasetSubEntry.setWindowTitle(QCoreApplication.translate("DatasetSubEntry", u"Form", None))
         self.label_name.setText(QCoreApplication.translate("DatasetSubEntry", u"- Sub Textlabel", None))
+        self.label_peak_counter.setText(QCoreApplication.translate("DatasetSubEntry", u"0x", None))
     # retranslateUi
 

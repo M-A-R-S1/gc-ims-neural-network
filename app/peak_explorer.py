@@ -114,7 +114,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Loop through all spectra and add them as a widget to the scroll area.
         for index, path in enumerate(paths):
-            spectrum = DatasetSubEntry(path, index, label_widget)
+            spectrum = DatasetSubEntry(path, index, label_widget, 'peak_explorer')
             self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
             spectrum.click_signal.connect(self.handle_spectrum_click)
             spectrum.hide()
@@ -273,6 +273,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Set a dark background for the plot.
         plt.style.use('dark_background')
+
+        # TODO ... Load the processed hdf5 file here instead of the .mea file.
 
         # Load the spectrum from the .mea file and adjust the drift time coordinates in relation to the RIP.
         spectrum = ims.Spectrum.read_mea(spectrum_widget.spectrum_path)
