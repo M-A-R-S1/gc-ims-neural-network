@@ -486,7 +486,6 @@ class PeakDetectionWorker(QtCore.QObject):
         peak_dataframe = pd.DataFrame(peak_data)
         # Save peak data to Excel file.
         excel_file = self.project_path / "peaks.xlsx"
-        print(excel_file)
         peak_dataframe.to_excel(excel_file, index=False)
 
         # Send the finished signal.
@@ -645,12 +644,14 @@ class PeakDetectionWorker(QtCore.QObject):
                                          f"Expected Shape: ({6 * peak_radius + 1}, {6 * peak_radius + 1})")
 
                     # 5. Save peak information as .npy file ----------------------------------------------------------------
-                    npy_dir = Path(label_name) / spectrum.name / "peaks"
-                    if not npy_dir.exists():
-                        npy_dir.mkdir(parents=True, exist_ok=True)
+                    npy_save_dir = self.project_path / "dataset" / label_name / spectrum.name / "peaks"
+                    if not npy_save_dir.exists():
+                        npy_save_dir.mkdir(parents=True, exist_ok=True)
 
-                    npy_filename = npy_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{6 * peak_radius + 1}x{6 * peak_radius + 1}.npy"
+                    npy_filename = npy_save_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{6 * peak_radius + 1}x{6 * peak_radius + 1}.npy"
                     np.save(npy_filename, peak_window)
+
+                    npy_dictionary_file = Path(label_name) / spectrum.name / "peaks" / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{6 * peak_radius + 1}x{6 * peak_radius + 1}.npy"
 
                     # Dictionary with information about peaks.
                     peak_data = {
@@ -659,7 +660,7 @@ class PeakDetectionWorker(QtCore.QObject):
                         'ret_time': spectrum.ret_time[ret_idx],
                         'drift_time': spectrum.drift_time[drift_idx],
                         'intensity': spectrum.values[ret_idx, drift_idx],
-                        'npy_file': npy_filename,
+                        'npy_file': npy_dictionary_file,
                     }
                     spectrum_peak_data.append(peak_data)
 
