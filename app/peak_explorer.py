@@ -1,6 +1,7 @@
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
 from PeakExplorerWidget import Ui_PeakExplorerWidget
+from dialogs import CustomMessageDialog, CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
 from project_manager import *
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -23,6 +24,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.current_selected_peak = None
         # Saves labels and spectra in a dictionary.
         self.dataset_storage = {}
+        # Path to the peak Excel file.
+        self.peaks_excel_path = self.project_path.parent / "peaks.xlsx"
 
         # Defining the scroll area layouts.
         self.scrollArea_dataset_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -39,6 +42,52 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # load dataset from project.
         self.load_data()
+
+
+    def showEvent(self, event) -> None:
+        """
+        This function is called every time the user enters this page and checks if the peak Exel file exists.
+        If the file does not exist, a peak detection dialog is prompted to the user.
+        :param event: The page display event.
+        =============================================================================
+        :return: None
+        """
+
+        super().showEvent(event)
+
+        if not self.peaks_excel_path.exists():
+            QtCore.QTimer.singleShot(100, self.show_peak_detection_dialog)
+
+
+    def show_peak_detection_dialog(self) -> None:
+        """
+        This function is called when the peak Excel file does not exist. It creates a dialog where the user is
+        prompted to start the peak detection process. If the user declines he will be redirected to the preprocessing page.
+        =============================================================================
+        :return: None.
+        """
+
+        dialog = CustomYesNoDialog(
+            title="Peak calculation",
+            message="In order to use the peak explorer you need to start the peak detection process first. Do you "
+                    " want to detect the peaks of this dataset?",
+            type="warning",
+            parent=self
+        )
+
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            self.start_peak_detection()
+        else:
+            main_window = self.window()
+
+            if hasattr(main_window, 'sb_preprocessing_button'):
+                main_window.sb_preprocessing_button.click()
+            else:
+                print("Error: Sidebar button 'Preprocessing' not found.")
+
+
+    def start_peak_detection(self):
+        print("Peak Detection gestartet...")
 
 
     def load_data(self):

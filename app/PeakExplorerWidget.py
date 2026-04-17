@@ -99,7 +99,7 @@ class Ui_PeakExplorerWidget(object):
         self.scrollArea_dataset.setWidgetResizable(True)
         self.scrollArea_dataset_Contents = QWidget()
         self.scrollArea_dataset_Contents.setObjectName(u"scrollArea_dataset_Contents")
-        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 787))
+        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 786))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_dataset_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -119,7 +119,7 @@ class Ui_PeakExplorerWidget(object):
 
         self.peak_container = QWidget(self.peakexplorer_container)
         self.peak_container.setObjectName(u"peak_container")
-        self.peak_container.setMaximumSize(QSize(450, 16777215))
+        self.peak_container.setMaximumSize(QSize(550, 16777215))
         self.peak_container.setStyleSheet(u"")
         self.verticalLayout_5 = QVBoxLayout(self.peak_container)
         self.verticalLayout_5.setSpacing(10)
@@ -163,7 +163,7 @@ class Ui_PeakExplorerWidget(object):
         self.scrollArea_peak.setWidgetResizable(True)
         self.scrollArea_peak_Contents = QWidget()
         self.scrollArea_peak_Contents.setObjectName(u"scrollArea_peak_Contents")
-        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 430, 787))
+        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 786))
         self.gridLayout = QGridLayout(self.scrollArea_peak_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.verticalSpacer_2 = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -185,6 +185,7 @@ class Ui_PeakExplorerWidget(object):
         self.preview_container.setObjectName(u"preview_container")
         self.preview_container.setStyleSheet(u"")
         self.verticalLayout_7 = QVBoxLayout(self.preview_container)
+        self.verticalLayout_7.setSpacing(6)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.label_preview = QLabel(self.preview_container)
         self.label_preview.setObjectName(u"label_preview")
@@ -205,8 +206,8 @@ class Ui_PeakExplorerWidget(object):
         self.pushButton_recalculate_peaks = QPushButton(self.preview_container)
         self.pushButton_recalculate_peaks.setObjectName(u"pushButton_recalculate_peaks")
         self.pushButton_recalculate_peaks.setEnabled(True)
-        self.pushButton_recalculate_peaks.setMinimumSize(QSize(0, 50))
-        self.pushButton_recalculate_peaks.setMaximumSize(QSize(350, 16777215))
+        self.pushButton_recalculate_peaks.setMinimumSize(QSize(0, 60))
+        self.pushButton_recalculate_peaks.setMaximumSize(QSize(16777215, 16777215))
         font3 = QFont()
         font3.setFamilies([u"Lato"])
         font3.setPointSize(20)
@@ -219,6 +220,7 @@ class Ui_PeakExplorerWidget(object):
 "    background-color: #232323; \n"
 "    color: #ff9000;\n"
 "    border-radius: 10px;\n"
+"	margin-top: 10px;\n"
 "}\n"
 "\n"
 "QPushButton:hover {\n"
@@ -226,11 +228,11 @@ class Ui_PeakExplorerWidget(object):
 "}")
         self.pushButton_recalculate_peaks.setAutoDefault(False)
 
-        self.verticalLayout_7.addWidget(self.pushButton_recalculate_peaks, 0, Qt.AlignmentFlag.AlignHCenter)
+        self.verticalLayout_7.addWidget(self.pushButton_recalculate_peaks)
 
         self.label_recalculation_info = QLabel(self.preview_container)
         self.label_recalculation_info.setObjectName(u"label_recalculation_info")
-        self.label_recalculation_info.setMaximumSize(QSize(350, 40))
+        self.label_recalculation_info.setMaximumSize(QSize(1799990, 20))
         font4 = QFont()
         font4.setFamilies([u"Lato"])
         font4.setPointSize(8)
@@ -239,7 +241,7 @@ class Ui_PeakExplorerWidget(object):
         self.label_recalculation_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label_recalculation_info.setWordWrap(True)
 
-        self.verticalLayout_7.addWidget(self.label_recalculation_info, 0, Qt.AlignmentFlag.AlignHCenter)
+        self.verticalLayout_7.addWidget(self.label_recalculation_info)
 
 
         self.horizontalLayout.addWidget(self.preview_container)

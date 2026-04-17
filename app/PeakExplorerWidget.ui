@@ -192,7 +192,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>430</width>
-                 <height>787</height>
+                 <height>786</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -223,7 +223,7 @@ background-color: transparent;
        <widget class="QWidget" name="peak_container" native="true">
         <property name="maximumSize">
          <size>
-          <width>450</width>
+          <width>550</width>
           <height>16777215</height>
          </size>
         </property>
@@ -332,8 +332,8 @@ background-color: transparent;
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>430</width>
-                 <height>787</height>
+                 <width>530</width>
+                 <height>786</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">
@@ -366,6 +366,9 @@ background-color: transparent;
          <string notr="true"/>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_7">
+         <property name="spacing">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_preview">
            <property name="maximumSize">
@@ -399,7 +402,7 @@ background-color: transparent;
            </property>
           </widget>
          </item>
-         <item alignment="Qt::AlignmentFlag::AlignHCenter">
+         <item>
           <widget class="QPushButton" name="pushButton_recalculate_peaks">
            <property name="enabled">
             <bool>true</bool>
@@ -407,12 +410,12 @@ background-color: transparent;
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>50</height>
+             <height>60</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
-             <width>350</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -437,6 +440,7 @@ background-color: transparent;
     background-color: #232323; 
     color: #ff9000;
     border-radius: 10px;
+	margin-top: 10px;
 }
 
 QPushButton:hover {
@@ -454,12 +458,12 @@ background-color: #131313;
            </property>
           </widget>
          </item>
-         <item alignment="Qt::AlignmentFlag::AlignHCenter">
+         <item>
           <widget class="QLabel" name="label_recalculation_info">
            <property name="maximumSize">
             <size>
-             <width>350</width>
-             <height>40</height>
+             <width>1799990</width>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
