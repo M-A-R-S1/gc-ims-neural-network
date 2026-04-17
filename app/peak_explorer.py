@@ -10,6 +10,8 @@ from collections import defaultdict
 from skimage.morphology import max_tree, h_maxima, area_opening
 from skimage.measure import label, regionprops
 from sklearn.preprocessing import MinMaxScaler
+import multiprocessing as mp
+from functools import partial
 import numpy as np
 import pandas as pd
 import shutil
@@ -448,231 +450,224 @@ class PeakDetectionWorker(QtCore.QObject):
 
 
     def run(self):
-        # Create a new dataset list of labels and spectra which should be preprocessed.
-        peak_data = []
-
-        processed_spectra = 0
-        # The total number of spectra of the dataset.
-        total_spectra = sum(len(spectra) for spectra in self.dataset.values())
-
-        # Loop through the dataset.
+        # 1. Aufgabenliste vorbereiten (Tasks)
+        tasks = []
         for label, spectra_paths in self.dataset.items():
             for spectrum_path in spectra_paths:
+                tasks.append((spectrum_path, label))
 
-                # Check during each loop if the user wants so cancel the processing.
-                QtCore.QCoreApplication.processEvents()
+        total_spectra = len(tasks)
+        if total_spectra == 0:
+            self.finished.emit()
+            return
+
+        # 2. Pool starten
+        num_cores = mp.cpu_count()
+        peak_data_all = []
+        processed_count = 0
+
+        # 'partial' fixiert Parameter, die für alle Tasks gleich sind (wie project_path)
+        worker_func = partial(peak_detection,
+                              project_path=self.project_path,
+                              peak_radius=5)
+
+        with mp.Pool(processes=num_cores) as pool:
+            for result in pool.imap_unordered(worker_func, tasks):
+
                 if self.worker_stopped:
-                    self.finished.emit()
-                    return
+                    pool.terminate()
+                    pool.join()
+                    break
 
-                # Get the spectrum name.
-                spec_name = Path(spectrum_path).stem
-                # Get the saved hdf5 file.
-                target_folder = self.project_path / "dataset" / label / spec_name
-                target_file = target_folder / f"{spec_name}.hdf5"
-                # Save the spectrum from the hdf5 file.
-                spectrum = ims.Spectrum.read_hdf5(target_file)
+                if result:
+                    peak_data_all.extend(result)
 
-                # Start the peak detection process.
-                peak_data.extend(self.peak_detection(spectrum=spectrum,
-                                                     label_name=label,
-                                                     peak_radius=5,
-                                                     spectrum_path=spectrum_path))
+                processed_count += 1
+                self.progress_update.emit(processed_count, total_spectra)
 
-                processed_spectra += 1
-                self.progress_update.emit(processed_spectra, total_spectra)
+        if not self.worker_stopped and peak_data_all:
+            df = pd.DataFrame(peak_data_all)
+            excel_file = self.project_path / "peaks.xlsx"
+            df.to_excel(excel_file, index=False)
 
-        # Convert the peak_data list to a pandas dataframe.
-        peak_dataframe = pd.DataFrame(peak_data)
-        # Save peak data to Excel file.
-        excel_file = self.project_path / "peaks.xlsx"
-        peak_dataframe.to_excel(excel_file, index=False)
-
-        # Send the finished signal.
         self.finished.emit()
 
-    def peak_detection(self,
-                       spectrum: ims.Spectrum,
-                       label_name: str,
-                       peak_radius: int,
-                       spectrum_path: Path) -> list[dict]:
-        """
-        This function handles the peak detection for preprocessed gc-ims spectra in a series of steps.
-        1. Normalization of the spectrum to values between 0 and 1.
-        2. Create a component tree of the spectrum and detect hierarchy levels.
-        3. Filter peaks from the component tree according to specific conditions [Area Opening, intensity threshold, tree hierarchy].
-        4. Create a plot with all selected peaks for each spectrum.
-        5. Save the intensities of each detected peak and its surrounding (defined by peak_radius) as a .npy file.
-        6. Return a list of dictionaries. One dictionary for each peak + surrounding with the following information.
-            - 'label' -> The label/type of the used spectrum.
-            - 'spectrum' -> Name of the spectrum.
-            - 'ret_time' -> Retention time [s] of the peak.
-            - 'drift_time' -> Drift time [ms] of the peak.
-            - 'intensity' -> Intensity [not normalized] of peak + surrounding.
-            - 'npy_file' -> Path to the saved npy file of this peak.
+def peak_detection(task_data, project_path, peak_radius) -> list[dict]:
+    """
+    This function handles the peak detection for preprocessed gc-ims spectra in a series of steps.
+    1. Normalization of the spectrum to values between 0 and 1.
+    2. Create a component tree of the spectrum and detect hierarchy levels.
+    3. Filter peaks from the component tree according to specific conditions [Area Opening, intensity threshold, tree hierarchy].
+    4. Create a plot with all selected peaks for each spectrum.
+    5. Save the intensities of each detected peak and its surrounding (defined by peak_radius) as a .npy file.
+    6. Return a list of dictionaries. One dictionary for each peak + surrounding with the following information.
+        - 'label' -> The label/type of the used spectrum.
+        - 'spectrum' -> Name of the spectrum.
+        - 'ret_time' -> Retention time [s] of the peak.
+        - 'drift_time' -> Drift time [ms] of the peak.
+        - 'intensity' -> Intensity [not normalized] of peak + surrounding.
+        - 'npy_file' -> Path to the saved npy file of this peak.
 
-        :param spectrum: A single preprocessed gc-ims spectrum.
-        :param peak_radius: Defines the radius around a detected peak within the intensities are saved.
-        :param output_dir: Saving path for the plotting image.
-        :param create_heatmaps: Specifies if heatmaps are created.
-        :param create_npy: Specifies if npy files are created.
+    :param spectrum: A single preprocessed gc-ims spectrum.
+    :param peak_radius: Defines the radius around a detected peak within the intensities are saved.
+    :param output_dir: Saving path for the plotting image.
+    :param create_heatmaps: Specifies if heatmaps are created.
+    :param create_npy: Specifies if npy files are created.
 
-        :return: List of dictionaries which contain peak + surrounding information.
-        """
+    :return: List of dictionaries which contain peak + surrounding information.
+    """
 
-        # 1. Spectrum normalization. ---------------------------------------------------------------------------------------
-        # Keep the non normalized values for later use.
-        values_non_normalized = spectrum.values.copy()
-        # Normalize the spectrum [0-1].
-        spectrum.normalization()
-        # List of dictionaries which contain selected peak information. This list is returned at the end of this function.
-        spectrum_peak_data = []
+    spectrum_path, label_name = task_data
+    spec_name = Path(spectrum_path).stem
+    target_file = project_path / "dataset" / label_name / spec_name / f"{spec_name}.hdf5"
+    spectrum = ims.Spectrum.read_hdf5(target_file)
 
-        try:
-            # 2. Create a component tree. ----------------------------------------------------------------------------------
-            parent, tree_traverser = max_tree(spectrum.values, connectivity=2)
+    # 1. Spectrum normalization. ---------------------------------------------------------------------------------------
+    # Keep the non normalized values for later use.
+    values_non_normalized = spectrum.values.copy()
+    # Normalize the spectrum [0-1].
+    spectrum.normalization()
+    # List of dictionaries which contain selected peak information. This list is returned at the end of this function.
+    spectrum_peak_data = []
 
-            # 3. Filter peaks. ---------------------------------------------------------------------------------------------
-            # Define the min. area threshold size in pixel. [Smaller value = finer peak detection]
-            area_threshold = 5
-            # Collapses nodes which are smaller than the area_threshold with their parents.
-            filtered_local_maxima = area_opening(spectrum.values,
-                                                 area_threshold=area_threshold,
-                                                 connectivity=2,
-                                                 parent=parent,
-                                                 tree_traverser=tree_traverser)
+    try:
+        # 2. Create a component tree. ----------------------------------------------------------------------------------
+        parent, tree_traverser = max_tree(spectrum.values, connectivity=2)
 
-            # What is the min. height differenz (normalized values) for nodes to be discriminated as different peaks?
-            height_differenz = 0.02
-            # Remove nodes which are to small compared to their node neighbors (node height differenz < height_differenz)
-            peak_mask = h_maxima(filtered_local_maxima, h=height_differenz)
-            # label the found nodes.
-            label_mask = label(peak_mask, connectivity=2)
-            # Create regions from the original spectrum values of the labeled nodes.
-            regions = regionprops(label_mask, intensity_image=spectrum.values)
-            # create a new empty array with the size of found regions (Each region = 1 peak).
-            all_peak_coords = np.zeros((len(regions), 2), dtype=int)
+        # 3. Filter peaks. ---------------------------------------------------------------------------------------------
+        # Define the min. area threshold size in pixel. [Smaller value = finer peak detection]
+        area_threshold = 5
+        # Collapses nodes which are smaller than the area_threshold with their parents.
+        filtered_local_maxima = area_opening(spectrum.values,
+                                             area_threshold=area_threshold,
+                                             connectivity=2,
+                                             parent=parent,
+                                             tree_traverser=tree_traverser)
 
-            # Walk through all found regions, calculate the weighted center coordinates and save them as a peak.
-            for region_idx, region in enumerate(regions):
-                y, x = region.weighted_centroid
-                all_peak_coords[region_idx] = [int(round(y)), int(round(x))]
+        # What is the min. height differenz (normalized values) for nodes to be discriminated as different peaks?
+        height_differenz = 0.02
+        # Remove nodes which are to small compared to their node neighbors (node height differenz < height_differenz)
+        peak_mask = h_maxima(filtered_local_maxima, h=height_differenz)
+        # label the found nodes.
+        label_mask = label(peak_mask, connectivity=2)
+        # Create regions from the original spectrum values of the labeled nodes.
+        regions = regionprops(label_mask, intensity_image=spectrum.values)
+        # create a new empty array with the size of found regions (Each region = 1 peak).
+        all_peak_coords = np.zeros((len(regions), 2), dtype=int)
 
-            # Get all retention indices from the peak coordinates.
-            ret_idx = all_peak_coords[:, 0]
-            # Get all drift indices from the peak coordinates.
-            drift_idx = all_peak_coords[:, 1]
-            # List with normalized intensities which correlate to the coordinates of the "all_peak_coords" list.
-            peak_intensities = spectrum.values[ret_idx, drift_idx]
+        # Walk through all found regions, calculate the weighted center coordinates and save them as a peak.
+        for region_idx, region in enumerate(regions):
+            y, x = region.weighted_centroid
+            all_peak_coords[region_idx] = [int(round(y)), int(round(x))]
 
-            # Define the min. peak threshold intensity [non normalized value].
-            peak_threshold = 64
-            # How many intensity values are there in total?
-            intensity_count_max = spectrum.values.shape[0] * spectrum.values.shape[1]
-            # How many intensities values are over the peak_threshold?
-            threshold_intensity_count = len(np.where(values_non_normalized >= peak_threshold)[0])
-            # Calculate the % of intensity values which are below the peak_threshold.
-            threshold_percentile = 100 - (threshold_intensity_count / intensity_count_max) * 100
-            # Peak intensity detection threshold.
-            intensity_threshold = np.percentile(spectrum.values, [threshold_percentile])
+        # Get all retention indices from the peak coordinates.
+        ret_idx = all_peak_coords[:, 0]
+        # Get all drift indices from the peak coordinates.
+        drift_idx = all_peak_coords[:, 1]
+        # List with normalized intensities which correlate to the coordinates of the "all_peak_coords" list.
+        peak_intensities = spectrum.values[ret_idx, drift_idx]
 
-            # Are there peaks?
-            # If so, select only peaks which are higher than the intensity threshold.
-            if len(peak_intensities) > 0:
-                intensity_mask = peak_intensities >= intensity_threshold
-                # Use the mask on the peak coordinates.
-                # Only Coordinates where the mask condition is satisfied are saved.
-                peak_coords = all_peak_coords[intensity_mask]
-            else:
-                # No peaks. Create an empty numpy array.
-                peak_coords = np.array([])
+        # Define the min. peak threshold intensity [non normalized value].
+        peak_threshold = 64
+        # How many intensity values are there in total?
+        intensity_count_max = spectrum.values.shape[0] * spectrum.values.shape[1]
+        # How many intensities values are over the peak_threshold?
+        threshold_intensity_count = len(np.where(values_non_normalized >= peak_threshold)[0])
+        # Calculate the % of intensity values which are below the peak_threshold.
+        threshold_percentile = 100 - (threshold_intensity_count / intensity_count_max) * 100
+        # Peak intensity detection threshold.
+        intensity_threshold = np.percentile(spectrum.values, [threshold_percentile])
 
-            if len(peak_coords) > 0:
-                # Remove peaks which are located near the spectrum boarders.
-                # list with all peak retention indices.
-                peak_ret_idx_list = peak_coords[:, 0]
-                # list with all peak drift indices.
-                peak_drift_idx_list = peak_coords[:, 1]
-                # Integer with the maximum retention and drift index.
-                ret_idx_max, drift_idx_max = spectrum.values.shape
+        # Are there peaks?
+        # If so, select only peaks which are higher than the intensity threshold.
+        if len(peak_intensities) > 0:
+            intensity_mask = peak_intensities >= intensity_threshold
+            # Use the mask on the peak coordinates.
+            # Only Coordinates where the mask condition is satisfied are saved.
+            peak_coords = all_peak_coords[intensity_mask]
+        else:
+            # No peaks. Create an empty numpy array.
+            peak_coords = np.array([])
 
-                # Create single mask conditions.
-                mask_ret_min = peak_ret_idx_list >= peak_radius
-                mask_ret_max = peak_ret_idx_list < (ret_idx_max - peak_radius)
-                mask_drift_min = peak_drift_idx_list >= peak_radius
-                mask_drift_max = peak_drift_idx_list < (drift_idx_max - peak_radius)
-                # Combine all 4 masks to one mask condition. This mask will remove all peaks which are too close to the border.
-                # This will create a list with tuples of the same length as the found peak list (peak_coords).
-                # If all single mask conditions are met, true will be saved in this list. Otherwise, it will be set to False.
-                final_validity_mask = (mask_ret_min &
-                                       mask_ret_max &
-                                       mask_drift_min &
-                                       mask_drift_max)
+        if len(peak_coords) > 0:
+            # Remove peaks which are located near the spectrum boarders.
+            # list with all peak retention indices.
+            peak_ret_idx_list = peak_coords[:, 0]
+            # list with all peak drift indices.
+            peak_drift_idx_list = peak_coords[:, 1]
+            # Integer with the maximum retention and drift index.
+            ret_idx_max, drift_idx_max = spectrum.values.shape
 
-                # Use the mask on the peak_coords list.
-                # Only Coordinates where the mask is set to "True" are kept. The rest will be removed.
-                peak_coords = peak_coords[final_validity_mask]
+            # Create single mask conditions.
+            mask_ret_min = peak_ret_idx_list >= peak_radius
+            mask_ret_max = peak_ret_idx_list < (ret_idx_max - peak_radius)
+            mask_drift_min = peak_drift_idx_list >= peak_radius
+            mask_drift_max = peak_drift_idx_list < (drift_idx_max - peak_radius)
+            # Combine all 4 masks to one mask condition. This mask will remove all peaks which are too close to the border.
+            # This will create a list with tuples of the same length as the found peak list (peak_coords).
+            # If all single mask conditions are met, true will be saved in this list. Otherwise, it will be set to False.
+            final_validity_mask = (mask_ret_min &
+                                   mask_ret_max &
+                                   mask_drift_min &
+                                   mask_drift_max)
 
-                # 4. Plot the detected peaks. ------------------------------------------------------------------------------
-                # Reload the non normalized values.
-                spectrum.values = values_non_normalized
+            # Use the mask on the peak_coords list.
+            # Only Coordinates where the mask is set to "True" are kept. The rest will be removed.
+            peak_coords = peak_coords[final_validity_mask]
 
-                # 4. Extend peaks. Each peak will be saved ....
-                # Copy the spectrum.values and add a padding of 0 around them.
-                # Why? If a peak is detected near the spectrum boarder, this could lead to errors in the shape and or saved
-                # intensities of the peak windows. The padding guarantees the correct shape and failsafe the intensities of
-                # indices outside the spectrum boarder to 0.
-                padded_values = np.pad(
-                    spectrum.values,
-                    pad_width=2 * peak_radius,
-                    mode='constant',
-                    constant_values=0
-                )
+            # 4. Plot the detected peaks. ------------------------------------------------------------------------------
+            # Reload the non normalized values.
+            spectrum.values = values_non_normalized
 
-                # Walk through all peak coordinates.
-                for ret_idx, drift_idx in peak_coords:
-                    start_ret_idx = ret_idx - peak_radius
-                    end_ret_idx = ret_idx + 5 * peak_radius + 1
-                    start_drift_idx = drift_idx - peak_radius
-                    end_drift_idx = drift_idx + 5 * peak_radius + 1
-                    peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
-                    peak_window = peak_window_intensities
+            # 4. Extend peaks. Each peak will be saved ....
+            # Copy the spectrum.values and add a padding of 0 around them.
+            # Why? If a peak is detected near the spectrum boarder, this could lead to errors in the shape and or saved
+            # intensities of the peak windows. The padding guarantees the correct shape and failsafe the intensities of
+            # indices outside the spectrum boarder to 0.
+            padded_values = np.pad(
+                spectrum.values,
+                pad_width=2 * peak_radius,
+                mode='constant',
+                constant_values=0
+            )
 
-                    # Check if the peak window has the correct shape. This should always be the case!
-                    if peak_window_intensities.shape != (6 * peak_radius + 1, 6 * peak_radius + 1):
-                        raise ValueError(f"\tPeak Window has the wrong shape: {peak_window_intensities.shape}. "
-                                         f"Expected Shape: ({6 * peak_radius + 1}, {6 * peak_radius + 1})")
+            # Walk through all peak coordinates.
+            for ret_idx, drift_idx in peak_coords:
+                start_ret_idx = ret_idx - peak_radius
+                end_ret_idx = ret_idx + 5 * peak_radius + 1
+                start_drift_idx = drift_idx - peak_radius
+                end_drift_idx = drift_idx + 5 * peak_radius + 1
+                peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+                peak_window = peak_window_intensities
 
-                    # 5. Save peak information as .npy file ----------------------------------------------------------------
-                    npy_save_dir = self.project_path / "dataset" / label_name / spectrum.name / "peaks"
-                    if not npy_save_dir.exists():
-                        npy_save_dir.mkdir(parents=True, exist_ok=True)
+                # Check if the peak window has the correct shape. This should always be the case!
+                if peak_window_intensities.shape != (6 * peak_radius + 1, 6 * peak_radius + 1):
+                    raise ValueError(f"\tPeak Window has the wrong shape: {peak_window_intensities.shape}. "
+                                     f"Expected Shape: ({6 * peak_radius + 1}, {6 * peak_radius + 1})")
 
-                    npy_filename = npy_save_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{6 * peak_radius + 1}x{6 * peak_radius + 1}.npy"
-                    np.save(npy_filename, peak_window)
+                # 5. Save peak information as .npy file ----------------------------------------------------------------
+                npy_save_dir = project_path / "dataset" / label_name / spectrum.name / "peaks"
+                if not npy_save_dir.exists():
+                    npy_save_dir.mkdir(parents=True, exist_ok=True)
 
-                    npy_dictionary_file = Path(label_name) / spectrum.name / "peaks" / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{6 * peak_radius + 1}x{6 * peak_radius + 1}.npy"
+                npy_filename = npy_save_dir / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{6 * peak_radius + 1}x{6 * peak_radius + 1}.npy"
+                np.save(npy_filename, peak_window)
 
-                    # Dictionary with information about peaks.
-                    peak_data = {
-                        'label': label_name,
-                        'spectrum': spectrum.name,
-                        'ret_time': spectrum.ret_time[ret_idx],
-                        'drift_time': spectrum.drift_time[drift_idx],
-                        'intensity': spectrum.values[ret_idx, drift_idx],
-                        'npy_file': npy_dictionary_file,
-                    }
-                    spectrum_peak_data.append(peak_data)
+                npy_dictionary_file = Path(label_name) / spectrum.name / "peaks" / f"PW_{spectrum.name}_RT{ret_idx}_DT{drift_idx}_{6 * peak_radius + 1}x{6 * peak_radius + 1}.npy"
 
-                # Notify that the peak detection on this spectrum is finished and print the number of peaks.
-                print(f"\t- {len(peak_coords)} Peaks saved [{spectrum.name}]")
+                # Dictionary with information about peaks.
+                peak_data = {
+                    'label': label_name,
+                    'spectrum': spectrum.name,
+                    'ret_time': spectrum.ret_time[ret_idx],
+                    'drift_time': spectrum.drift_time[drift_idx],
+                    'intensity': spectrum.values[ret_idx, drift_idx],
+                    'npy_file': npy_dictionary_file,
+                }
+                spectrum_peak_data.append(peak_data)
 
-            else:
-                # Notify that the peak detection on this spectrum is finished and print the number of peaks.
-                print(f"\t- No Peaks saved [{spectrum.name}]")
+    except Exception as err:
+        print(f"\tError on {spectrum.name} - Skipped: {err=}, {type(err)=}")
+        return []
 
-        except Exception as err:
-            print(f"\tError on {spectrum.name} - Skipped: {err=}, {type(err)=}")
-            raise
-
-        return spectrum_peak_data
+    return spectrum_peak_data

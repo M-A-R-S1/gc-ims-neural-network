@@ -354,51 +354,55 @@ def load_custom_fonts():
     for font_file in font_path.glob("*.ttf"):
         QFontDatabase.addApplicationFont(str(font_file))
 
-# Create an application instance!
-app = QtWidgets.QApplication(sys.argv)
+def main():
+    # Create an application instance!
+    app = QtWidgets.QApplication(sys.argv)
 
-# Set the standard text colors to white [Needed for linux and possibly other os].
-palette = app.palette()
-palette.setColor(QPalette.Text, QColor(235, 235, 235))
-palette.setColor(QPalette.WindowText, QColor(235, 235, 235))
-palette.setColor(QPalette.ButtonText, QColor(235, 235, 235))
-palette.setColor(QPalette.ColorRole.Button, QColor(45, 45, 45))
-palette.setColor(QPalette.ColorRole.Base, QColor(30, 30, 30))
-palette.setColor(QPalette.ColorRole.Window, QColor(45, 45, 45))
-# BrightText wird oft für Highlights auf dunklem Grund genutzt
-palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 255, 255))
-app.setPalette(palette)
+    # Set the standard text colors to white [Needed for linux and possibly other os].
+    palette = app.palette()
+    palette.setColor(QPalette.Text, QColor(235, 235, 235))
+    palette.setColor(QPalette.WindowText, QColor(235, 235, 235))
+    palette.setColor(QPalette.ButtonText, QColor(235, 235, 235))
+    palette.setColor(QPalette.ColorRole.Button, QColor(45, 45, 45))
+    palette.setColor(QPalette.ColorRole.Base, QColor(30, 30, 30))
+    palette.setColor(QPalette.ColorRole.Window, QColor(45, 45, 45))
+    # BrightText wird oft für Highlights auf dunklem Grund genutzt
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 255, 255))
+    app.setPalette(palette)
 
-# Load the custom fonts of this app [Lato...]
-load_custom_fonts()
+    # Load the custom fonts of this app [Lato...]
+    load_custom_fonts()
 
-# Create a window and show it.
-launcher = MainWindow()
-# turns of the minimize and maximize buttons.
-launcher.setWindowFlags(QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowCloseButtonHint)
-launcher.show()
+    # Create a window and show it.
+    launcher = MainWindow()
+    # turns of the minimize and maximize buttons.
+    launcher.setWindowFlags(QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowCloseButtonHint)
+    launcher.show()
 
-# Reference array for the project window.
-project_window_reference = []
+    # Reference array for the project window.
+    project_window_reference = []
 
-def launch_main_project(path: Path) -> None:
-    """
-    This function is called when a project is about to be loaded. The current launcher is closed and the
-    main project window is loaded with the selected project.
+    def launch_main_project(path: Path) -> None:
+        """
+        This function is called when a project is about to be loaded. The current launcher is closed and the
+        main project window is loaded with the selected project.
 
-    :param path: Path to the project folder.
+        :param path: Path to the project folder.
 
-    :return: None.
-    """
+        :return: None.
+        """
 
-    project_window = ProjectWindow(path)
-    project_window_reference.append(project_window)
-    project_window.showMaximized()
-    project_window.raise_()
-    project_window.activateWindow()
+        project_window = ProjectWindow(path)
+        project_window_reference.append(project_window)
+        project_window.showMaximized()
+        project_window.raise_()
+        project_window.activateWindow()
 
-# Connect the "open project" signal.
-launcher.open_project_signal.connect(launch_main_project)
+    # Connect the "open project" signal.
+    launcher.open_project_signal.connect(launch_main_project)
 
-# Start the App.
-sys.exit(app.exec())
+    # Start the App.
+    sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()
