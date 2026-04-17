@@ -6,6 +6,8 @@ from project_manager import *
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
+from collections import defaultdict
+import shutil
 import ims
 
 class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
@@ -76,7 +78,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         )
 
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            self.start_peak_detection()
+            # self.start_peak_detection()
+            pass
         else:
             main_window = self.window()
 
@@ -87,7 +90,32 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
 
     def start_peak_detection(self):
-        print("Peak Detection gestartet...")
+
+        # Open the progress dialog which informs the user about the current state of the preprocessing.
+        self.detection_progress_dialog = CustomProgressDialog("Peak detection...")
+        # Reset the start time.
+        self.detection_progress_dialog.start_time = None
+        self.detection_progress_dialog.show()
+
+        # Create a thread and worker for the progress dialog.
+        self.thread = QtCore.QThread()
+        self.worker = PeakDetectionWorker(path=self.project_path,
+                                          dataset=self.dataset_storage)
+
+        self.worker.moveToThread(self.thread)
+
+        # Connect some signals to the worker and thread.
+        self.thread.started.connect(self.worker.run)
+        self.worker.progress_update.connect(self.detection_progress_dialog.update_progress)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.detection_progress_dialog.accept)
+        self.worker.finished.connect(self.check_processed_spectra)
+        self.detection_progress_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
+        self.thread.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        # Start the thread.
+        self.thread.start()
 
 
     def load_data(self):
@@ -323,11 +351,11 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         # Set a dark background for the plot.
         plt.style.use('dark_background')
 
-        # TODO ... Load the processed hdf5 file here instead of the .mea file.
-
-        # Load the spectrum from the .mea file and adjust the drift time coordinates in relation to the RIP.
-        spectrum = ims.Spectrum.read_mea(spectrum_widget.spectrum_path)
-        spectrum.riprel()
+        # Path to the hdf5 file.
+        hdf5_path = self.project_path.parent / "dataset" / self.selected_label_name / Path(spectrum_widget.spectrum_path).stem
+        hdf5_file = hdf5_path / f"{Path(spectrum_widget.spectrum_path).stem}.hdf5"
+        # Load the spectrum from the .hdf5 file.
+        spectrum = ims.Spectrum.read_hdf5(hdf5_file)
 
         # Clear the axes and set their colors.
         self.canvas.fig.patch.set_facecolor('#191919')
@@ -363,3 +391,57 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         self.canvas.draw()
 
+
+class PeakDetectionWorker(QtCore.QObject):
+    # Signal definitions.
+    finished = Signal()
+    progress_update = Signal(int, int)
+
+    def __init__(self,
+                 path: Path,
+                 dataset: dict):
+
+        super().__init__()
+        self.dataset = dataset
+        self.project_path = path.parent
+        # Worker stopped signal [The user has canceled the preprocessing].
+        self.worker_stopped = False
+
+    @QtCore.Slot()
+    def stop(self):
+        self.worker_stopped = True
+
+    def run(self):
+        # Create a new dataset list of labels and spectra which should be preprocessed.
+        used_dataset = defaultdict(list)
+        spectra_to_process = 0
+
+        # Loop through the dataset.
+        for label, spectra_paths in self.dataset.items():
+            for spectrum_path in spectra_paths:
+                # Get the spectrum name.
+                spec_name = Path(spectrum_path).stem
+                # Set the folder where the processed spectrum will be saved.
+                target_folder = self.project_path / "dataset" / label / spec_name
+                target_file = target_folder / f"{spec_name}.hdf5"
+
+                # Add the spectrum to the used dataset list for processing.
+                if self.process_all or not target_file.exists():
+                    # Remove the already saved hdf5 file if the user wants to process this spectrum again.
+                    if self.process_all and target_file.exists():
+                        try:
+                            shutil.rmtree(target_folder)
+                        except Exception as e:
+                            print(f"Error while deleting {target_file}: {e}")
+
+                    # Add the label to the used dataset.
+                    if label not in used_dataset:
+                        used_dataset[label] = []
+
+                    # Add the spectrum to the used dataset.
+                    used_dataset[label].append(spectrum_path)
+                    spectra_to_process += 1
+
+
+        # Send the finished signal.
+        self.finished.emit()
