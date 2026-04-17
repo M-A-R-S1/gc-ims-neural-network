@@ -29,6 +29,10 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         # Path to the peak Excel file.
         self.peaks_excel_path = self.project_path.parent / "peaks.xlsx"
 
+        # Background overlay -> This overlay blocks the view to the peak explorer while the peak detection process is running.
+        self.overlay = QtWidgets.QWidget(self)
+        self.overlay.setStyleSheet("background-color: #1d1d1d;")
+
         # Defining the scroll area layouts.
         self.scrollArea_dataset_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea_dataset_Contents.layout().setSpacing(5)
@@ -44,6 +48,19 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # load dataset from project.
         self.load_data()
+
+
+    def resizeEvent(self, event) -> None:
+        """
+        This function overrides the resizeEvent method and resizes the overlay widget always to the size of the main window.
+        =============================================================================
+        :param event: The resizing event.
+        =============================================================================
+        :return: None.
+        """
+
+        super().resizeEvent(event)
+        self.overlay.resize(self.size())
 
 
     def showEvent(self, event) -> None:
@@ -79,6 +96,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             # self.start_peak_detection()
+            self.overlay.hide()
             pass
         else:
             main_window = self.window()
@@ -109,7 +127,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.worker.progress_update.connect(self.detection_progress_dialog.update_progress)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.detection_progress_dialog.accept)
-        self.worker.finished.connect(self.check_processed_spectra)
+        #self.worker.finished.connect(self.check_processed_spectra)
         self.detection_progress_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
         self.thread.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)

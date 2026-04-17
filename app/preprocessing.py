@@ -655,7 +655,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
     def check_processed_spectra(self) -> None:
         """
-        This function updates a label and shows the notifies the user about the number of processed spectra.
+        This function updates a label and notifies the user about the number of processed spectra.
         - It will either show the message "All spectra processed" if all spectra were successfully processed.
         - Or it will notify the user that some spectra aren't processed yet -> "x unprocessed spectra"
         =============================================================================
