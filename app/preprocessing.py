@@ -209,7 +209,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
             if self.selected_spectrum_name == spectrum.label_name.text():
                 self.handle_spectrum_click(spectrum)
-                self.label_preview.setText(f"{self.selected_label_name} - {self.selected_spectrum_name}")
+                self.label_preview.setText(f"{label_widget.label_name.text()} - {self.selected_spectrum_name}")
 
 
     def handle_label_click(self,
@@ -508,7 +508,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # Plot the clicked spectrum to the canvas.
         self.plot_spectrum(spectrum_widget)
         self.selected_spectrum_name = spectrum_widget.label_name.text()
-        self.label_preview.setText(f"{self.selected_label_name} - {self.selected_spectrum_name}")
+        self.label_preview.setText(f"{spectrum_widget.parent.label_name.text()} - {self.selected_spectrum_name}")
 
         # If in fullscreen mode show the complete canvas, otheriese show the cropped region of interest.
         if self.canvas_fullscreen:
