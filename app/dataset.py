@@ -9,26 +9,26 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
-from project_manager import *
+from pathlib import Path
+import pandas as pd
+import sqlite3
 import shutil
 import ims
 
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
-    def __init__(self, project_path: str, project_manager: ProjectManager) -> None   :
+    def __init__(self, project_path: str) -> None   :
         super().__init__()
         self.setupUi(self)
 
         # Project save path
         self.project_path = Path(project_path)
-        # The project manager
-        self.project_manager = project_manager
         # Currently selected label and spectrum.
         self.current_selected_label = None
         self.current_selected_spectrum = None
         self.current_selected_spectrum_path = None
-        # Saves labels and spectra in a dictionary.
-        self.dataset_storage = {}
+        # The path to the database file.
+        self.db_path = self.project_path.parent / "database" / "project_database.db"
 
         # Defining the scroll area layouts.
         self.scrollArea_labels_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -45,8 +45,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         self.canvas = PlottingCanvas(self, width=5, height=4, dpi=50)
         # Initialize the plot canvas.
         self.init_plot_canvas()
-
-        # load dataset from project.
+        # load dataset from database.
         self.load_data()
 
 
@@ -110,17 +109,17 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                         name: str) -> None:
         """
         This function is called when a new label is about to be added. The label is connected so a series of signals
-        [Delete | Rename] and is finally added as a widget to the label scroll area and to the dataset storage dictionary.
+        [Delete | Rename] and is finally added as a widget to the label scroll area and to the database.
         =============================================================================
         :param name: The name of the label.
         =============================================================================
         :return: None.
         """
 
-        # Check if the label is already saved in the dataset storage directory. If not add it.
-        if name not in self.dataset_storage:
-            self.dataset_storage[name] = []
-            self.save_data()
+        # Add the new label to the database.
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("INSERT OR IGNORE INTO labels (name) VALUES (?)", (name,))
+        conn.commit()
 
         # Create a new instance of the "DatasetLabelEntry" class.
         label = DatasetLabelEntry(name)
@@ -139,7 +138,15 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             self.handle_label_click(label)
 
         # Count the number of spectra which are associated for the current label and update the spectra counter.
-        label.spectra_counter.setText(f"{len(self.dataset_storage[name])}x")
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM labels WHERE name = ?", (name,))
+        result = cursor.fetchone()
+        label_id = result[0]
+        cursor.execute("SELECT COUNT(*) FROM spectra WHERE label_id = ?", (label_id,))
+        spectra_count = cursor.fetchone()[0]
+        conn.close()
+
+        label.spectra_counter.setText(f"{spectra_count}x")
 
 
     def handle_label_click(self,
@@ -222,11 +229,21 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             label_widget.deleteLater()
             self.scrollArea_labels_Contents.layout().removeWidget(label_widget)
             self.update_label_count()
-            # Remove the label from the data storage dictionary and refresh the spectra scroll area.
-            del self.dataset_storage[label_name]
+
+            # Remove the label from the labels tabel in the database and remove all spectra entries which are connected
+            # to this label.
+            conn = sqlite3.connect(self.db_path)
+            conn.execute("PRAGMA foreign_keys = ON")
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM labels WHERE name = ?", (label_name,))
+            result = cursor.fetchone()
+            label_id = result[0]
+            cursor.execute("DELETE FROM labels WHERE id = ?", (label_id,))
+            conn.commit()
+            conn.close()
+
             self.update_spectra_list()
-            # Save the adjusted dataset storage.
-            self.save_data()
+
 
 
     def rename_label_dialog(self,
@@ -276,17 +293,23 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             except Exception as e:
                 print(f"Error while renaming: {e}")
 
-            # Exchange the label name in the dataset storage and display the new label name.
-            self.dataset_storage[new_label_name] = self.dataset_storage.pop(label_widget.old_label_name)
+            # Exchange the label name in the database.
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM labels WHERE name = ?", (label_widget.old_label_name,))
+            result = cursor.fetchone()
+            label_id = result[0]
+            cursor.execute("UPDATE labels SET name = ? WHERE id = ?", (new_label_name, label_id))
+            conn.commit()
+            conn.close()
+
+            # Display the new label name.
             label_widget.label_name.setText(new_label_name)
             label_widget.old_label_name = new_label_name
 
             # If the renamed label is the currently selected label, then change also the header of the spectra scroll area.
             if label_widget == self.current_selected_label:
                 self.spectra_container_header.setText(new_label_name)
-
-            # Save the adjusted dataset storage.
-            self.save_data()
 
 
     def update_label_count(self) -> None:
@@ -344,15 +367,27 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         :return: None.
         """
 
-        # Walk through all paths and add them to the dataset storage dictionary.
-        for path in paths:
-            # Check if the path is already part of the dictionary, if so skip it.
-            if path not in self.dataset_storage[self.current_selected_label.label_name.text()]:
-                self.dataset_storage[self.current_selected_label.label_name.text()].append(path)
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM labels WHERE name = ?", (str(self.current_selected_label.label_name.text()),))
+        result = cursor.fetchone()
+        label_id = result[0]
 
-        # Save the adjusted dataset storage.
-        self.save_data()
-        # 2. UI aktualisieren (Liste neu zeichnen)
+        spectra_to_insert = []
+
+        for path in paths:
+            p = Path(path)
+            spectrum_name = str(p.name)
+            spectrum_folder = str(p.parent)
+            spectra_to_insert.append((label_id, spectrum_name, spectrum_folder, str(path)))
+
+        # 3. Batch-Insert in die Datenbank
+        if spectra_to_insert:
+            cursor.executemany("INSERT INTO spectra (label_id, name, folder, path) VALUES (?, ?, ?, ?)", spectra_to_insert)
+
+        conn.commit()
+        conn.close()
+
         self.update_spectra_list()
 
 
@@ -371,13 +406,18 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
 
         # If a label is selected look for all spectra which are connected to this label and add them to the spectra scroll area.
         if self.current_selected_label is not None:
-            # Get all spectra paths of the current label from the dataset storage dictionary.
-            paths = self.dataset_storage[self.current_selected_label.label_name.text()]
-            # Sort the paths.
-            paths.sort()
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM labels WHERE name = ?", (str(self.current_selected_label.label_name.text()),))
+            result = cursor.fetchone()
+            label_id = result[0]
+            cursor.execute("SELECT path FROM spectra WHERE label_id = ?", (label_id,))
+            paths = cursor.fetchall()
 
             # Walk through all paths from the current label and set up the spectra widgets.
-            for path in paths:
+            for row in paths:
+                # Get the first element from the SQL result tuple.
+                path = row[0]
                 # Create a new spectra widget element.
                 spectra_widget = DatasetSpectrumEntry(path, spectra_layout.count() + 1)
                 # Connect the widget to a delete and click signal.
@@ -391,8 +431,11 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                     self.current_selected_spectrum = spectra_widget
 
             # Update the spectra counter inside the label scroll area and the counter beneath the spectra scroll area.
-            self.current_selected_label.spectra_counter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])}x")
-            self.label_spectracounter.setText(f"{len(self.dataset_storage[self.current_selected_label.label_name.text()])} spectra")
+            self.current_selected_label.spectra_counter.setText(f"{len(paths)}x")
+            self.label_spectracounter.setText(f"{len(paths)} spectra")
+
+            conn.commit()
+            conn.close()
         # If there is currently no label selected set the spectra counter to the default value.
         else :
             self.label_spectracounter.setText("0 spectra")
@@ -462,11 +505,19 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             self.scrollArea_spectra_Contents.layout().removeWidget(spectrum_widget)
             # Wait for 10 milliseconds and then call the renumber_spectra function to adjust the spectra numbering in the spectra scroll area.
             QtCore.QTimer.singleShot(10, self.renumber_spectra)
-            # Remove the spectrum also from the dataset storage directory.
-            self.dataset_storage[self.current_selected_label.label_name.text()].remove(spectrum_widget.spectrum_path)
-            # Update the displayed spectra list and save the dataset storage.
+
+            # Remove the spectrum from the database.
+            conn = sqlite3.connect(self.db_path)
+            conn.execute("PRAGMA foreign_keys = ON")
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM spectra WHERE path = ?", (spectrum_widget.spectrum_path,))
+            result = cursor.fetchone()
+            spectrum_id = result[0]
+            cursor.execute("DELETE FROM spectra WHERE id = ?", (spectrum_id,))
+            conn.commit()
+            conn.close()
+
             self.update_spectra_list()
-            self.save_data()
 
 
     def renumber_spectra(self) -> None:
@@ -497,36 +548,27 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                 counter += 1
 
 
-    def save_data(self) -> None:
-        """
-        This function saves the state of the currently available labels and spectra.
-        It is connected to the project manager and calls the save_dataset method.
-        =============================================================================
-        :return: None.
-        """
-
-        self.project_manager.save_dataset(self.dataset_storage)
-
-
     def load_data(self) -> None:
         """
-        This function loads all labels and spectra paths from the project file and saves them in the dataset storage
-        directory. It will als call the add_label function to create all label widgets, as well as the update_spectra_list
+        This function loads all labels and spectra paths from the database and saves them in dataframes.
+        It will also call the add_label function to create all label widgets, as well as the update_spectra_list
         method to create all spectra widgets for the scroll area.
         =============================================================================
         :return: None.
         """
 
-        # 1. Den aktuellen Speicher leeren
-        self.dataset_storage.clear()
-        # 2. Mit den neuen Daten füllen
-        self.dataset_storage.update(self.project_manager.get_dataset())
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM labels", )
+        label_names = cursor.fetchall()
 
-        # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
-        for label_name in self.dataset_storage.keys():
+        # Walk through all labels in the database, get the names and add them as labels.
+        for row in label_names:
+            # Get the first element from the SQL result tuple.
+            label_name = row[0]
             self.add_label(label_name)
 
-        # 5. Optional: Die Liste der Spektren (rechts) aktualisieren
+        # Handle the spectra widgets in another method.
         self.update_spectra_list()
 
 
@@ -796,7 +838,7 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
         This function is called when a spectra widget is clicked and changes the spectra stylesheet to highlight the currently
         selected spectrum in the spectra scroll area.
         =============================================================================
-        :param active: True if a spectrum widget is selected, False if a sspectrum widget is deselected.
+        :param active: True if a spectrum widget is selected, False if a spectrum widget is deselected.
         =============================================================================
         :return: None.
         """

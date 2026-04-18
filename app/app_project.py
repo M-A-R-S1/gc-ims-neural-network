@@ -44,6 +44,8 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         # Create project manager object.
         self.project_manager = ProjectManager(project_path)
 
+        # Initialize the database.
+        self.initialize_database()
         # Pages Setup.
         self.setup_pages()
         # Set the default page [Dataset].
@@ -52,13 +54,11 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.current_page = self.Main_container.currentWidget()
         # Set the sidebar buttons.
         self.setup_sidebar_buttons()
-        # Initialize the database.
-        self.initialize_database()
 
 
     def setup_pages(self):
         # Dataset
-        self.dataset_page = DatasetPage(self.project_path, self.project_manager)
+        self.dataset_page = DatasetPage(self.project_path)
         self.Main_container.addWidget(self.dataset_page)
         # Preprocessing
         self.preprocessing_page = PreprocessingPage(self.project_path, self.project_manager)
@@ -158,27 +158,65 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         :return: None.
         """
 
+        # Path to the database.
         db_directory = self.project_path.parent / "database"
-
+        # Create the database directory if it does not exist.
         if not db_directory.exists():
             db_directory.mkdir(parents=True, exist_ok=True)
-
+        # Database full path.
         db_file = db_directory / "project_database.db"
 
-        # Verbindung herstellen
+        # Connect to the database.
         conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
 
-        # Tabelle für Peaks erstellen
+        # Creat the settings table.
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS settings
+                       (
+                           drift_cut_start REAL DEFAULT 0,
+                           drift_cut_end REAL DEFAULT 0,
+                           retention_cut_start REAL DEFAULT 0,
+                           retention_cut_end REAL DEFAULT 0
+                       )
+                       ''')
+
+        # Creat the labels table.
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS labels
+                       (
+                           id INTEGER PRIMARY KEY AUTOINCREMENT,
+                           name TEXT UNIQUE NOT NULL
+                        )
+                    ''')
+
+        # Creat the spectra table.
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS spectra
+                       (
+                           id INTEGER PRIMARY KEY AUTOINCREMENT,
+                           label_id INTEGER NOT NULL,
+                           name TEXT NOT NULL,
+                           folder TEXT NOT NULL,
+                           path TEXT NOT NULL,
+                           processing_done INTEGER DEFAULT 0,
+                           peaks_done INTEGER DEFAULT 0,
+                           FOREIGN KEY (label_id) REFERENCES labels (id) ON DELETE CASCADE
+                       )
+                       ''')
+
+        # Create the peak table.
         cursor.execute('''
                             CREATE TABLE IF NOT EXISTS peaks (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                label TEXT NOT NULL,
-                                spectrum TEXT NOT NULL,
+                                label_id INTEGER NOT NULL,
+                                spectrum_id INTEGER NOT NULL,
                                 ret_time REAL,
                                 drift_time REAL,
                                 intensity REAL,
-                                npy_file TEXT
+                                npy_file TEXT,
+                                FOREIGN KEY (label_id) REFERENCES labels (id) ON DELETE CASCADE,
+                                FOREIGN KEY (spectrum_id) REFERENCES spectra (id) ON DELETE CASCADE
                             )
                         ''')
 

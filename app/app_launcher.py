@@ -126,8 +126,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
                 }
             }
 
-            #project_file.write_text(content, encoding="utf-8")
-
             with open(project_file, 'w', encoding='utf-8') as f:
                 json.dump(content, f, indent=4)
 
