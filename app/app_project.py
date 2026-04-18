@@ -10,6 +10,7 @@ from consensus_peak import ConsensusPeakPage
 from classifier import ClassifierPage
 from settings import SettingsPage
 from project_manager import ProjectManager
+import sqlite3
 
 class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
     def __init__(self, project_path):
@@ -17,15 +18,14 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.setupUi(self)
 
         # Set the current project path.
-        self.current_project = project_path
+        self.project_path = project_path
 
         # Set the window titel name.
-        if self.current_project:
-            project_name = self.current_project.stem
+        if self.project_path:
+            project_name = self.project_path.stem
             self.setWindowTitle(f"GC-IMS suite - {project_name}")
         else:
             self.setWindowTitle("GC-IMS suite - No Project Loaded")
-
 
         # All different pages.
         self.dataset_page = None
@@ -52,17 +52,19 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.current_page = self.Main_container.currentWidget()
         # Set the sidebar buttons.
         self.setup_sidebar_buttons()
+        # Initialize the database.
+        self.initialize_database()
 
 
     def setup_pages(self):
         # Dataset
-        self.dataset_page = DatasetPage(self.current_project, self.project_manager)
+        self.dataset_page = DatasetPage(self.project_path, self.project_manager)
         self.Main_container.addWidget(self.dataset_page)
         # Preprocessing
-        self.preprocessing_page = PreprocessingPage(self.current_project, self.project_manager)
+        self.preprocessing_page = PreprocessingPage(self.project_path, self.project_manager)
         self.Main_container.addWidget(self.preprocessing_page)
         # Peak Explorer
-        self.peak_explorer_page = PeakExplorerPage(self.current_project, self.project_manager)
+        self.peak_explorer_page = PeakExplorerPage(self.project_path, self.project_manager)
         self.Main_container.addWidget(self.peak_explorer_page)
         # Consensus Peak
         self.consensus_peak_page = ConsensusPeakPage()
@@ -147,6 +149,41 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.Main_container.setCurrentWidget(page)
 
         self.current_page = page
+
+
+    def initialize_database(self) -> None:
+        """
+        This function initializes the database of this project where all the detected peaks and more is saved.
+        =============================================================================
+        :return: None.
+        """
+
+        db_directory = self.project_path.parent / "database"
+
+        if not db_directory.exists():
+            db_directory.mkdir(parents=True, exist_ok=True)
+
+        db_file = db_directory / "project_database.db"
+
+        # Verbindung herstellen
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
+
+        # Tabelle für Peaks erstellen
+        cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS peaks (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                label TEXT NOT NULL,
+                                spectrum TEXT NOT NULL,
+                                ret_time REAL,
+                                drift_time REAL,
+                                intensity REAL,
+                                npy_file TEXT
+                            )
+                        ''')
+
+        conn.commit()
+        conn.close()
 
 
 if __name__ == "__main__":
