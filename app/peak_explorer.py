@@ -117,7 +117,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
     def start_peak_detection(self):
 
         # Open the progress dialog which informs the user about the current state of the preprocessing.
-        self.detection_progress_dialog = CustomProgressDialog("Peak detection...")
+        self.detection_progress_dialog = CustomProgressDialog(title="Peak detection...", header="Detecting peaks...",)
         # Reset the start time.
         self.detection_progress_dialog.start_time = None
         self.detection_progress_dialog.show()

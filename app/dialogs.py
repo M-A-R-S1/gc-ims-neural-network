@@ -119,7 +119,7 @@ class CustomYesNoDialog(QtWidgets.QDialog, Ui_YesNoDialog):
 
 
 class CustomProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
-    def __init__(self, title, parent=None):
+    def __init__(self, title: str, header: str, parent=None) -> None:
         super().__init__(parent)
         self.setupUi(self)
         self.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
@@ -141,6 +141,8 @@ class CustomProgressDialog(QtWidgets.QDialog, Ui_ProgressDialog):
         # Initialize the progress bar.
         self.progressBar.setValue(0)
         self.progressBar.setMaximum(100)
+        # Set the header label.
+        self.label_header.setText(header)
 
 
     def update_progress(self, current, total):

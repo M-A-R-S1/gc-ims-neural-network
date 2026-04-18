@@ -624,7 +624,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                 return
 
         # Open the progress dialog which informs the user about the current state of the preprocessing.
-        self.loading_dialog = CustomProgressDialog("Preprocessing...")
+        self.loading_dialog = CustomProgressDialog(title="Preprocessing...", header="Dataset preprocessing")
         # Reset the start time.
         self.loading_dialog.start_time = None
         self.loading_dialog.show()
