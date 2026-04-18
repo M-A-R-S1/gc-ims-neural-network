@@ -15,6 +15,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 import shutil
+import sqlite3
 import ims
 
 class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
@@ -33,8 +34,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.current_selected_peak = None
         # Saves labels and spectra in a dictionary.
         self.dataset_storage = {}
-        # Path to the peak Excel file.
-        self.peaks_excel_path = self.project_path.parent / "peaks.xlsx"
+        # Peak dataframe which is filled with the peak database information.
+        self.peak_dataframe = None
 
         # Background overlay -> This overlay blocks the view to the peak explorer while the peak detection process is running.
         self.overlay = QtWidgets.QWidget(self)
@@ -71,8 +72,10 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
     def showEvent(self, event) -> None:
         """
-        This function is called every time the user enters this page and checks if the peak Exel file exists.
-        If the file does not exist, a peak detection dialog is prompted to the user.
+        This function is called every time the user enters this page and checks if the peak database file exists and
+        if all spectra have peaks inside the database.
+        If peaks are missing a peak detection dialog is prompted to the user.
+        =============================================================================
         :param event: The page display event.
         =============================================================================
         :return: None
@@ -80,11 +83,22 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         super().showEvent(event)
 
-        if not self.peaks_excel_path.exists():
+        if self.peak_dataframe is None:
+            db_path = self.project_path.parent / "database" / "project_database.db"
+            conn = sqlite3.connect(db_path)
+            self.peak_dataframe = pd.read_sql_query("SELECT * FROM peaks", conn)
+            conn.close()
+
+        if self.peak_dataframe.empty:
             QtCore.QTimer.singleShot(100, self.show_peak_detection_dialog)
         else:
-            self.overlay.hide()
+            total_spectra_count = sum(len(files) for files in self.dataset_storage.values())
+            unique_spectra_count = self.peak_dataframe['spectrum'].nunique()
 
+            if total_spectra_count == unique_spectra_count:
+                self.overlay.hide()
+            else:
+                QtCore.QTimer.singleShot(100, self.show_peak_detection_dialog)
 
 
     def show_peak_detection_dialog(self) -> None:
@@ -143,16 +157,28 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.thread.start()
 
 
+    # TODO ... change this methode!
+
     def check_peaks(self) -> None:
-        if not self.peaks_excel_path.exists():
+
+        # Update the peak dataframe by fetching the new peak data.
+        db_path = self.project_path.parent / "database" / "project_database.db"
+        conn = sqlite3.connect(db_path)
+        self.peak_dataframe = pd.read_sql_query("SELECT * FROM peaks", conn)
+        conn.close()
+
+        total_spectra_count = sum(len(files) for files in self.dataset_storage.values())
+        unique_spectra_count = self.peak_dataframe['spectrum'].nunique()
+
+        if total_spectra_count == unique_spectra_count:
+            self.overlay.hide()
+        else:
             main_window = self.window()
 
             if hasattr(main_window, 'sb_preprocessing_button'):
                 main_window.sb_preprocessing_button.click()
             else:
                 print("Error: Sidebar button 'Preprocessing' not found.")
-        else:
-            self.overlay.hide()
 
 
     def load_data(self):
@@ -486,9 +512,21 @@ class PeakDetectionWorker(QtCore.QObject):
                 self.progress_update.emit(processed_count, total_spectra)
 
         if not self.worker_stopped and peak_data_all:
-            df = pd.DataFrame(peak_data_all)
-            excel_file = self.project_path / "peaks.xlsx"
-            df.to_excel(excel_file, index=False)
+            #df = pd.DataFrame(peak_data_all)
+            #excel_file = self.project_path / "peaks.xlsx"
+            #df.to_excel(excel_file, index=False)
+
+            # Get the database path and connect to it.
+            db_path = self.project_path / "database" / "project_database.db"
+            conn = sqlite3.connect(db_path)
+
+            # Create the pandas dataframe from the peak data and write it into the database.
+            dataframe = pd.DataFrame(peak_data_all)
+            dataframe.to_sql('peaks', conn, if_exists='replace', index=False)
+            # Close the database connection.
+            conn.close()
+            print(f"Erfolgreich {len(dataframe)} Peaks in die Datenbank gespeichert.")
+
 
         self.finished.emit()
 
@@ -659,10 +697,10 @@ def peak_detection(task_data, project_path, peak_radius) -> list[dict]:
                 peak_data = {
                     'label': label_name,
                     'spectrum': spectrum.name,
-                    'ret_time': spectrum.ret_time[ret_idx],
-                    'drift_time': spectrum.drift_time[drift_idx],
-                    'intensity': spectrum.values[ret_idx, drift_idx],
-                    'npy_file': npy_dictionary_file,
+                    'ret_time': float(spectrum.ret_time[ret_idx]),
+                    'drift_time': float(spectrum.drift_time[drift_idx]),
+                    'intensity': float(spectrum.values[ret_idx, drift_idx]),
+                    'npy_file': str(npy_dictionary_file),
                 }
                 spectrum_peak_data.append(peak_data)
 
