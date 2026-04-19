@@ -11,27 +11,25 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
 from collections import defaultdict
-from project_manager import *
+from pathlib import Path
+import sqlite3
 import shutil
 import ims
-import json
 
 
 class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
-    def __init__(self, project_path: str, project_manager: ProjectManager):
+    def __init__(self, project_path: str):
         super().__init__()
         self.setupUi(self)
 
         # Project save path
         self.project_path = Path(project_path)
-        # The project manager
-        self.project_manager = project_manager
         # Currently selected spectrum.
         self.current_selected_spectrum = None
         self.selected_spectrum_name = None
         self.selected_label_name = None
-        # Saves labels and spectra in a dictionary.
-        self.dataset_storage = {}
+        # The path to the database file.
+        self.db_path = self.project_path.parent / "database" / "project_database.db"
 
         # Defining the scroll area layouts.
         self.scrollArea_dataset_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -72,44 +70,16 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
         # Connect the button
         self.pushButton_start_processing.clicked.connect(self.start_preprocessing)
-        # load dataset from project.
+        # load dataset from the database.
         self.load_data()
         # Check if any spectra are already processed.
         self.check_processed_spectra()
 
 
-    def load_dataset(self) -> None:
-        """
-        This function is called the first time the preprocessing page is loaded. This function reads all previously saved
-        labels and spectra and loads them into the dataset storage. Each label is then created as a widget for the
-        scroll area.
-        =============================================================================
-        :return: None.
-        """
-
-        try:
-            # load all label and spectra data from the project .gcimsp file.
-            with open(self.project_path, 'r', encoding='utf-8') as f:
-                loaded_data = json.load(f)
-
-            # clear the dataset storage and override it with the loaded labels and spectra.
-            self.dataset_storage.clear()
-            self.dataset_storage.update(loaded_data)
-
-            # Walk through all labels in the dataset storage and add them as label widgets to the label scroll area.
-            for label_name in self.dataset_storage.keys():
-                self.add_label(label_name)
-
-        except Exception as e:
-            # Display an error dialog - Something went wrong while loading the data.
-            CustomMessageDialog.show_error("Error - Loading", "Something went wrong while loading the dataset!", self)
-            print(f"Dataset loading error: {e}")
-
-
     def save_data(self):
         """
         This function saves the state of the currently set region of interest.
-        It is connected to the project manager and calls the save_processing method.
+        It is saved to the settings table in the database.
         =============================================================================
         :return: None.
         """
@@ -119,7 +89,22 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                                 "dt_start": self.lineEdit_drift_start_cut.text() or 0,
                                 "dt_end": self.lineEdit_drift_end_cut.text() or 0}
 
-        self.project_manager.save_preprocessing(region_of_interest)
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+                       UPDATE settings 
+                       SET retention_start_cut = ?,
+                           retention_end_cut   = ?,
+                           drift_start_cut     = ?,
+                           drift_end_cut       = ?
+                       WHERE id = 1
+                       ''', (region_of_interest['rt_start'],
+                             region_of_interest['rt_end'],
+                             region_of_interest['dt_start'],
+                             region_of_interest['dt_end']))
+
+        conn.commit()
+        conn.close()
 
 
     def load_data(self):
@@ -133,9 +118,6 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         self.current_selected_spectrum = None
         self.label_preview.setText("Spectrum preview")
 
-        # Clear the dataset storage and load the new one.
-        self.dataset_storage.clear()
-        self.dataset_storage.update(self.project_manager.get_dataset())
         # Clear the canvas.
         self.clear_canvas()
 
@@ -152,16 +134,27 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                 widget.setParent(None)
                 widget.deleteLater()
 
-        # Now walk through all labels in the dataset storage and add all labels to the scroll area.
-        for label_name in self.dataset_storage.keys():
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM labels", )
+        label_names = cursor.fetchall()
+
+        # Walk through all labels in the database, get the names and add them as labels.
+        for row in label_names:
+            # Get the first element from the SQL result tuple.
+            label_name = row['name']
             self.add_label(label_name)
 
         # Load and set the region of interest values.
-        cutting_data = self.project_manager.get_preprocessing()
-        self.lineEdit_retention_start_cut.setText(str(cutting_data.get("rt_start", "")))
-        self.lineEdit_retention_end_cut.setText(str(cutting_data.get("rt_end", "")))
-        self.lineEdit_drift_start_cut.setText(str(cutting_data.get("dt_start", "")))
-        self.lineEdit_drift_end_cut.setText(str(cutting_data.get("dt_end", "")))
+        cursor.execute("SELECT * FROM settings WHERE id = ?", (1,))
+        roi_data = cursor.fetchone()
+
+        self.lineEdit_retention_start_cut.setText(str(roi_data['retention_start_cut']))
+        self.lineEdit_retention_end_cut.setText(str(roi_data['retention_end_cut']))
+        self.lineEdit_drift_start_cut.setText(str(roi_data['drift_start_cut']))
+        self.lineEdit_drift_end_cut.setText(str(roi_data['drift_end_cut']))
 
 
     def add_label(self,
@@ -197,11 +190,19 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         :return: None.
         """
 
-        # Get all spectra paths for the current label.
-        paths = self.dataset_storage[label_widget.label_name.text()]
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM labels WHERE name = ?", (label_widget.label_name.text(),))
+        result = cursor.fetchone()
+        cursor.execute("SELECT path FROM spectra WHERE label_id = ?", (result['id'],))
+        spectra_rows = cursor.fetchall()
+        conn.close()
 
         # Loop through all spectra and add them as a widget to the scroll area.
-        for index, path in enumerate(paths):
+        for index, row in enumerate(spectra_rows):
+            path = row['path']
+
             spectrum = DatasetSubEntry(path, index, label_widget, 'preprocessing')
             self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
             spectrum.click_signal.connect(self.handle_spectrum_click)
@@ -576,8 +577,13 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         path = self.project_path.parent / "dataset"
         # Number of processed spectra.
         processed_spectra = 0
+
         # The total number of spectra of the dataset.
-        total_spectra = sum(len(spectra) for spectra in self.dataset_storage.values())
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM spectra",)
+        total_spectra = cursor.fetchone()[0]
+        conn.close()
 
         # Check if the dataset path exists. If so look for already processed spectra which are saved as .hdf5 files.
         if path.exists():
@@ -632,7 +638,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # Create a thread and worker for the progress dialog.
         self.thread = QtCore.QThread()
         self.worker = PreprocessingWorker(path=self.project_path,
-                                          dataset=self.dataset_storage,
+                                          db_path=self.db_path,
                                           drift_cut=(self.lineEdit_drift_start_cut.text(), self.lineEdit_drift_end_cut.text()),
                                           retention_cut=(self.lineEdit_retention_start_cut.text(), self.lineEdit_retention_end_cut.text()),
                                           process_all=process_all)
@@ -665,8 +671,13 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # Set the path to the saved dataset files.
         path = self.project_path.parent / "dataset"
         processed_spectra = 0
+
         # Get the total number of spectra which are in the dataset.
-        total_spectra = sum(len(spectra) for spectra in self.dataset_storage.values())
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM spectra", )
+        total_spectra = cursor.fetchone()[0]
+        conn.close()
 
         # Check if the dataset folder exists and if so check how many spectra are already processed.
         if path.exists():
@@ -842,17 +853,17 @@ class PreprocessingWorker(QtCore.QObject):
 
     def __init__(self,
                  path: Path,
-                 dataset: dict,
+                 db_path: Path,
                  drift_cut: tuple,
                  retention_cut: tuple,
                  process_all: bool):
 
         super().__init__()
-        self.dataset = dataset
         self.drift_cut = drift_cut
         self.retention_cut = retention_cut
         self.project_path = path.parent
         self.process_all = process_all
+        self.db_path = db_path
         # Worker stopped signal [The user has canceled the preprocessing].
         self.worker_stopped = False
 
@@ -878,13 +889,24 @@ class PreprocessingWorker(QtCore.QObject):
         used_dataset = defaultdict(list)
         spectra_to_process = 0
 
-        # Loop through the dataset.
-        for label, spectra_paths in self.dataset.items():
-            for spectrum_path in spectra_paths:
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM labels",)
+        label_data = cursor.fetchall()
+
+        # Walk through all labels in the database.
+        for label in label_data:
+            cursor.execute("SELECT id, path, name FROM spectra WHERE label_id = ?", (label['id'],))
+            spectra_paths = cursor.fetchall()
+
+            for spectrum_path_data in spectra_paths:
+                spectrum_path = spectrum_path_data['path']
                 # Get the spectrum name.
-                spec_name = Path(spectrum_path).stem
+                spec_name = spectrum_path_data['name']
                 # Set the folder where the processed spectrum will be saved.
-                target_folder = self.project_path / "dataset" / label / spec_name
+                target_folder = self.project_path / "dataset" / label['name'] / spec_name
                 target_file = target_folder / f"{spec_name}.hdf5"
 
                 # Add the spectrum to the used dataset list for processing.
@@ -897,12 +919,14 @@ class PreprocessingWorker(QtCore.QObject):
                             print(f"Error while deleting {target_file}: {e}")
 
                     # Add the label to the used dataset.
-                    if label not in used_dataset:
-                        used_dataset[label] = []
+                    if label['name'] not in used_dataset:
+                        used_dataset[label['name']] = []
 
                     # Add the spectrum to the used dataset.
-                    used_dataset[label].append(spectrum_path)
+                    used_dataset[label['name']].append(spectrum_path)
                     spectra_to_process += 1
+
+        conn.close()
 
         # The number of processed spectra during this preprocessing.
         processed_spectra_counter = 0
@@ -945,18 +969,26 @@ class PreprocessingWorker(QtCore.QObject):
                 spectrum.values[spectrum.values < 0] = 0.0
 
                 # Create the path where the spectrum should be saved and create the folders if neccessary.
-                spectrum_path =  self.project_path / "dataset" / label / spectrum.name
-                if not spectrum_path.exists():
-                    spectrum_path.mkdir(parents=True, exist_ok=True)
+                save_path =  self.project_path / "dataset" / label / spectrum.name
+                if not save_path.exists():
+                    save_path.mkdir(parents=True, exist_ok=True)
 
                 # Specify the file name and delete the old file (if an old file exists).
-                spectrum_file = spectrum_path / f"{spectrum.name}.hdf5"
+                spectrum_file = save_path / f"{spectrum.name}.hdf5"
                 if spectrum_file.exists():
                     spectrum_file.unlink()
 
                 # Save the processed spectrum, increase the counter and update the progress dialog.
-                spectrum.to_hdf5(spectrum_path)
+                spectrum.to_hdf5(save_path)
                 processed_spectra_counter += 1
+
+                # Update the database entry.
+                conn = sqlite3.connect(self.db_path)
+                cursor = conn.cursor()
+                cursor.execute("UPDATE spectra SET processing_done = ? WHERE path = ?", (1, str(spectrum_path)))
+                conn.commit()
+                conn.close()
+
                 self.progress_update.emit(processed_spectra_counter, spectra_to_process)
 
         # Send the finished signal.

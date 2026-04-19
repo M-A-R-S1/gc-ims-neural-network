@@ -9,7 +9,6 @@ from peak_explorer import PeakExplorerPage
 from consensus_peak import ConsensusPeakPage
 from classifier import ClassifierPage
 from settings import SettingsPage
-from project_manager import ProjectManager
 import sqlite3
 
 class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
@@ -41,9 +40,6 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.palette_deactivated = None
         self.palette_normal = None
 
-        # Create project manager object.
-        self.project_manager = ProjectManager(project_path)
-
         # Initialize the database.
         self.initialize_database()
         # Pages Setup.
@@ -61,10 +57,10 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.dataset_page = DatasetPage(self.project_path)
         self.Main_container.addWidget(self.dataset_page)
         # Preprocessing
-        self.preprocessing_page = PreprocessingPage(self.project_path, self.project_manager)
+        self.preprocessing_page = PreprocessingPage(self.project_path)
         self.Main_container.addWidget(self.preprocessing_page)
         # Peak Explorer
-        self.peak_explorer_page = PeakExplorerPage(self.project_path, self.project_manager)
+        self.peak_explorer_page = PeakExplorerPage(self.project_path)
         self.Main_container.addWidget(self.peak_explorer_page)
         # Consensus Peak
         self.consensus_peak_page = ConsensusPeakPage()
@@ -174,12 +170,17 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         cursor.execute('''
                        CREATE TABLE IF NOT EXISTS settings
                        (
-                           drift_cut_start REAL DEFAULT 0,
-                           drift_cut_end REAL DEFAULT 0,
-                           retention_cut_start REAL DEFAULT 0,
-                           retention_cut_end REAL DEFAULT 0
+                           id INTEGER PRIMARY KEY CHECK (id = 1),
+                           drift_start_cut REAL,
+                           drift_end_cut REAL,
+                           retention_start_cut INTEGER,
+                           retention_end_cut INTEGER
                        )
                        ''')
+
+        # Input the settings.
+        cursor.execute("INSERT OR IGNORE INTO settings (id, drift_start_cut, drift_end_cut, retention_start_cut, retention_end_cut) VALUES (1, 0, 0, 0, 0)")
+        conn.commit()
 
         # Creat the labels table.
         cursor.execute('''
@@ -197,7 +198,6 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                            id INTEGER PRIMARY KEY AUTOINCREMENT,
                            label_id INTEGER NOT NULL,
                            name TEXT NOT NULL,
-                           folder TEXT NOT NULL,
                            path TEXT NOT NULL,
                            processing_done INTEGER DEFAULT 0,
                            peaks_done INTEGER DEFAULT 0,

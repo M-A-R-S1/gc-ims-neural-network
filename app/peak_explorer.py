@@ -2,13 +2,13 @@ from PySide6 import QtWidgets, QtCore
 from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
 from PeakExplorerWidget import Ui_PeakExplorerWidget
 from dialogs import CustomMessageDialog, CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
-from project_manager import *
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
 from collections import defaultdict
 from skimage.morphology import max_tree, h_maxima, area_opening
 from skimage.measure import label, regionprops
+from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler
 import multiprocessing as mp
 from functools import partial
@@ -19,14 +19,12 @@ import sqlite3
 import ims
 
 class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
-    def __init__(self, project_path: str, project_manager: ProjectManager):
+    def __init__(self, project_path: str):
         super().__init__()
         self.setupUi(self)
 
         # Project save path
         self.project_path = Path(project_path)
-        # The project manager
-        self.project_manager = project_manager
         # Currently selected spectrum.
         self.current_selected_spectrum = None
         self.selected_spectrum_name = None
@@ -194,7 +192,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Clear the dataset storage and load the new one.
         self.dataset_storage.clear()
-        self.dataset_storage.update(self.project_manager.get_dataset())
+        #self.dataset_storage.update(self.project_manager.get_dataset())
         # Clear the canvas.
         self.clear_canvas()
 

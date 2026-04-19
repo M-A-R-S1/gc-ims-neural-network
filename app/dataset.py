@@ -10,11 +10,9 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
 from pathlib import Path
-import pandas as pd
 import sqlite3
 import shutil
 import ims
-
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
     def __init__(self, project_path: str) -> None   :
@@ -378,12 +376,11 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         for path in paths:
             p = Path(path)
             spectrum_name = str(p.name)
-            spectrum_folder = str(p.parent)
-            spectra_to_insert.append((label_id, spectrum_name, spectrum_folder, str(path)))
+            spectra_to_insert.append((label_id, spectrum_name, str(path)))
 
         # 3. Batch-Insert in die Datenbank
         if spectra_to_insert:
-            cursor.executemany("INSERT INTO spectra (label_id, name, folder, path) VALUES (?, ?, ?, ?)", spectra_to_insert)
+            cursor.executemany("INSERT INTO spectra (label_id, name, path) VALUES (?, ?, ?)", spectra_to_insert)
 
         conn.commit()
         conn.close()

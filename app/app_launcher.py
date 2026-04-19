@@ -117,13 +117,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
             # Create the content for the .gcimsp file and create the file.
             content = {
                 "version": "1.0",
-                "datasets": {},
-                "preprocessing": {
-                    "rt_start": 0,
-                    "rt_end": 0,
-                    "dt_start": 0,
-                    "dt_end": 0
-                }
             }
 
             with open(project_file, 'w', encoding='utf-8') as f:
