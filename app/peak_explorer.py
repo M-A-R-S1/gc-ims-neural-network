@@ -30,10 +30,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.selected_spectrum_name = None
         self.selected_label_name = None
         self.current_selected_peak = None
-        # Saves labels and spectra in a dictionary.
-        self.dataset_storage = {}
-        # Peak dataframe which is filled with the peak database information.
-        self.peak_dataframe = None
+        # Path to the database.
+        self.db_path = self.project_path.parent / "database" / "project_database.db"
 
         # Background overlay -> This overlay blocks the view to the peak explorer while the peak detection process is running.
         self.overlay = QtWidgets.QWidget(self)
@@ -70,8 +68,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
     def showEvent(self, event) -> None:
         """
-        This function is called every time the user enters this page and checks if the peak database file exists and
-        if all spectra have peaks inside the database.
+        This function is called every time the user enters this page and checks if all spectra have peaks inside the database.
         If peaks are missing a peak detection dialog is prompted to the user.
         =============================================================================
         :param event: The page display event.
@@ -80,23 +77,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         """
 
         super().showEvent(event)
-
-        if self.peak_dataframe is None:
-            db_path = self.project_path.parent / "database" / "project_database.db"
-            conn = sqlite3.connect(db_path)
-            self.peak_dataframe = pd.read_sql_query("SELECT * FROM peaks", conn)
-            conn.close()
-
-        if self.peak_dataframe.empty:
-            QtCore.QTimer.singleShot(100, self.show_peak_detection_dialog)
-        else:
-            total_spectra_count = sum(len(files) for files in self.dataset_storage.values())
-            unique_spectra_count = self.peak_dataframe['spectrum'].nunique()
-
-            if total_spectra_count == unique_spectra_count:
-                self.overlay.hide()
-            else:
-                QtCore.QTimer.singleShot(100, self.show_peak_detection_dialog)
+        # Check if the peak detection was performed on all spectra.
+        self.check_spectra_without_peaks()
 
 
     def show_peak_detection_dialog(self) -> None:
@@ -136,8 +118,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Create a thread and worker for the progress dialog.
         self.thread = QtCore.QThread()
-        self.worker = PeakDetectionWorker(path=self.project_path,
-                                          dataset=self.dataset_storage)
+        self.worker = PeakDetectionWorker(path=self.project_path)
 
         self.worker.moveToThread(self.thread)
 
@@ -146,7 +127,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.worker.progress_update.connect(self.detection_progress_dialog.update_progress)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.detection_progress_dialog.accept)
-        self.worker.finished.connect(self.check_peaks)
+        self.worker.finished.connect(self.check_spectra_without_peaks)
         self.detection_progress_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
         self.thread.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
@@ -155,28 +136,26 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.thread.start()
 
 
-    # TODO ... change this methode!
+    def check_spectra_without_peaks(self) -> None:
+        """
+        This function checks if all spectra inside the database are flagged with peaks_done = 1.
+        If the peak detection was not performed on a spectrum this flag is set to 0 and the
+        peak detection dialog is shown to the user.
+        =============================================================================
+        :return: None.
+        """
 
-    def check_peaks(self) -> None:
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM spectra WHERE peaks_done = 0")
+        spectra_without_peaks = cursor.fetchone()[0]
 
-        # Update the peak dataframe by fetching the new peak data.
-        db_path = self.project_path.parent / "database" / "project_database.db"
-        conn = sqlite3.connect(db_path)
-        self.peak_dataframe = pd.read_sql_query("SELECT * FROM peaks", conn)
-        conn.close()
-
-        total_spectra_count = sum(len(files) for files in self.dataset_storage.values())
-        unique_spectra_count = self.peak_dataframe['spectrum'].nunique()
-
-        if total_spectra_count == unique_spectra_count:
-            self.overlay.hide()
+        if spectra_without_peaks > 0:
+            QtCore.QTimer.singleShot(100, self.show_peak_detection_dialog)
         else:
-            main_window = self.window()
+            self.overlay.hide()
 
-            if hasattr(main_window, 'sb_preprocessing_button'):
-                main_window.sb_preprocessing_button.click()
-            else:
-                print("Error: Sidebar button 'Preprocessing' not found.")
+        conn.close()
 
 
     def load_data(self):
@@ -190,9 +169,6 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.current_selected_spectrum = None
         self.label_preview.setText("Spectrum preview")
 
-        # Clear the dataset storage and load the new one.
-        self.dataset_storage.clear()
-        #self.dataset_storage.update(self.project_manager.get_dataset())
         # Clear the canvas.
         self.clear_canvas()
 
@@ -202,15 +178,24 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             item = layout.itemAt(i)
             widget = item.widget()
 
-            # Check if the widget is an instance of the DatasetMainEntry or DatasetSubEntry, if so remove it from the
+            # Check if the widget is an instnace of the DatasetMainEntry or DatasetSubEntry, if so remove it from the
             # layout and delete it.
             if widget is not None and isinstance(widget, DatasetMainEntry) or isinstance(widget, DatasetSubEntry):
                 layout.removeWidget(widget)
                 widget.setParent(None)
                 widget.deleteLater()
 
-        # Now walk through all labels in the dataset storage and add all labels to the scroll area.
-        for label_name in self.dataset_storage.keys():
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM labels", )
+        labels_data = cursor.fetchall()
+
+        # Walk through all labels in the database, get the names and add them as labels.
+        for row in labels_data:
+            # Get the label name of the current row.
+            label_name = row['name']
             self.add_label(label_name)
 
 
@@ -247,18 +232,27 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         :return: None.
         """
 
-        # Get all spectra paths for the current label.
-        paths = self.dataset_storage[label_widget.label_name.text()]
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM labels WHERE name = ?", (label_widget.label_name.text(),))
+        result = cursor.fetchone()
+        cursor.execute("SELECT path FROM spectra WHERE label_id = ?", (result['id'],))
+        spectra_rows = cursor.fetchall()
+        conn.close()
 
         # Loop through all spectra and add them as a widget to the scroll area.
-        for index, path in enumerate(paths):
-            spectrum_widget = DatasetSubEntry(path, index, label_widget, 'peak_explorer')
-            self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, spectrum_widget)
-            spectrum_widget.click_signal.connect(self.handle_spectrum_click)
-            spectrum_widget.hide()
+        for index, row in enumerate(spectra_rows):
+            path = row['path']
 
-            if self.selected_spectrum_name == spectrum_widget.label_name.text():
-                self.handle_spectrum_click(spectrum_widget)
+            spectrum = DatasetSubEntry(path, index, label_widget, 'preprocessing')
+            self.scrollArea_dataset_Contents.layout().insertWidget(
+                self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
+            spectrum.click_signal.connect(self.handle_spectrum_click)
+            spectrum.hide()
+
+            if self.selected_spectrum_name == spectrum.label_name.text():
+                self.handle_spectrum_click(spectrum)
                 self.label_preview.setText(f"{label_widget.label_name.text()} - {self.selected_spectrum_name}")
 
 
@@ -458,13 +452,11 @@ class PeakDetectionWorker(QtCore.QObject):
     finished = Signal()
     progress_update = Signal(int, int)
 
-    def __init__(self,
-                 path: Path,
-                 dataset: dict):
+    def __init__(self, path: Path):
 
         super().__init__()
-        self.dataset = dataset
         self.project_path = path.parent
+        self.db_path = self.project_path / "database" / "project_database.db"
         # Worker stopped signal [The user has canceled the preprocessing].
         self.worker_stopped = False
 
@@ -472,16 +464,21 @@ class PeakDetectionWorker(QtCore.QObject):
     def stop(self):
         self.worker_stopped = True
 
-
     def run(self):
-        # 1. Aufgabenliste vorbereiten (Tasks)
-        tasks = []
-        for label, spectra_paths in self.dataset.items():
-            for spectrum_path in spectra_paths:
-                tasks.append((spectrum_path, label))
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        query = """
+                SELECT spectra.path, labels.name, labels.id, spectra.id FROM spectra 
+                JOIN labels ON spectra.label_id = labels.id 
+                WHERE spectra.peaks_done = 0
+                """
+        cursor.execute(query)
+        tasks = cursor.fetchall()
 
         total_spectra = len(tasks)
         if total_spectra == 0:
+            conn.close()
             self.finished.emit()
             return
 
@@ -497,38 +494,35 @@ class PeakDetectionWorker(QtCore.QObject):
 
         with mp.Pool(processes=num_cores) as pool:
             for result in pool.imap_unordered(worker_func, tasks):
-
                 if self.worker_stopped:
                     pool.terminate()
                     pool.join()
                     break
 
                 if result:
-                    peak_data_all.extend(result)
+                    spectrum_path, peaks = result
+
+                    if peaks:
+                        peak_data_all.extend(peaks)
+
+                    cursor.execute("UPDATE spectra SET peaks_done = 1 WHERE path = ?", (spectrum_path,))
+                    conn.commit()
 
                 processed_count += 1
                 self.progress_update.emit(processed_count, total_spectra)
 
-        if not self.worker_stopped and peak_data_all:
-            #df = pd.DataFrame(peak_data_all)
-            #excel_file = self.project_path / "peaks.xlsx"
-            #df.to_excel(excel_file, index=False)
-
-            # Get the database path and connect to it.
-            db_path = self.project_path / "database" / "project_database.db"
-            conn = sqlite3.connect(db_path)
-
+        if peak_data_all:
             # Create the pandas dataframe from the peak data and write it into the database.
             dataframe = pd.DataFrame(peak_data_all)
-            dataframe.to_sql('peaks', conn, if_exists='replace', index=False)
-            # Close the database connection.
-            conn.close()
+            dataframe.to_sql('peaks', conn, if_exists='append', index=False)
+            conn.commit()
             print(f"Erfolgreich {len(dataframe)} Peaks in die Datenbank gespeichert.")
 
-
+        conn.close()
         self.finished.emit()
 
-def peak_detection(task_data, project_path, peak_radius) -> list[dict]:
+
+def peak_detection(task_data, project_path, peak_radius) -> tuple[Path, list]:
     """
     This function handles the peak detection for preprocessed gc-ims spectra in a series of steps.
     1. Normalization of the spectrum to values between 0 and 1.
@@ -553,7 +547,7 @@ def peak_detection(task_data, project_path, peak_radius) -> list[dict]:
     :return: List of dictionaries which contain peak + surrounding information.
     """
 
-    spectrum_path, label_name = task_data
+    spectrum_path, label_name, label_id, spectrum_id = task_data
     spec_name = Path(spectrum_path).stem
     target_file = project_path / "dataset" / label_name / spec_name / f"{spec_name}.hdf5"
     spectrum = ims.Spectrum.read_hdf5(target_file)
@@ -667,6 +661,11 @@ def peak_detection(task_data, project_path, peak_radius) -> list[dict]:
                 constant_values=0
             )
 
+            # Check if the peaks directory already exists - if so delete it and all old peaks.
+            npy_save_dir = project_path / "dataset" / label_name / spectrum.name / "peaks"
+            if npy_save_dir.exists():
+                shutil.rmtree(npy_save_dir)
+
             # Walk through all peak coordinates.
             for ret_idx, drift_idx in peak_coords:
                 start_ret_idx = ret_idx - peak_radius
@@ -693,8 +692,8 @@ def peak_detection(task_data, project_path, peak_radius) -> list[dict]:
 
                 # Dictionary with information about peaks.
                 peak_data = {
-                    'label': label_name,
-                    'spectrum': spectrum.name,
+                    'label_id': label_id,
+                    'spectrum_id': spectrum_id,
                     'ret_time': float(spectrum.ret_time[ret_idx]),
                     'drift_time': float(spectrum.drift_time[drift_idx]),
                     'intensity': float(spectrum.values[ret_idx, drift_idx]),
@@ -706,4 +705,4 @@ def peak_detection(task_data, project_path, peak_radius) -> list[dict]:
         print(f"\tError on {spectrum.name} - Skipped: {err=}, {type(err)=}")
         return []
 
-    return spectrum_peak_data
+    return spectrum_path, spectrum_peak_data

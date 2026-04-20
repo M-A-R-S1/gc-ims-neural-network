@@ -139,11 +139,11 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM labels", )
-        label_names = cursor.fetchall()
+        labels_data = cursor.fetchall()
 
         # Walk through all labels in the database, get the names and add them as labels.
-        for row in label_names:
-            # Get the first element from the SQL result tuple.
+        for row in labels_data:
+            # Get the label name of the current row.
             label_name = row['name']
             self.add_label(label_name)
 
@@ -926,8 +926,6 @@ class PreprocessingWorker(QtCore.QObject):
                     used_dataset[label['name']].append(spectrum_path)
                     spectra_to_process += 1
 
-        conn.close()
-
         # The number of processed spectra during this preprocessing.
         processed_spectra_counter = 0
 
@@ -982,14 +980,23 @@ class PreprocessingWorker(QtCore.QObject):
                 spectrum.to_hdf5(save_path)
                 processed_spectra_counter += 1
 
-                # Update the database entry.
-                conn = sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-                cursor.execute("UPDATE spectra SET processing_done = ? WHERE path = ?", (1, str(spectrum_path)))
+                # Get the peaks directory.
+                peak_dir = save_path / "peaks"
+                if peak_dir.exists():
+                    shutil.rmtree(peak_dir)
+
+                cursor.execute("SELECT id FROM spectra WHERE path = ?", (str(spectrum_path),))
+                spectra_data = cursor.fetchone()
+                spectrum_id = spectra_data[0]
+                # Delete peaks which are associated with this spectrum.
+                cursor.execute("DELETE FROM peaks WHERE spectrum_id = ?", (spectrum_id,))
+                # Update the spectrum database entry.
+                cursor.execute("UPDATE spectra SET processing_done = ?, peaks_done = ? WHERE path = ?", (1, 0,str(spectrum_path)))
+
                 conn.commit()
-                conn.close()
 
                 self.progress_update.emit(processed_spectra_counter, spectra_to_process)
 
+        conn.close()
         # Send the finished signal.
         self.finished.emit()
