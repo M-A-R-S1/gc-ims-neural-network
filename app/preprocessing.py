@@ -195,7 +195,7 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM labels WHERE name = ?", (label_widget.label_name.text(),))
         result = cursor.fetchone()
-        cursor.execute("SELECT path FROM spectra WHERE label_id = ?", (result['id'],))
+        cursor.execute("SELECT id, path FROM spectra WHERE label_id = ?", (result['id'],))
         spectra_rows = cursor.fetchall()
         conn.close()
 
@@ -203,7 +203,12 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         for index, row in enumerate(spectra_rows):
             path = row['path']
 
-            spectrum = DatasetSubEntry(path, index, label_widget, 'preprocessing')
+            spectrum = DatasetSubEntry(path=path,
+                                       index=index,
+                                       parent=label_widget,
+                                       spectrum_id=row['id'],
+                                       page='preprocessing')
+
             self.scrollArea_dataset_Contents.layout().insertWidget(self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
             spectrum.click_signal.connect(self.handle_spectrum_click)
             spectrum.hide()
@@ -773,7 +778,7 @@ class DatasetSubEntry(QtWidgets.QWidget, Ui_DatasetSubEntry):
     # Signal definitions
     click_signal = QtCore.Signal(object)
 
-    def __init__(self, path: str, index: int, parent: DatasetMainEntry, page: str):
+    def __init__(self, path: str, index: int, parent: DatasetMainEntry, spectrum_id: int, page: str):
         super().__init__()
         self.setupUi(self)
 
@@ -790,6 +795,8 @@ class DatasetSubEntry(QtWidgets.QWidget, Ui_DatasetSubEntry):
         self.parent = parent
         # Spectrum save path.
         self.spectrum_path = path
+        # Spectrum id in the database.
+        self.spectrum_id = spectrum_id
         # Spectrum name.
         self.label_name.setText(f"{index+1} - {Path(self.spectrum_path).parent.name}/{Path(self.spectrum_path).stem}")
         # Make the background styleable [sometimes needed if a widget is not complex enough].

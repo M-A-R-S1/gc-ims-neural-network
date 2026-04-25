@@ -1,10 +1,11 @@
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
 from PeakExplorerWidget import Ui_PeakExplorerWidget
 from dialogs import CustomMessageDialog, CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
+from matplotlib import cm
 from collections import defaultdict
 from skimage.morphology import max_tree, h_maxima, area_opening
 from skimage.measure import label, regionprops
@@ -44,6 +45,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.scrollArea_peak_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.scrollArea_peak_Contents.layout().setSpacing(5)
         self.scrollArea_peak.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.scrollArea_peak_Contents.layout().setSpacing(10)
 
         # Canvas plot element.
         self.canvas = PlottingCanvas(self, width=5, height=4, dpi=50)
@@ -237,7 +239,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM labels WHERE name = ?", (label_widget.label_name.text(),))
         result = cursor.fetchone()
-        cursor.execute("SELECT path FROM spectra WHERE label_id = ?", (result['id'],))
+        cursor.execute("SELECT id, path FROM spectra WHERE label_id = ?", (result['id'],))
         spectra_rows = cursor.fetchall()
         conn.close()
 
@@ -245,7 +247,12 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         for index, row in enumerate(spectra_rows):
             path = row['path']
 
-            spectrum = DatasetSubEntry(path, index, label_widget, 'preprocessing')
+            spectrum = DatasetSubEntry(path=path,
+                                       index=index,
+                                       parent=label_widget,
+                                       spectrum_id=row['id'],
+                                       page='preprocessing')
+
             self.scrollArea_dataset_Contents.layout().insertWidget(
                 self.scrollArea_dataset_Contents.layout().count() - 1, spectrum)
             spectrum.click_signal.connect(self.handle_spectrum_click)
@@ -312,6 +319,49 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.plot_spectrum(spectrum_widget)
         self.selected_spectrum_name = spectrum_widget.label_name.text()
         self.label_preview.setText(f"{spectrum_widget.parent.label_name.text()} - {self.selected_spectrum_name}")
+
+
+        # 1. Altes Layout leeren
+        self.clear_layout(self.scrollArea_peak_Contents.layout())
+
+        # 2. Daten aus der DB holen
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        query = "SELECT id, npy_file, ret_time, drift_time FROM peaks WHERE spectrum_id = ?"
+        cursor.execute(query, (spectrum_widget.spectrum_id,))
+        peaks = cursor.fetchall()
+        conn.close()
+
+        # 3. Grid-Parameter
+        max_columns = 5  # Wie viele Kacheln nebeneinander?
+
+        for index, (peak_id, npy_path, rt, dt) in enumerate(peaks):
+            # Berechne Position im Raster
+            row = index // max_columns
+            column = index % max_columns
+            absolute_npy_path = Path(self.project_path).parent / "dataset" / npy_path
+
+            # Erstelle die Kachel
+            peak_tile = PeakTileWidget(peak_id, absolute_npy_path, rt, dt)
+
+            # Zum Grid hinzufügen: addWidget(widget, row, column)
+            self.scrollArea_peak_Contents.layout().addWidget(peak_tile, row, column)
+
+        # Wichtig: Ein Spacer am Ende hilft, dass die Kacheln bei wenigen
+        # Ergebnissen nicht über das ganze Grid "gestreckt" werden.
+        self.scrollArea_peak_Contents.layout().setRowStretch(self.scrollArea_peak_Contents.layout().rowCount(), 1)
+        self.scrollArea_peak_Contents.layout().setColumnStretch(max_columns, 1)
+
+
+    def clear_layout(self, layout):
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
+                else:
+                    self.clear_layout(item.layout())
 
 
     def init_plot_canvas(self) -> None:
@@ -521,7 +571,6 @@ class PeakDetectionWorker(QtCore.QObject):
         conn.close()
         self.finished.emit()
 
-
 def peak_detection(task_data, project_path, peak_radius) -> tuple[Path, list]:
     """
     This function handles the peak detection for preprocessed gc-ims spectra in a series of steps.
@@ -706,3 +755,77 @@ def peak_detection(task_data, project_path, peak_radius) -> tuple[Path, list]:
         return []
 
     return spectrum_path, spectrum_peak_data
+
+
+class PeakTileWidget(QtWidgets.QFrame):
+    def __init__(self, peak_id, npy_path, rt, dt, parent=None):
+        super().__init__(parent)
+        self.peak_id = peak_id
+
+        # Styling für den Kachel-Look
+        self.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.setFixedSize(90, 120)  # Feste Größe für gleichmäßige Kacheln
+        self.setStyleSheet("""
+            PeakTileWidget {
+                background-color: #2b2b2b;
+                border: 1px solid #3d3d3d;
+                border-radius: 5px;
+            }
+            PeakTileWidget:hover {
+                border: 1px solid #555555;
+                background-color: #323232;
+            }
+        """)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        # 1. Bild-Bereich (NPY laden)
+        self.image_label = QtWidgets.QLabel()
+        self.image_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.display_npy(npy_path)
+        layout.addWidget(self.image_label)
+
+        # 2. Info-Bereich
+        info_text = f"RT: {rt:.2f}\nDT: {dt:.2f}"
+        info_label = QtWidgets.QLabel(info_text)
+        info_label.setStyleSheet("font-size: 12px; color: #aaaaaa;")
+        info_label.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(info_label)
+
+
+    def display_npy(self, npy_path):
+        try:
+            data = np.load(npy_path)
+            # Normalisierung auf 0-255 für die Anzeige
+            if data.max() > data.min():
+                normalized = (data - data.min()) / (data.max() - data.min()) * 255
+            else:
+                normalized = data * 0
+
+            img_data = normalized.astype(np.uint8)
+            height, width = img_data.shape
+
+            cmap = cm.get_cmap('RdBu_r', 256)
+
+            # QImage aus numpy Array erstellen (Graustufen-Thumbnail)
+            qimg = QtGui.QImage(img_data.data, width, height, width, QtGui.QImage.Format_Indexed8)
+
+            # Übersetzen in Qt's qRgb Format (0-255 pro Kanal)
+            qt_color_table = []
+            for i in range(256):
+                rgba = cmap(i)  # Holt die Farbe für Stufe i (0.0 - 1.0)
+                # qRgb erwartet Integer-Werte 0-255
+                qt_color_table.append(QtGui.qRgb(
+                    int(rgba[0] * 255),  # Red
+                    int(rgba[1] * 255),  # Green
+                    int(rgba[2] * 255)  # Blue
+                ))
+
+            # Die Farbtabelle dem Image zuweisen
+            qimg.setColorTable(qt_color_table)
+
+            pixmap = QtGui.QPixmap.fromImage(qimg).scaled(80, 80, QtCore.Qt.KeepAspectRatio)
+            self.image_label.setPixmap(pixmap)
+        except:
+            self.image_label.setText("N/A")

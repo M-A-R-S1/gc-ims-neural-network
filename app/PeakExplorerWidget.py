@@ -166,6 +166,7 @@ class Ui_PeakExplorerWidget(object):
         self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 786))
         self.gridLayout = QGridLayout(self.scrollArea_peak_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setVerticalSpacing(10)
         self.verticalSpacer_2 = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.gridLayout.addItem(self.verticalSpacer_2, 0, 0, 1, 1)

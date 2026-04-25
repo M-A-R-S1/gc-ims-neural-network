@@ -337,6 +337,9 @@ background-color: transparent;
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">
+                <property name="verticalSpacing">
+                 <number>10</number>
+                </property>
                 <item row="0" column="0">
                  <spacer name="verticalSpacer_2">
                   <property name="orientation">
