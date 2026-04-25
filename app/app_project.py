@@ -215,6 +215,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                                 drift_time REAL,
                                 intensity REAL,
                                 npy_file TEXT,
+                                is_active INTEGER DEFAULT 1,
                                 FOREIGN KEY (label_id) REFERENCES labels (id) ON DELETE CASCADE,
                                 FOREIGN KEY (spectrum_id) REFERENCES spectra (id) ON DELETE CASCADE
                             )
