@@ -204,19 +204,19 @@ class Ui_PeakExplorerWidget(object):
 
         self.verticalLayout_7.addWidget(self.preview_image)
 
-        self.pushButton_recalculate_peaks = QPushButton(self.preview_container)
-        self.pushButton_recalculate_peaks.setObjectName(u"pushButton_recalculate_peaks")
-        self.pushButton_recalculate_peaks.setEnabled(True)
-        self.pushButton_recalculate_peaks.setMinimumSize(QSize(0, 60))
-        self.pushButton_recalculate_peaks.setMaximumSize(QSize(16777215, 16777215))
+        self.pushButton_toggle_peak_marker = QPushButton(self.preview_container)
+        self.pushButton_toggle_peak_marker.setObjectName(u"pushButton_toggle_peak_marker")
+        self.pushButton_toggle_peak_marker.setEnabled(True)
+        self.pushButton_toggle_peak_marker.setMinimumSize(QSize(0, 60))
+        self.pushButton_toggle_peak_marker.setMaximumSize(QSize(16777215, 16777215))
         font3 = QFont()
         font3.setFamilies([u"Lato"])
         font3.setPointSize(20)
-        self.pushButton_recalculate_peaks.setFont(font3)
-        self.pushButton_recalculate_peaks.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.pushButton_recalculate_peaks.setMouseTracking(True)
-        self.pushButton_recalculate_peaks.setTabletTracking(False)
-        self.pushButton_recalculate_peaks.setStyleSheet(u"QPushButton {\n"
+        self.pushButton_toggle_peak_marker.setFont(font3)
+        self.pushButton_toggle_peak_marker.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.pushButton_toggle_peak_marker.setMouseTracking(True)
+        self.pushButton_toggle_peak_marker.setTabletTracking(False)
+        self.pushButton_toggle_peak_marker.setStyleSheet(u"QPushButton {\n"
 "    border: 1px solid #ff9000;\n"
 "    background-color: #232323; \n"
 "    color: #ff9000;\n"
@@ -227,22 +227,9 @@ class Ui_PeakExplorerWidget(object):
 "QPushButton:hover {\n"
 "background-color: #131313;\n"
 "}")
-        self.pushButton_recalculate_peaks.setAutoDefault(False)
+        self.pushButton_toggle_peak_marker.setAutoDefault(False)
 
-        self.verticalLayout_7.addWidget(self.pushButton_recalculate_peaks)
-
-        self.label_recalculation_info = QLabel(self.preview_container)
-        self.label_recalculation_info.setObjectName(u"label_recalculation_info")
-        self.label_recalculation_info.setMaximumSize(QSize(1799990, 20))
-        font4 = QFont()
-        font4.setFamilies([u"Lato"])
-        font4.setPointSize(8)
-        self.label_recalculation_info.setFont(font4)
-        self.label_recalculation_info.setStyleSheet(u"color: #9e9e9e;")
-        self.label_recalculation_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label_recalculation_info.setWordWrap(True)
-
-        self.verticalLayout_7.addWidget(self.label_recalculation_info)
+        self.verticalLayout_7.addWidget(self.pushButton_toggle_peak_marker)
 
 
         self.horizontalLayout.addWidget(self.preview_container)
@@ -254,7 +241,7 @@ class Ui_PeakExplorerWidget(object):
 
         self.retranslateUi(PeakExplorerWidget)
 
-        self.pushButton_recalculate_peaks.setDefault(False)
+        self.pushButton_toggle_peak_marker.setDefault(False)
 
 
         QMetaObject.connectSlotsByName(PeakExplorerWidget)
@@ -266,7 +253,6 @@ class Ui_PeakExplorerWidget(object):
         self.label_container_header.setText(QCoreApplication.translate("PeakExplorerWidget", u"Dataset", None))
         self.label_container_header_2.setText(QCoreApplication.translate("PeakExplorerWidget", u"Peaks", None))
         self.label_preview.setText(QCoreApplication.translate("PeakExplorerWidget", u"Spectrum preview", None))
-        self.pushButton_recalculate_peaks.setText(QCoreApplication.translate("PeakExplorerWidget", u"Recalculate peaks", None))
-        self.label_recalculation_info.setText(QCoreApplication.translate("PeakExplorerWidget", u"Attention! Recalculation will reset all peaks of the currently selected spectrum.", None))
+        self.pushButton_toggle_peak_marker.setText(QCoreApplication.translate("PeakExplorerWidget", u"Hide peak marker", None))
     # retranslateUi
 

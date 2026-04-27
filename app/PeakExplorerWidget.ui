@@ -406,7 +406,7 @@ background-color: transparent;
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_recalculate_peaks">
+          <widget class="QPushButton" name="pushButton_toggle_peak_marker">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -451,41 +451,13 @@ background-color: #131313;
 }</string>
            </property>
            <property name="text">
-            <string>Recalculate peaks</string>
+            <string>Hide peak marker</string>
            </property>
            <property name="autoDefault">
             <bool>false</bool>
            </property>
            <property name="default">
             <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_recalculation_info">
-           <property name="maximumSize">
-            <size>
-             <width>1799990</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="font">
-            <font>
-             <family>Lato</family>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">color: #9e9e9e;</string>
-           </property>
-           <property name="text">
-            <string>Attention! Recalculation will reset all peaks of the currently selected spectrum.</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignmentFlag::AlignCenter</set>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
            </property>
           </widget>
          </item>

@@ -483,6 +483,23 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             ),
         )
 
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Get all peak retention- and drifttimes of the current spectrum.
+        query = "SELECT ret_time, drift_time FROM peaks WHERE spectrum_id = ?"
+        cursor.execute(query, (spectrum_widget.spectrum_id,))
+        peak_times = cursor.fetchall()
+        conn.close()
+
+        # If there are peaks mark them on the plot canvas.
+        if peak_times:
+            retention_time = [p[0] for p in peak_times]
+            drift_time = [p[1] for p in peak_times]
+            self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=200, color='black', linewidths=6.0)
+            self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=100, color='#ff9000', linewidths=3.0)
+
         # Set the axis labels.
         self.canvas.axes.set_xlabel("Drift Time [ms]", labelpad=15)
         self.canvas.axes.set_ylabel("Retention Time [s]", labelpad=15)
