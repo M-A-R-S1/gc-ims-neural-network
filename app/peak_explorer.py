@@ -91,6 +91,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         :return: None.
         """
 
+        # Create a custom yes/no dialog for the user where he can start the peak detection process.
         dialog = CustomYesNoDialog(
             title="Peak calculation",
             message="In order to use the peak explorer you need to start the peak detection process first. Do you "
@@ -99,18 +100,25 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             parent=self
         )
 
+        # If the user accepted the dialog, call the start_peak_detection method.
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.start_peak_detection()
         else:
             main_window = self.window()
-
+            # The user declined the peak detection -> Redirect to the preprocessing page.
             if hasattr(main_window, 'sb_preprocessing_button'):
                 main_window.sb_preprocessing_button.click()
             else:
                 print("Error: Sidebar button 'Preprocessing' not found.")
 
 
-    def start_peak_detection(self):
+    def start_peak_detection(self) -> None:
+        """
+        This function is called when the user accepted the "start peak detection" prompt to detect peaks.
+        A Thread is created and started on which multiple pools are started to detect the peaks of the spectra.
+        =============================================================================
+        :return: None
+        """
 
         # Open the progress dialog which informs the user about the current state of the preprocessing.
         self.detection_progress_dialog = CustomProgressDialog(title="Peak detection...", header="Detecting peaks...",)
@@ -121,7 +129,6 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         # Create a thread and worker for the progress dialog.
         self.thread = QtCore.QThread()
         self.worker = PeakDetectionWorker(path=self.project_path)
-
         self.worker.moveToThread(self.thread)
 
         # Connect some signals to the worker and thread.
@@ -147,11 +154,13 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         :return: None.
         """
 
+        # Connect to the database and get the number of spectra where the peak detection process was not performed.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM spectra WHERE peaks_done = 0")
         spectra_without_peaks = cursor.fetchone()[0]
 
+        # If there are spectra without peaks prompt the user with the "peak detection dialog".
         if spectra_without_peaks > 0:
             QtCore.QTimer.singleShot(100, self.show_peak_detection_dialog)
         else:
@@ -308,7 +317,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
                               spectrum_widget: DatasetSubEntry) -> None:
         """
         This function is called when a spectrum in the scroll area is clicked. It displays the selected spectrum to the
-        canvas and shows either the fullscreen or the cropped region of interest.
+        canvas and shows all peaks of this spectrum in the peak scroll area.
         =============================================================================
         :param spectrum_widget: The widget of the clicked spectrum.
         =============================================================================
@@ -320,11 +329,10 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.selected_spectrum_name = spectrum_widget.label_name.text()
         self.label_preview.setText(f"{spectrum_widget.parent.label_name.text()} - {self.selected_spectrum_name}")
 
-
-        # 1. Altes Layout leeren
+        # Clear the old layout before the new peaks are added to the scroll area.
         self.clear_layout(self.scrollArea_peak_Contents.layout())
 
-        # 2. Daten aus der DB holen
+        # Connect to the database and get all peaks from the selected spectrum.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         query = "SELECT id, npy_file, ret_time, drift_time FROM peaks WHERE spectrum_id = ?"
@@ -332,28 +340,34 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         peaks = cursor.fetchall()
         conn.close()
 
-        # 3. Grid-Parameter
-        max_columns = 5  # Wie viele Kacheln nebeneinander?
+        # The number of columns inside the scroll area.
+        max_columns = 5
 
+        # Loop through all peaks.
         for index, (peak_id, npy_path, rt, dt) in enumerate(peaks):
-            # Berechne Position im Raster
+            # Calculate the position of the peak widget inside the peak scroll area.
             row = index // max_columns
             column = index % max_columns
+            # The path to the peak .npy file.
             absolute_npy_path = Path(self.project_path).parent / "dataset" / npy_path
-
-            # Erstelle die Kachel
+            # Create the peak widget tile and add it to the scroll area.
             peak_tile = PeakTileWidget(peak_id, absolute_npy_path, rt, dt)
-
-            # Zum Grid hinzufügen: addWidget(widget, row, column)
             self.scrollArea_peak_Contents.layout().addWidget(peak_tile, row, column)
 
-        # Wichtig: Ein Spacer am Ende hilft, dass die Kacheln bei wenigen
-        # Ergebnissen nicht über das ganze Grid "gestreckt" werden.
         self.scrollArea_peak_Contents.layout().setRowStretch(self.scrollArea_peak_Contents.layout().rowCount(), 1)
         self.scrollArea_peak_Contents.layout().setColumnStretch(max_columns, 1)
 
 
-    def clear_layout(self, layout):
+    def clear_layout(self, layout) -> None:
+        """
+        This function clears the content of the peak scroll area.
+        =============================================================================
+        :param layout: The layout of the peak scroll area.
+        =============================================================================
+        :return: None
+        """
+
+        # If there is a layout then remove all of its items [Peak tile widgets].
         if layout is not None:
             while layout.count():
                 item = layout.takeAt(0)
@@ -439,6 +453,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
                       spectrum_widget: DatasetSubEntry) -> None:
         """
         This function loads the .mea file of one spectrum and plots it to the canvas.
+        Additionally, all detected peaks are marked on the canvas.
         =============================================================================
         :param spectrum_widget: Widget of the currently selected spectrum in the spectra scroll area.
         =============================================================================
@@ -527,59 +542,80 @@ class PeakDetectionWorker(QtCore.QObject):
         # Worker stopped signal [The user has canceled the preprocessing].
         self.worker_stopped = False
 
+
     @QtCore.Slot()
     def stop(self):
         self.worker_stopped = True
 
-    def run(self):
 
+    def run(self) -> None:
+        """
+        This function overrides the run function of a thread worker and starts the peak detection process on all
+        spectra without peaks. It starts a distinct number of pools [one for each CPU core], collects the detected peaks
+        from all spectra and saves them at the end into the peak table of the database.
+        =============================================================================
+        :return: None.
+        """
+
+        # Connect to the database.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
+        # Select all spectra paths, their associated label names and label ids for all spectra where the peak detection
+        # process was not performed on.
         query = """
                 SELECT spectra.path, labels.name, labels.id, spectra.id FROM spectra 
                 JOIN labels ON spectra.label_id = labels.id 
                 WHERE spectra.peaks_done = 0
                 """
         cursor.execute(query)
-        tasks = cursor.fetchall()
+        spectra_todo_list = cursor.fetchall()
 
-        total_spectra = len(tasks)
+        # Get the total number of spectra where the peak detection has to be performed.
+        total_spectra = len(spectra_todo_list)
         if total_spectra == 0:
             conn.close()
             self.finished.emit()
             return
 
-        # 2. Pool starten
+        # Get the number of available CPUs.
         num_cores = mp.cpu_count()
+        # List where the peaks are saved to.
         peak_data_all = []
+        # Number spectra where peaks have been calculated-
         processed_count = 0
 
-        # 'partial' fixiert Parameter, die für alle Tasks gleich sind (wie project_path)
-        worker_func = partial(peak_detection,
-                              project_path=self.project_path,
-                              peak_radius=5)
+        # Create a partial fixed function call, where the project_path and the peak_radis is set.
+        worker_function = partial(peak_detection,
+                                  project_path=self.project_path,
+                                  peak_radius=5)
 
+        # Start as many pools as possible [Depends on the number of CPU cores available].
         with mp.Pool(processes=num_cores) as pool:
-            for result in pool.imap_unordered(worker_func, tasks):
+            for result in pool.imap_unordered(worker_function, spectra_todo_list):
+                # Check if the user stopped the peak detection.
                 if self.worker_stopped:
                     pool.terminate()
                     pool.join()
                     break
 
+                # Peak detection on one pool is done with results.
                 if result:
                     spectrum_path, peaks = result
 
+                    # If there are peaks append them to the peak_data_all list.
                     if peaks:
                         peak_data_all.extend(peaks)
 
+                    # Update the database entry of this spectrum and commit the changes.
                     cursor.execute("UPDATE spectra SET peaks_done = 1 WHERE path = ?", (spectrum_path,))
                     conn.commit()
 
+                # Update the counter and send an update signal for the progress bar widget.
                 processed_count += 1
                 self.progress_update.emit(processed_count, total_spectra)
 
         if peak_data_all:
-            # Create the pandas dataframe from the peak data and write it into the database.
+            # Convert the peak data to a pandas dataframe and commit the peaks to the database.
             dataframe = pd.DataFrame(peak_data_all)
             dataframe.to_sql('peaks', conn, if_exists='append', index=False)
             conn.commit()
@@ -588,32 +624,32 @@ class PeakDetectionWorker(QtCore.QObject):
         conn.close()
         self.finished.emit()
 
-def peak_detection(task_data, project_path, peak_radius) -> tuple[Path, list]:
+
+def peak_detection(spectrum_data: tuple[str, str, int, int],
+                   project_path: Path,
+                   peak_radius: int) -> tuple[Path, list]:
     """
     This function handles the peak detection for preprocessed gc-ims spectra in a series of steps.
     1. Normalization of the spectrum to values between 0 and 1.
     2. Create a component tree of the spectrum and detect hierarchy levels.
     3. Filter peaks from the component tree according to specific conditions [Area Opening, intensity threshold, tree hierarchy].
-    4. Create a plot with all selected peaks for each spectrum.
-    5. Save the intensities of each detected peak and its surrounding (defined by peak_radius) as a .npy file.
-    6. Return a list of dictionaries. One dictionary for each peak + surrounding with the following information.
-        - 'label' -> The label/type of the used spectrum.
-        - 'spectrum' -> Name of the spectrum.
+    4. Save the intensities of each detected peak and its surrounding (defined by peak_radius) as a .npy file.
+    5. Return a list of dictionaries. One dictionary for each peak + surrounding with the following information.
+        - 'label_id' -> The label/type of the used spectrum.
+        - 'spectrum_id' -> Name of the spectrum.
         - 'ret_time' -> Retention time [s] of the peak.
         - 'drift_time' -> Drift time [ms] of the peak.
         - 'intensity' -> Intensity [not normalized] of peak + surrounding.
         - 'npy_file' -> Path to the saved npy file of this peak.
-
-    :param spectrum: A single preprocessed gc-ims spectrum.
-    :param peak_radius: Defines the radius around a detected peak within the intensities are saved.
-    :param output_dir: Saving path for the plotting image.
-    :param create_heatmaps: Specifies if heatmaps are created.
-    :param create_npy: Specifies if npy files are created.
-
+    =============================================================================
+    :param spectrum_data: a tuple with spectrum data -> Path, associated label name, label id, spectrum id.
+    :param project_path: The path to the current project.
+    :param peak_radius: The radius around a detected peak within the intensities are saved.
+    =============================================================================
     :return: List of dictionaries which contain peak + surrounding information.
     """
 
-    spectrum_path, label_name, label_id, spectrum_id = task_data
+    spectrum_path, label_name, label_id, spectrum_id = spectrum_data
     spec_name = Path(spectrum_path).stem
     target_file = project_path / "dataset" / label_name / spec_name / f"{spec_name}.hdf5"
     spectrum = ims.Spectrum.read_hdf5(target_file)
