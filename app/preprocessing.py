@@ -289,7 +289,23 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
 
         # Create a toolbar at the bottom of the canvas and set the style.
         self.toolbar = NavigationToolbar(self.canvas, self)
-        self.toolbar.setStyleSheet("background-color: #191919; color: white; border: none;")
+        self.toolbar.setStyleSheet("""
+                            QToolButton {
+                                background-color: transparent;
+                                border: 1px solid transparent;
+                                border-radius: 4px;
+                                margin: 2px;
+                                padding: 2px;
+                            }
+                            QToolButton:hover {
+                                background-color: #3d3d3d;
+                                border: 1px solid #555555;
+                            }
+                            QToolButton:checked {
+                                background-color: #af6300; 
+                                border: 1px solid #ffffff;
+                            }
+                        """)
 
         # Remove some of the toolbar buttons which are not needed.
         toolbar_actions = self.toolbar.actions()

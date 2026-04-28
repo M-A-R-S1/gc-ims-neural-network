@@ -30,7 +30,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.current_selected_spectrum = None
         self.selected_spectrum_name = None
         self.selected_label_name = None
-        self.current_selected_peak = None
+        self.peak_widgets = {}
+        self.selected_peak_id = None
         # Path to the database.
         self.db_path = self.project_path.parent / "database" / "project_database.db"
         # Show peak marker on the canvas? [True or False].
@@ -55,6 +56,9 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.canvas = PlottingCanvas(self, width=5, height=4, dpi=50)
         # Initialize the plot canvas.
         self.init_plot_canvas()
+        # Connect pick events to the peaks from the canvas.
+        self.canvas.mpl_connect('pick_event', self.on_canvas_pick)
+        self.canvas.mpl_connect('motion_notify_event', self.on_canvas_hover)
         # load dataset from project.
         self.load_data()
 
@@ -333,6 +337,9 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.selected_spectrum_name = spectrum_widget.label_name.text()
         self.label_preview.setText(f"{spectrum_widget.parent.label_name.text()} - {self.selected_spectrum_name}")
 
+        # Clear the peak widgets dictionary.
+        self.peak_widgets.clear()
+
         # Clear the old layout before the new peaks are added to the scroll area.
         self.clear_layout(self.scrollArea_peak_Contents.layout())
 
@@ -360,6 +367,11 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
                                        retention_time=retention_time,
                                        drift_time=drift_time)
 
+            # Add the peak to the dictionary.
+            self.peak_widgets[peak_id] = peak_tile
+            # Add a mouse click event listener to the peak tile.
+            peak_tile.mousePressEvent = lambda event, peak_id=peak_id: self.on_peak_tile_clicked(peak_id)
+            # Add the peak widget to the scroll area.
             self.scrollArea_peak_Contents.layout().addWidget(peak_tile, row, column)
 
         self.scrollArea_peak_Contents.layout().setRowStretch(self.scrollArea_peak_Contents.layout().rowCount(), 1)
@@ -416,7 +428,23 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Create a toolbar at the bottom of the canvas and set the style.
         self.toolbar = NavigationToolbar(self.canvas, self)
-        self.toolbar.setStyleSheet("background-color: #191919; color: white; border: none;")
+        self.toolbar.setStyleSheet("""
+                    QToolButton {
+                        background-color: transparent;
+                        border: 1px solid transparent;
+                        border-radius: 4px;
+                        margin: 2px;
+                        padding: 2px;
+                    }
+                    QToolButton:hover {
+                        background-color: #3d3d3d;
+                        border: 1px solid #555555;
+                    }
+                    QToolButton:checked {
+                        background-color: #af6300; 
+                        border: 1px solid #ffffff;
+                    }
+                """)
 
         # Remove some of the toolbar buttons which are not needed.
         toolbar_actions = self.toolbar.actions()
@@ -511,17 +539,34 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         cursor = conn.cursor()
 
         # Get all peak retention- and drifttimes of the current spectrum.
-        query = "SELECT ret_time, drift_time FROM peaks WHERE spectrum_id = ?"
+        query = "SELECT id, ret_time, drift_time FROM peaks WHERE spectrum_id = ?"
         cursor.execute(query, (spectrum_widget.spectrum_id,))
         peak_times = cursor.fetchall()
         conn.close()
 
         # If there are peaks mark them on the plot canvas.
         if peak_times and self.show_peak_marker:
-            retention_time = [p[0] for p in peak_times]
-            drift_time = [p[1] for p in peak_times]
-            self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=200, color='black', linewidths=6.0)
-            self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=100, color='#ff9000', linewidths=3.0)
+            # Extract peak information.
+            peak_ids = [p[0] for p in peak_times]
+            retention_time = [p[1] for p in peak_times]
+            drift_time = [p[2] for p in peak_times]
+
+            # Plot the peaks as + signs.
+            self.peak_scatter = self.canvas.axes.scatter(
+                drift_time, retention_time, marker='+', s=300, color='black', linewidths=6.0,
+                picker=True, pickradius=5
+            )
+            self.peak_scatter.peak_ids = peak_ids
+            self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=150, color='#00eaff', linewidths=3.0)
+
+            # Check if one peak is selected.
+            if self.selected_peak_id:
+                # Find die coordinates of the peak.
+                selected_data = [p for p in peak_times if p[0] == self.selected_peak_id]
+                if selected_data:
+                    _, selected_retention_time, selected_drift_time = selected_data[0]
+                    # Highlight the selected peak.
+                    self.canvas.axes.scatter(selected_drift_time, selected_retention_time, marker='+', s=150, color='#ff9000', linewidths=3.0)
 
         # Set the axis labels.
         self.canvas.axes.set_xlabel("Drift Time [ms]", labelpad=15)
@@ -536,7 +581,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.canvas.draw()
 
 
-    def toggle_peak_marker(self):
+    def toggle_peak_marker(self) -> None:
         """
         This function is called when the 'Hide/Show peak markers' button is pressed and handels the change of view of
         the canvas. It either shows or hides the peak markers.
@@ -562,6 +607,80 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             self.canvas.axes.set_ylim(old_ylim)
             # Draw the canvas.
             self.canvas.draw()
+
+
+    def on_peak_tile_clicked(self,
+                             peak_id: int) -> None:
+        """
+        This function is called when the user clicked on one of the peak tiles in the peak scroll area.
+        The clicked tile is highlighted.
+        =============================================================================
+        :param peak_id: The ID of the peak tile.
+        =============================================================================
+        :return: None.
+        """
+
+        # Remove the highlight from the peak widget tile.
+        if self.selected_peak_id in self.peak_widgets:
+            self.peak_widgets[self.selected_peak_id].set_highlight(False)
+
+        # Highlight the clicked peak tile in the scroll area.
+        self.selected_peak_id = peak_id
+        if peak_id in self.peak_widgets:
+            self.peak_widgets[peak_id].set_highlight(True)
+            self.scrollArea_peak.ensureWidgetVisible(self.peak_widgets[peak_id])
+
+        # Maintain the zoom status of the canvas.
+        xlim, ylim = self.canvas.axes.get_xlim(), self.canvas.axes.get_ylim()
+        self.plot_spectrum(self.current_selected_spectrum)
+        self.canvas.axes.set_xlim(xlim)
+        self.canvas.axes.set_ylim(ylim)
+        self.canvas.draw()
+
+
+    def on_canvas_pick(self, event) -> None:
+        """
+        This function is called when the user clicks on one of the peak markings in the canvas.
+        The marked peak is highlighted on the canvas and in the peak scroll area.
+        =============================================================================
+        :param event: The click event.
+        =============================================================================
+        :return: None
+        """
+
+        if event.artist == self.peak_scatter:
+            idx = event.ind[0]
+            peak_id = event.artist.peak_ids[idx]
+            # Call the on tile clicked method.
+            self.on_peak_tile_clicked(peak_id)
+
+
+    def on_canvas_hover(self, event) -> None:
+        """
+        This function is called when the user hovers over one of the peak markings in the canvas.
+        The mouse icon is changed to the pointing hand cursor if the user currently not in the 'zoom' or 'pan' mode.
+        =============================================================================
+        :param event: The hover event.
+        =============================================================================
+        :return: None
+        """
+
+        # Are there reals peaks?
+        if hasattr(self, 'peak_scatter') and self.peak_scatter is not None:
+            # Get data of the current mouse location.
+            cont, _ = self.peak_scatter.contains(event)
+
+            # is the mouse hovering over a 'peak_scatter' element? [This is a peak marking].
+            if cont and self.toolbar.mode != 'zoom rect' and self.toolbar.mode != 'pan/zoom':
+                self.canvas.setCursor(QtCore.Qt.PointingHandCursor)
+            else:
+                # If the mouse is not hovering over a peak use the default style, according to the current mode.
+                if self.toolbar.mode == 'zoom rect':
+                    self.canvas.setCursor(QtCore.Qt.CrossCursor)
+                elif self.toolbar.mode == 'pan/zoom':
+                    self.canvas.setCursor(QtCore.Qt.SizeAllCursor)
+                else:
+                    self.canvas.setCursor(QtCore.Qt.ArrowCursor)
 
 
 class PeakDetectionWorker(QtCore.QObject):
@@ -874,26 +993,54 @@ class PeakTileWidget(QtWidgets.QFrame):
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        # 1. Bild-Bereich (NPY laden)
+        # Image area of the widget.
         self.image_label = QtWidgets.QLabel()
         self.image_label.setAlignment(QtCore.Qt.AlignCenter)
         self.display_npy(npy_path)
         layout.addWidget(self.image_label)
 
-        # 2. Info-Bereich
+        # Text area of the widget.
         info_text = f"DT: {drift_time:.2f}\nRT: {retention_time:.2f}"
         info_label = QtWidgets.QLabel(info_text)
         info_label.setStyleSheet("font-size: 12px; color: #aaaaaa;")
         info_label.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(info_label)
 
+        # Set hover mouse icon
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+
+
+    def set_highlight(self, active: bool):
+        if active:
+            self.setStyleSheet("""
+                        PeakTileWidget {
+                            background-color: #4a4a4a;
+                            border: 1px solid #ff9000;
+                            border-radius: 5px;
+                        }
+                        PeakTileWidget:hover {
+                            border: 1px solid #ff9000;
+                            background-color: #323232;
+                        }
+                    """)
+        else:
+            self.setStyleSheet("""
+                        PeakTileWidget {
+                            background-color: #2b2b2b;
+                            border: 1px solid #3d3d3d;
+                            border-radius: 5px;
+                        }
+                        PeakTileWidget:hover {
+                            border: 1px solid #555555;
+                            background-color: #323232;
+                        }
+                    """)
 
     def display_npy(self,
                     npy_path: Path) -> None:
 
         try:
             data = np.load(npy_path)
-            # Normalisierung auf 0-255 für die Anzeige
             if data.max() > data.min():
                 normalized = (data - data.min()) / (data.max() - data.min()) * 255
             else:
@@ -901,26 +1048,23 @@ class PeakTileWidget(QtWidgets.QFrame):
 
             img_data = normalized.astype(np.uint8)
             height, width = img_data.shape
-
             cmap = cm.get_cmap('RdBu_r', 256)
 
-            # QImage aus numpy Array erstellen (Graustufen-Thumbnail)
+            # Create a greyscale QImage of the numpy array data.
             qimg = QtGui.QImage(img_data.data, width, height, width, QtGui.QImage.Format_Indexed8)
 
-            # Übersetzen in Qt's qRgb Format (0-255 pro Kanal)
+            # Convert into the right color format.
             qt_color_table = []
             for i in range(256):
-                rgba = cmap(i)  # Holt die Farbe für Stufe i (0.0 - 1.0)
-                # qRgb erwartet Integer-Werte 0-255
+                rgba = cmap(i)
                 qt_color_table.append(QtGui.qRgb(
-                    int(rgba[0] * 255),  # Red
-                    int(rgba[1] * 255),  # Green
-                    int(rgba[2] * 255)  # Blue
+                    int(rgba[0] * 255),
+                    int(rgba[1] * 255),
+                    int(rgba[2] * 255)
                 ))
 
-            # Die Farbtabelle dem Image zuweisen
+            # Apply the color pallet to the image.
             qimg.setColorTable(qt_color_table)
-
             pixmap = QtGui.QPixmap.fromImage(qimg).scaled(80, 80, QtCore.Qt.KeepAspectRatio)
             self.image_label.setPixmap(pixmap)
         except:
