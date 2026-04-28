@@ -342,12 +342,6 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         query = "SELECT id, npy_file, ret_time, drift_time FROM peaks WHERE spectrum_id = ? ORDER BY drift_time"
         cursor.execute(query, (spectrum_widget.spectrum_id,))
         peaks = cursor.fetchall()
-        query = "SELECT intensity_max, intensity_min FROM spectra WHERE id = ?"
-        cursor.execute(query, (spectrum_widget.spectrum_id,))
-        spectrum_intensity_data = cursor.fetchone()
-        # Get the max and min intensity of the current spectrum.
-        intensity_max = spectrum_intensity_data[0]
-        intensity_min = spectrum_intensity_data[1]
         conn.close()
 
         # The number of columns inside the scroll area.
@@ -364,9 +358,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             peak_tile = PeakTileWidget(peak_id=peak_id,
                                        npy_path=absolute_npy_path,
                                        retention_time=retention_time,
-                                       drift_time=drift_time,
-                                       intensity_max=intensity_max,
-                                       intensity_min=intensity_min)
+                                       drift_time=drift_time)
 
             self.scrollArea_peak_Contents.layout().addWidget(peak_tile, row, column)
 
@@ -859,8 +851,6 @@ class PeakTileWidget(QtWidgets.QFrame):
                  npy_path: Path,
                  retention_time: float,
                  drift_time: float,
-                 intensity_max: float,
-                 intensity_min: float,
                  parent=None) -> None:
 
         super().__init__(parent)
@@ -887,7 +877,7 @@ class PeakTileWidget(QtWidgets.QFrame):
         # 1. Bild-Bereich (NPY laden)
         self.image_label = QtWidgets.QLabel()
         self.image_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.display_npy(npy_path, intensity_max, intensity_min)
+        self.display_npy(npy_path)
         layout.addWidget(self.image_label)
 
         # 2. Info-Bereich
@@ -899,9 +889,7 @@ class PeakTileWidget(QtWidgets.QFrame):
 
 
     def display_npy(self,
-                    npy_path: Path,
-                    intensity_max: float,
-                    intensity_min: float) -> None:
+                    npy_path: Path) -> None:
 
         try:
             data = np.load(npy_path)
@@ -910,10 +898,6 @@ class PeakTileWidget(QtWidgets.QFrame):
                 normalized = (data - data.min()) / (data.max() - data.min()) * 255
             else:
                 normalized = data * 0
-            #if intensity_max > intensity_min:
-            #    normalized = (data - intensity_min) / (intensity_max - intensity_min) * 255
-            #else:
-            #    normalized = data * 0
 
             img_data = normalized.astype(np.uint8)
             height, width = img_data.shape
