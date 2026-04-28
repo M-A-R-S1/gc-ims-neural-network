@@ -201,6 +201,8 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                            path TEXT NOT NULL,
                            processing_done INTEGER DEFAULT 0,
                            peaks_done INTEGER DEFAULT 0,
+                           intensity_max INTEGER DEFAULT NULL,
+                           intensity_min INTEGER DEFAULT NULL,
                            FOREIGN KEY (label_id) REFERENCES labels (id) ON DELETE CASCADE
                        )
                        ''')

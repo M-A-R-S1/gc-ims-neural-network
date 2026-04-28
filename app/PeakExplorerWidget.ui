@@ -192,7 +192,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>430</width>
-                 <height>786</height>
+                 <height>787</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -333,7 +333,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>530</width>
-                 <height>786</height>
+                 <height>787</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">
@@ -451,7 +451,7 @@ background-color: #131313;
 }</string>
            </property>
            <property name="text">
-            <string>Hide peak marker</string>
+            <string>Hide peak markers</string>
            </property>
            <property name="autoDefault">
             <bool>false</bool>

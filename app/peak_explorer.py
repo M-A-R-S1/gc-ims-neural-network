@@ -33,6 +33,10 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.current_selected_peak = None
         # Path to the database.
         self.db_path = self.project_path.parent / "database" / "project_database.db"
+        # Show peak marker on the canvas? [True or False].
+        self.show_peak_marker = True
+        # Connect the button to the toggle methode.
+        self.pushButton_toggle_peak_marker.clicked.connect(self.toggle_peak_marker)
 
         # Background overlay -> This overlay blocks the view to the peak explorer while the peak detection process is running.
         self.overlay = QtWidgets.QWidget(self)
@@ -335,23 +339,35 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         # Connect to the database and get all peaks from the selected spectrum.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        query = "SELECT id, npy_file, ret_time, drift_time FROM peaks WHERE spectrum_id = ?"
+        query = "SELECT id, npy_file, ret_time, drift_time FROM peaks WHERE spectrum_id = ? ORDER BY drift_time"
         cursor.execute(query, (spectrum_widget.spectrum_id,))
         peaks = cursor.fetchall()
+        query = "SELECT intensity_max, intensity_min FROM spectra WHERE id = ?"
+        cursor.execute(query, (spectrum_widget.spectrum_id,))
+        spectrum_intensity_data = cursor.fetchone()
+        # Get the max and min intensity of the current spectrum.
+        intensity_max = spectrum_intensity_data[0]
+        intensity_min = spectrum_intensity_data[1]
         conn.close()
 
         # The number of columns inside the scroll area.
         max_columns = 5
 
         # Loop through all peaks.
-        for index, (peak_id, npy_path, rt, dt) in enumerate(peaks):
+        for index, (peak_id, npy_path, retention_time, drift_time) in enumerate(peaks):
             # Calculate the position of the peak widget inside the peak scroll area.
             row = index // max_columns
             column = index % max_columns
             # The path to the peak .npy file.
             absolute_npy_path = Path(self.project_path).parent / "dataset" / npy_path
             # Create the peak widget tile and add it to the scroll area.
-            peak_tile = PeakTileWidget(peak_id, absolute_npy_path, rt, dt)
+            peak_tile = PeakTileWidget(peak_id=peak_id,
+                                       npy_path=absolute_npy_path,
+                                       retention_time=retention_time,
+                                       drift_time=drift_time,
+                                       intensity_max=intensity_max,
+                                       intensity_min=intensity_min)
+
             self.scrollArea_peak_Contents.layout().addWidget(peak_tile, row, column)
 
         self.scrollArea_peak_Contents.layout().setRowStretch(self.scrollArea_peak_Contents.layout().rowCount(), 1)
@@ -509,7 +525,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         conn.close()
 
         # If there are peaks mark them on the plot canvas.
-        if peak_times:
+        if peak_times and self.show_peak_marker:
             retention_time = [p[0] for p in peak_times]
             drift_time = [p[1] for p in peak_times]
             self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=200, color='black', linewidths=6.0)
@@ -525,8 +541,35 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Apply a tight layout and draw the canvas.
         self.canvas.fig.tight_layout()
-
         self.canvas.draw()
+
+
+    def toggle_peak_marker(self):
+        """
+        This function is called when the 'Hide/Show peak markers' button is pressed and handels the change of view of
+        the canvas. It either shows or hides the peak markers.
+        =============================================================================
+        :return: None.
+        """
+
+        if self.show_peak_marker:
+            self.show_peak_marker = False
+            self.pushButton_toggle_peak_marker.setText("Show peak markers")
+        else:
+            self.show_peak_marker = True
+            self.pushButton_toggle_peak_marker.setText("Hide peak markers")
+
+        if self.current_selected_spectrum is not None:
+            # Save the current zoom status [limits].
+            old_xlim = self.canvas.axes.get_xlim()
+            old_ylim = self.canvas.axes.get_ylim()
+            # Plot the spectrum.
+            self.plot_spectrum(self.current_selected_spectrum)
+            # Apply the saved zoom status.
+            self.canvas.axes.set_xlim(old_xlim)
+            self.canvas.axes.set_ylim(old_ylim)
+            # Draw the canvas.
+            self.canvas.draw()
 
 
 class PeakDetectionWorker(QtCore.QObject):
@@ -811,7 +854,15 @@ def peak_detection(spectrum_data: tuple[str, str, int, int],
 
 
 class PeakTileWidget(QtWidgets.QFrame):
-    def __init__(self, peak_id, npy_path, rt, dt, parent=None):
+    def __init__(self,
+                 peak_id: int,
+                 npy_path: Path,
+                 retention_time: float,
+                 drift_time: float,
+                 intensity_max: float,
+                 intensity_min: float,
+                 parent=None) -> None:
+
         super().__init__(parent)
         self.peak_id = peak_id
 
@@ -836,18 +887,22 @@ class PeakTileWidget(QtWidgets.QFrame):
         # 1. Bild-Bereich (NPY laden)
         self.image_label = QtWidgets.QLabel()
         self.image_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.display_npy(npy_path)
+        self.display_npy(npy_path, intensity_max, intensity_min)
         layout.addWidget(self.image_label)
 
         # 2. Info-Bereich
-        info_text = f"RT: {rt:.2f}\nDT: {dt:.2f}"
+        info_text = f"DT: {drift_time:.2f}\nRT: {retention_time:.2f}"
         info_label = QtWidgets.QLabel(info_text)
         info_label.setStyleSheet("font-size: 12px; color: #aaaaaa;")
         info_label.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(info_label)
 
 
-    def display_npy(self, npy_path):
+    def display_npy(self,
+                    npy_path: Path,
+                    intensity_max: float,
+                    intensity_min: float) -> None:
+
         try:
             data = np.load(npy_path)
             # Normalisierung auf 0-255 für die Anzeige
@@ -855,6 +910,10 @@ class PeakTileWidget(QtWidgets.QFrame):
                 normalized = (data - data.min()) / (data.max() - data.min()) * 255
             else:
                 normalized = data * 0
+            #if intensity_max > intensity_min:
+            #    normalized = (data - intensity_min) / (intensity_max - intensity_min) * 255
+            #else:
+            #    normalized = data * 0
 
             img_data = normalized.astype(np.uint8)
             height, width = img_data.shape

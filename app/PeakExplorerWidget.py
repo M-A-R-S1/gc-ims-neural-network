@@ -99,7 +99,7 @@ class Ui_PeakExplorerWidget(object):
         self.scrollArea_dataset.setWidgetResizable(True)
         self.scrollArea_dataset_Contents = QWidget()
         self.scrollArea_dataset_Contents.setObjectName(u"scrollArea_dataset_Contents")
-        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 786))
+        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 787))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_dataset_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -163,7 +163,7 @@ class Ui_PeakExplorerWidget(object):
         self.scrollArea_peak.setWidgetResizable(True)
         self.scrollArea_peak_Contents = QWidget()
         self.scrollArea_peak_Contents.setObjectName(u"scrollArea_peak_Contents")
-        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 786))
+        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 787))
         self.gridLayout = QGridLayout(self.scrollArea_peak_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -253,6 +253,6 @@ class Ui_PeakExplorerWidget(object):
         self.label_container_header.setText(QCoreApplication.translate("PeakExplorerWidget", u"Dataset", None))
         self.label_container_header_2.setText(QCoreApplication.translate("PeakExplorerWidget", u"Peaks", None))
         self.label_preview.setText(QCoreApplication.translate("PeakExplorerWidget", u"Spectrum preview", None))
-        self.pushButton_toggle_peak_marker.setText(QCoreApplication.translate("PeakExplorerWidget", u"Hide peak marker", None))
+        self.pushButton_toggle_peak_marker.setText(QCoreApplication.translate("PeakExplorerWidget", u"Hide peak markers", None))
     # retranslateUi
 

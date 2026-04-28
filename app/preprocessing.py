@@ -952,7 +952,7 @@ class PreprocessingWorker(QtCore.QObject):
                     return
 
                 # Load the ims spectrum and create a copy.
-                spec = ims.Spectrum.read_mea(spectrum_path)
+                spec = ims.Spectrum.read_mea(spectrum_path, compr="binning")
                 spectrum = spec.copy()
                 # Set the drifttime coordinate of the RIP to 0.
                 spectrum.riprel()
@@ -972,6 +972,10 @@ class PreprocessingWorker(QtCore.QObject):
                 spectrum.savgol(window_length=10, polyorder=4)
                 # Remove all negative intensities and set them to 0.
                 spectrum.values[spectrum.values < 0] = 0.0
+
+                # Get the min and max intensity values.
+                intensity_min = spectrum.values.min()
+                intensity_max = spectrum.values.max()
 
                 # Create the path where the spectrum should be saved and create the folders if neccessary.
                 save_path =  self.project_path / "dataset" / label / spectrum.name
@@ -998,7 +1002,8 @@ class PreprocessingWorker(QtCore.QObject):
                 # Delete peaks which are associated with this spectrum.
                 cursor.execute("DELETE FROM peaks WHERE spectrum_id = ?", (spectrum_id,))
                 # Update the spectrum database entry.
-                cursor.execute("UPDATE spectra SET processing_done = ?, peaks_done = ? WHERE path = ?", (1, 0,str(spectrum_path)))
+                cursor.execute("UPDATE spectra SET processing_done = ?, peaks_done = ?, intensity_max = ?, intensity_min = ? "
+                                    "WHERE path = ?", (1, 0, intensity_max, intensity_min, str(spectrum_path)))
 
                 conn.commit()
 
