@@ -37,7 +37,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         # Show peak marker on the canvas? [True or False].
         self.show_peak_marker = True
         # Connect the button to the toggle methode.
-        self.pushButton_toggle_peak_marker.clicked.connect(self.toggle_peak_marker)
+        self.pushButton_toggle_peak_marker.clicked.connect(self.toggle_peak_markers)
 
         # Background overlay -> This overlay blocks the view to the peak explorer while the peak detection process is running.
         self.overlay = QtWidgets.QWidget(self)
@@ -365,8 +365,11 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             peak_tile = PeakTileWidget(peak_id=peak_id,
                                        npy_path=absolute_npy_path,
                                        retention_time=retention_time,
-                                       drift_time=drift_time)
+                                       drift_time=drift_time,
+                                       db_path=self.db_path)
 
+            # Connect the peak tile widget handler.
+            peak_tile.peakActivityChanged.connect(self.set_peak_activity)
             # Add the peak to the dictionary.
             self.peak_widgets[peak_id] = peak_tile
             # Add a mouse click event listener to the peak tile.
@@ -376,6 +379,38 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         self.scrollArea_peak_Contents.layout().setRowStretch(self.scrollArea_peak_Contents.layout().rowCount(), 1)
         self.scrollArea_peak_Contents.layout().setColumnStretch(max_columns, 1)
+
+
+    def set_peak_activity(self,
+                          peak_id: int,
+                          is_active: bool) -> None:
+        """
+        This function is called when the user changes the visibility of a peak. If a peak is set to "inactive" or "invisible"
+        the peak is no longer considered an important peak and will be ignored in later steps. The peak status is here
+        updated to the database and the canvas is redrawn.
+        =============================================================================
+        :param peak_id: The id of the peak.
+        :param is_active: The new activity status of the peak.
+        =============================================================================
+        :return: None.
+        """
+
+        # Connect to the database and update the peak activity.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE peaks SET is_active = ? WHERE id = ?", (is_active, peak_id))
+        conn.commit()
+
+        # Save the current zoom status [limits].
+        old_xlim = self.canvas.axes.get_xlim()
+        old_ylim = self.canvas.axes.get_ylim()
+        # Plot the spectrum.
+        self.plot_spectrum(self.current_selected_spectrum)
+        # Apply the saved zoom status.
+        self.canvas.axes.set_xlim(old_xlim)
+        self.canvas.axes.set_ylim(old_ylim)
+        # Draw the canvas.
+        self.canvas.draw()
 
 
     def clear_layout(self, layout) -> None:
@@ -539,7 +574,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         cursor = conn.cursor()
 
         # Get all peak retention- and drifttimes of the current spectrum.
-        query = "SELECT id, ret_time, drift_time FROM peaks WHERE spectrum_id = ?"
+        query = "SELECT id, ret_time, drift_time, is_active FROM peaks WHERE spectrum_id = ?"
         cursor.execute(query, (spectrum_widget.spectrum_id,))
         peak_times = cursor.fetchall()
         conn.close()
@@ -550,23 +585,28 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             peak_ids = [p[0] for p in peak_times]
             retention_time = [p[1] for p in peak_times]
             drift_time = [p[2] for p in peak_times]
+            is_active = [p[3] for p in peak_times]
 
-            # Plot the peaks as + signs.
-            self.peak_scatter = self.canvas.axes.scatter(
-                drift_time, retention_time, marker='+', s=300, color='black', linewidths=6.0,
-                picker=True, pickradius=5
-            )
+            # Color list for the peak markers, depending on the activity status and their selection.
+            colors = []
+            for peak_id, activity in zip(peak_ids, is_active):
+                if peak_id == self.selected_peak_id:
+                    colors.append('#ff9000')
+                else:
+                    colors.append('#00eaff' if activity == 1 else '#da05ab')
+
+            # Plot the black base peak and the colored overlay peak.
+            self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=300, color='black', linewidths=6.0)
+            self.peak_scatter = self.canvas.axes.scatter(drift_time,
+                                                         retention_time,
+                                                         marker='+',
+                                                         s=150,
+                                                         color=colors,
+                                                         linewidths=3.0,
+                                                         picker=True,
+                                                         pickradius=5)
+            # Save the ids for the pick event.
             self.peak_scatter.peak_ids = peak_ids
-            self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=150, color='#00eaff', linewidths=3.0)
-
-            # Check if one peak is selected.
-            if self.selected_peak_id:
-                # Find die coordinates of the peak.
-                selected_data = [p for p in peak_times if p[0] == self.selected_peak_id]
-                if selected_data:
-                    _, selected_retention_time, selected_drift_time = selected_data[0]
-                    # Highlight the selected peak.
-                    self.canvas.axes.scatter(selected_drift_time, selected_retention_time, marker='+', s=150, color='#ff9000', linewidths=3.0)
 
         # Set the axis labels.
         self.canvas.axes.set_xlabel("Drift Time [ms]", labelpad=15)
@@ -581,7 +621,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.canvas.draw()
 
 
-    def toggle_peak_marker(self) -> None:
+    def toggle_peak_markers(self) -> None:
         """
         This function is called when the 'Hide/Show peak markers' button is pressed and handels the change of view of
         the canvas. It either shows or hides the peak markers.
@@ -622,12 +662,12 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Remove the highlight from the peak widget tile.
         if self.selected_peak_id in self.peak_widgets:
-            self.peak_widgets[self.selected_peak_id].set_highlight(False)
+            self.peak_widgets[self.selected_peak_id].change_tile_style(False)
 
         # Highlight the clicked peak tile in the scroll area.
         self.selected_peak_id = peak_id
         if peak_id in self.peak_widgets:
-            self.peak_widgets[peak_id].set_highlight(True)
+            self.peak_widgets[peak_id].change_tile_style(True)
             self.scrollArea_peak.ensureWidgetVisible(self.peak_widgets[peak_id])
 
         # Maintain the zoom status of the canvas.
@@ -965,19 +1005,37 @@ def peak_detection(spectrum_data: tuple[str, str, int, int],
 
 
 class PeakTileWidget(QtWidgets.QFrame):
+    # Signal definition.
+    peakActivityChanged = QtCore.Signal(int, bool)
+
     def __init__(self,
                  peak_id: int,
                  npy_path: Path,
                  retention_time: float,
                  drift_time: float,
+                 db_path: Path,
                  parent=None) -> None:
 
         super().__init__(parent)
         self.peak_id = peak_id
+        self.db_path = db_path
 
-        # Styling für den Kachel-Look
-        self.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.setFixedSize(90, 120)  # Feste Größe für gleichmäßige Kacheln
+        # Connect to the database and get the activity status of this peak.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT is_active FROM peaks WHERE id = ?", (peak_id,))
+        peak_data = cursor.fetchone()
+
+        # Set the peak activity.
+        self.is_active = bool(peak_data[0]) if peak_data else False
+        conn.close()
+
+        # Image paths for the activity icons.
+        self.icon_active = QtGui.QIcon("ui/_pics/icons/eye_open.png")
+        self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")
+
+        # Set the size and the style for the peak tile widget.
+        self.setFixedSize(90, 120)
         self.setStyleSheet("""
             PeakTileWidget {
                 background-color: #2b2b2b;
@@ -990,28 +1048,82 @@ class PeakTileWidget(QtWidgets.QFrame):
             }
         """)
 
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(5, 5, 5, 5)
+        # Define the main layout of this widget and its margins.
+        self.main_layout = QtWidgets.QVBoxLayout(self)
+        self.main_layout.setContentsMargins(5, 5, 5, 5)
 
-        # Image area of the widget.
+        # Create a label for the image
         self.image_label = QtWidgets.QLabel()
         self.image_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.display_npy(npy_path)
-        layout.addWidget(self.image_label)
+        # Set the image to the label.
+        self.set_peak_tile_image(npy_path)
+
+        # Create a button which is placed on top of the peak image.
+        self.activity_button = QtWidgets.QPushButton(self.image_label)
+        self.activity_button.setFixedSize(20, 20)
+        self.activity_button.move(58, 50)
+        self.activity_button.setCursor(QtCore.Qt.PointingHandCursor)
+        self.activity_button.setStyleSheet("background: rgba(0,0,0,100); border: none;")
+        # Set the correct peak button icon for the current peak activity.
+        self.change_button_icon()
+        # Connect the button.
+        self.activity_button.clicked.connect(self.change_peak_activity_button)
+
+        # Add the image label to the main layout.
+        self.main_layout.addWidget(self.image_label)
 
         # Text area of the widget.
         info_text = f"DT: {drift_time:.2f}\nRT: {retention_time:.2f}"
-        info_label = QtWidgets.QLabel(info_text)
-        info_label.setStyleSheet("font-size: 12px; color: #aaaaaa;")
-        info_label.setAlignment(QtCore.Qt.AlignCenter)
-        layout.addWidget(info_label)
+        self.info_label = QtWidgets.QLabel(info_text)
+        self.info_label.setStyleSheet("font-size: 12px; color: #aaaaaa;")
+        self.info_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.main_layout.addWidget(self.info_label)
 
         # Set hover mouse icon
         self.setCursor(QtCore.Qt.PointingHandCursor)
 
 
-    def set_highlight(self, active: bool):
-        if active:
+    def change_peak_activity_button(self) -> None:
+        """
+        This function is called when the user clicked on the peak activity button.
+        The peak activity is adjusted, the button icon is changed and a signal is emitted which will update the
+        peak activity in the database.
+        =============================================================================
+        :return: None.
+        """
+
+        # Change the peak activity and update the icon.
+        self.is_active = not self.is_active
+        self.change_button_icon()
+        # Emmit a signal which will update the peak entry in the database.
+        self.peakActivityChanged.emit(self.peak_id, self.is_active)
+
+
+    def change_button_icon(self) -> None:
+        """
+        This function changes the peak activity button icon.
+        =============================================================================
+        :return: None.
+        """
+
+        # Get the path to the correct icon.
+        path = self.icon_active if self.is_active else self.icon_inactive
+        # Replace the icon on the button.
+        self.activity_button.setIcon(path)
+        self.activity_button.setIconSize(QtCore.QSize(20, 20))
+
+
+    def change_tile_style(self,
+                          selected: bool) -> None:
+        """
+        This function changed the style of a peak tile if it is currently selected or not.
+        =============================================================================
+        :param selected: Boolean value of a tile [True = selected, False = not selected].
+        =============================================================================
+        :return: None.
+        """
+
+        if selected:
             self.setStyleSheet("""
                         PeakTileWidget {
                             background-color: #4a4a4a;
@@ -1036,27 +1148,38 @@ class PeakTileWidget(QtWidgets.QFrame):
                         }
                     """)
 
-    def display_npy(self,
-                    npy_path: Path) -> None:
+
+    def set_peak_tile_image(self,
+                            npy_path: Path) -> None:
+        """
+        This function loads the .npy file of a peak, normalizes it between 0-255, applies a colormap and represents
+        the peak as an image on the peak tile widget.
+        =============================================================================
+        :param npy_path: Path to the .npy peak file.
+        =============================================================================
+        :return: None.
+        """
 
         try:
-            data = np.load(npy_path)
-            if data.max() > data.min():
-                normalized = (data - data.min()) / (data.max() - data.min()) * 255
+            # Load the peak .npy file and normalize the values.
+            peak_data = np.load(npy_path)
+            if peak_data.max() > peak_data.min():
+                normalized_peak_data = (peak_data - peak_data.min()) / (peak_data.max() - peak_data.min()) * 255
             else:
-                normalized = data * 0
+                normalized_peak_data = peak_data * 0
 
-            img_data = normalized.astype(np.uint8)
-            height, width = img_data.shape
-            cmap = cm.get_cmap('RdBu_r', 256)
+            # change the dataformat and define a colormap.
+            image_data = normalized_peak_data.astype(np.uint8)
+            height, width = image_data.shape
+            color_map = cm.get_cmap('RdBu_r', 256)
 
             # Create a greyscale QImage of the numpy array data.
-            qimg = QtGui.QImage(img_data.data, width, height, width, QtGui.QImage.Format_Indexed8)
+            q_image = QtGui.QImage(image_data.data, width, height, width, QtGui.QImage.Format_Indexed8)
 
             # Convert into the right color format.
             qt_color_table = []
             for i in range(256):
-                rgba = cmap(i)
+                rgba = color_map(i)
                 qt_color_table.append(QtGui.qRgb(
                     int(rgba[0] * 255),
                     int(rgba[1] * 255),
@@ -1064,8 +1187,8 @@ class PeakTileWidget(QtWidgets.QFrame):
                 ))
 
             # Apply the color pallet to the image.
-            qimg.setColorTable(qt_color_table)
-            pixmap = QtGui.QPixmap.fromImage(qimg).scaled(80, 80, QtCore.Qt.KeepAspectRatio)
+            q_image.setColorTable(qt_color_table)
+            pixmap = QtGui.QPixmap.fromImage(q_image).scaled(80, 80, QtCore.Qt.KeepAspectRatio)
             self.image_label.setPixmap(pixmap)
         except:
             self.image_label.setText("N/A")
