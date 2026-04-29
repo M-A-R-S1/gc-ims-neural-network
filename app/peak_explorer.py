@@ -1,16 +1,14 @@
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PeakExplorerWidget import Ui_PeakExplorerWidget
-from dialogs import CustomMessageDialog, CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
+from dialogs import CustomYesNoDialog, CustomProgressDialog
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
 from matplotlib import cm
-from collections import defaultdict
 from skimage.morphology import max_tree, h_maxima, area_opening
 from skimage.measure import label, regionprops
 from pathlib import Path
-from sklearn.preprocessing import MinMaxScaler
 import multiprocessing as mp
 from functools import partial
 import numpy as np
