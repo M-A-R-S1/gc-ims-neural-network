@@ -57,6 +57,10 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         # Connect pick events to the peaks from the canvas.
         self.canvas.mpl_connect('pick_event', self.on_canvas_pick)
         self.canvas.mpl_connect('motion_notify_event', self.on_canvas_hover)
+        # Saves the plotted canvas and it's markers.
+        self.canvas_spectrum = None
+        self.canvas_peak_marker_base = None
+        self.canvas_peak_marker_fill = None
         # load dataset from project.
         self.load_data()
 
@@ -330,11 +334,6 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         :return: None.
         """
 
-        # Plot the clicked spectrum to the canvas.
-        self.plot_spectrum(spectrum_widget)
-        self.selected_spectrum_name = spectrum_widget.label_name.text()
-        self.label_preview.setText(f"{spectrum_widget.parent.label_name.text()} - {self.selected_spectrum_name}")
-
         # Clear the peak widgets dictionary.
         self.peak_widgets.clear()
 
@@ -378,6 +377,13 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.scrollArea_peak_Contents.layout().setRowStretch(self.scrollArea_peak_Contents.layout().rowCount(), 1)
         self.scrollArea_peak_Contents.layout().setColumnStretch(max_columns, 1)
 
+        # Plot the clicked spectrum to the canvas.
+        self.clear_peak_markers()
+        self.plot_spectrum(spectrum_widget)
+        self.canvas.draw()
+        self.selected_spectrum_name = spectrum_widget.label_name.text()
+        self.label_preview.setText(f"{spectrum_widget.parent.label_name.text()} - {self.selected_spectrum_name}")
+
 
     def set_peak_activity(self,
                           peak_id: int,
@@ -403,12 +409,13 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         old_xlim = self.canvas.axes.get_xlim()
         old_ylim = self.canvas.axes.get_ylim()
         # Plot the spectrum.
-        self.plot_spectrum(self.current_selected_spectrum)
+        self.draw_peak_markers(self.current_selected_spectrum)
         # Apply the saved zoom status.
         self.canvas.axes.set_xlim(old_xlim)
         self.canvas.axes.set_ylim(old_ylim)
         # Draw the canvas.
         self.canvas.draw()
+        self.canvas.blit(self.canvas.axes.bbox)
 
 
     def clear_layout(self, layout) -> None:
@@ -567,15 +574,33 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             ),
         )
 
-        # Connect to the database.
+        # Set the axis labels.
+        self.canvas.axes.set_xlabel("Drift Time [ms]", labelpad=15)
+        self.canvas.axes.set_ylabel("Retention Time [s]", labelpad=15)
+        # Adjust the visual spacing of the canvas.
+        self.canvas.fig.subplots_adjust(left=0.069, bottom=0.058, right=0.094, top=0.995)
+        # Show the toolbar.
+        self.toolbar.show()
+
+        # Apply a tight layout and draw the canvas.
+        self.canvas_spectrum = self.canvas.copy_from_bbox(self.canvas.axes.bbox)
+        self.canvas.fig.tight_layout()
+        self.draw_peak_markers(spectrum_widget)
+        self.canvas.blit(self.canvas.axes.bbox)
+
+
+    def draw_peak_markers(self, spectrum_widget: DatasetSubEntry) -> None:
+        # Connect to the database and get all peak retention- and drifttimes of the current spectrum.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-
-        # Get all peak retention- and drifttimes of the current spectrum.
-        query = "SELECT id, ret_time, drift_time, is_active FROM peaks WHERE spectrum_id = ?"
-        cursor.execute(query, (spectrum_widget.spectrum_id,))
+        cursor.execute("SELECT id, ret_time, drift_time, is_active FROM peaks WHERE spectrum_id = ?",
+                       (spectrum_widget.spectrum_id,))
         peak_times = cursor.fetchall()
         conn.close()
+
+        # Load the canvas from the cache and remove the peak markings.
+        self.canvas_peak_marker_base = None
+        self.canvas_peak_marker_fill = None
 
         # If there are peaks mark them on the plot canvas.
         if peak_times and self.show_peak_marker:
@@ -593,29 +618,28 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
                 else:
                     colors.append('#00eaff' if activity == 1 else '#da05ab')
 
-            # Plot the black base peak and the colored overlay peak.
-            self.canvas.axes.scatter(drift_time, retention_time, marker='+', s=300, color='black', linewidths=6.0)
-            self.peak_scatter = self.canvas.axes.scatter(drift_time,
-                                                         retention_time,
-                                                         marker='+',
-                                                         s=150,
-                                                         color=colors,
-                                                         linewidths=3.0,
-                                                         picker=True,
-                                                         pickradius=5)
+            # Falls die Scatter-Objekte noch nicht existieren, erstellen wir sie
+            self.canvas_peak_marker_base = self.canvas.axes.scatter(drift_time, retention_time, marker='^', s=200,
+                                                                    color='black', linewidths=4.0)
+            self.canvas_peak_marker_fill = self.canvas.axes.scatter(drift_time, retention_time, marker='^', s=100,
+                                                                    color=colors, linewidths=2.0, picker=True)
+
             # Save the ids for the pick event.
-            self.peak_scatter.peak_ids = peak_ids
+            self.canvas_peak_marker_fill.peak_ids = peak_ids
+            # 3. Nur die Scatter-Objekte neu rendern
+            self.canvas.axes.draw_artist(self.canvas_peak_marker_base)
+            self.canvas.axes.draw_artist(self.canvas_peak_marker_fill)
 
-        # Set the axis labels.
-        self.canvas.axes.set_xlabel("Drift Time [ms]", labelpad=15)
-        self.canvas.axes.set_ylabel("Retention Time [s]", labelpad=15)
-        # Adjust the visual spacing of the canvas.
-        self.canvas.fig.subplots_adjust(left=0.069, bottom=0.058, right=0.094, top=0.995)
-        # Show the toolbar.
-        self.toolbar.show()
 
-        # Apply a tight layout and draw the canvas.
-        self.canvas.fig.tight_layout()
+    def clear_peak_markers(self):
+        if hasattr(self, 'canvas_peak_marker_base') and self.canvas_peak_marker_base is not None:
+            self.canvas_peak_marker_base.remove()
+            self.canvas_peak_marker_base = None
+
+        if hasattr(self, 'canvas_peak_marker_fill') and self.canvas_peak_marker_fill is not None:
+            self.canvas_peak_marker_fill.remove()
+            self.canvas_peak_marker_fill = None
+        self.canvas_spectrum = None
         self.canvas.draw()
 
 
@@ -638,7 +662,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
             # Save the current zoom status [limits].
             old_xlim = self.canvas.axes.get_xlim()
             old_ylim = self.canvas.axes.get_ylim()
-            # Plot the spectrum.
+            # Update the markers
             self.plot_spectrum(self.current_selected_spectrum)
             # Apply the saved zoom status.
             self.canvas.axes.set_xlim(old_xlim)
@@ -670,10 +694,11 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Maintain the zoom status of the canvas.
         xlim, ylim = self.canvas.axes.get_xlim(), self.canvas.axes.get_ylim()
-        self.plot_spectrum(self.current_selected_spectrum)
+        self.draw_peak_markers(self.current_selected_spectrum)
         self.canvas.axes.set_xlim(xlim)
         self.canvas.axes.set_ylim(ylim)
         self.canvas.draw()
+        self.canvas.blit(self.canvas.axes.bbox)
 
 
     def on_canvas_pick(self, event) -> None:
@@ -686,7 +711,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         :return: None
         """
 
-        if event.artist == self.peak_scatter:
+        if event.artist == self.canvas_peak_marker_fill:
             idx = event.ind[0]
             peak_id = event.artist.peak_ids[idx]
             # Call the on tile clicked method.
@@ -704,11 +729,11 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         """
 
         # Are there reals peaks?
-        if hasattr(self, 'peak_scatter') and self.peak_scatter is not None:
+        if hasattr(self, 'canvas_peak_marker_fill') and self.canvas_peak_marker_fill is not None:
             # Get data of the current mouse location.
-            cont, _ = self.peak_scatter.contains(event)
+            cont, _ = self.canvas_peak_marker_fill.contains(event)
 
-            # is the mouse hovering over a 'peak_scatter' element? [This is a peak marking].
+            # is the mouse hovering over a 'canvas_peak_marker_fill' element? [This is a peak marking].
             if cont and self.toolbar.mode != 'zoom rect' and self.toolbar.mode != 'pan/zoom':
                 self.canvas.setCursor(QtCore.Qt.PointingHandCursor)
             else:
@@ -1124,12 +1149,12 @@ class PeakTileWidget(QtWidgets.QFrame):
         if selected:
             self.setStyleSheet("""
                         PeakTileWidget {
-                            background-color: #4a4a4a;
-                            border: 1px solid #ff9000;
+                            background-color: #1b1b1b;
+                            border: 2px solid #ff9000;
                             border-radius: 5px;
                         }
                         PeakTileWidget:hover {
-                            border: 1px solid #ff9000;
+                            border: 2px solid #ff9000;
                             background-color: #323232;
                         }
                     """)
