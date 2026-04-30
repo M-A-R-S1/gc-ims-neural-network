@@ -335,7 +335,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         """
 
         # Clear the peak widgets dictionary.
-        self.peak_widgets.clear()
+        self.clear_canvas()
+        self.clear_peak_markers()
 
         # Clear the old layout before the new peaks are added to the scroll area.
         self.clear_layout(self.scrollArea_peak_Contents.layout())
@@ -378,7 +379,6 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.scrollArea_peak_Contents.layout().setColumnStretch(max_columns, 1)
 
         # Plot the clicked spectrum to the canvas.
-        self.clear_peak_markers()
         self.plot_spectrum(spectrum_widget)
         self.canvas.draw()
         self.selected_spectrum_name = spectrum_widget.label_name.text()
@@ -415,7 +415,7 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.canvas.axes.set_ylim(old_ylim)
         # Draw the canvas.
         self.canvas.draw()
-        self.canvas.blit(self.canvas.axes.bbox)
+        #self.canvas.blit(self.canvas.axes.bbox)
 
 
     def clear_layout(self, layout) -> None:
@@ -586,7 +586,6 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.canvas_spectrum = self.canvas.copy_from_bbox(self.canvas.axes.bbox)
         self.canvas.fig.tight_layout()
         self.draw_peak_markers(spectrum_widget)
-        self.canvas.blit(self.canvas.axes.bbox)
 
 
     def draw_peak_markers(self, spectrum_widget: DatasetSubEntry) -> None:
@@ -619,10 +618,10 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
                     colors.append('#00eaff' if activity == 1 else '#da05ab')
 
             # Falls die Scatter-Objekte noch nicht existieren, erstellen wir sie
-            self.canvas_peak_marker_base = self.canvas.axes.scatter(drift_time, retention_time, marker='^', s=200,
-                                                                    color='black', linewidths=4.0)
-            self.canvas_peak_marker_fill = self.canvas.axes.scatter(drift_time, retention_time, marker='^', s=100,
-                                                                    color=colors, linewidths=2.0, picker=True)
+            self.canvas_peak_marker_base = self.canvas.axes.scatter(drift_time, retention_time, marker='o', s=150,
+                                                                    color='black', linewidths=2.0)
+            self.canvas_peak_marker_fill = self.canvas.axes.scatter(drift_time, retention_time, marker='o', s=75,
+                                                                    color=colors, linewidths=1.0, picker=True)
 
             # Save the ids for the pick event.
             self.canvas_peak_marker_fill.peak_ids = peak_ids
@@ -632,6 +631,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
 
     def clear_peak_markers(self):
+        self.peak_widgets.clear()
+
         if hasattr(self, 'canvas_peak_marker_base') and self.canvas_peak_marker_base is not None:
             self.canvas_peak_marker_base.remove()
             self.canvas_peak_marker_base = None
@@ -698,7 +699,6 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.canvas.axes.set_xlim(xlim)
         self.canvas.axes.set_ylim(ylim)
         self.canvas.draw()
-        self.canvas.blit(self.canvas.axes.bbox)
 
 
     def on_canvas_pick(self, event) -> None:
@@ -1042,6 +1042,8 @@ class PeakTileWidget(QtWidgets.QFrame):
         super().__init__(parent)
         self.peak_id = peak_id
         self.db_path = db_path
+        self.retention_time = retention_time
+        self.drift_time = drift_time
 
         # Connect to the database and get the activity status of this peak.
         conn = sqlite3.connect(self.db_path)
@@ -1118,6 +1120,7 @@ class PeakTileWidget(QtWidgets.QFrame):
         # Change the peak activity and update the icon.
         self.is_active = not self.is_active
         self.change_button_icon()
+        self.change_tile_style(False)
         # Emmit a signal which will update the peak entry in the database.
         self.peakActivityChanged.emit(self.peak_id, self.is_active)
 
@@ -1146,30 +1149,39 @@ class PeakTileWidget(QtWidgets.QFrame):
         :return: None.
         """
 
-        if selected:
-            self.setStyleSheet("""
-                        PeakTileWidget {
-                            background-color: #1b1b1b;
-                            border: 2px solid #ff9000;
-                            border-radius: 5px;
-                        }
-                        PeakTileWidget:hover {
-                            border: 2px solid #ff9000;
-                            background-color: #323232;
-                        }
-                    """)
+        if selected and self.is_active:
+            border_color = "#ff9000"
+            border_color_hover = "#ff9000"
+            background_color = "#1b1b1b"
+            background_color_hover = "#323232"
+        elif selected and not self.is_active:
+            border_color = "#ff9000"
+            border_color_hover = "#ff9000"
+            background_color = "#480038"
+            background_color_hover = "#66004f"
+        elif not selected and self.is_active:
+            border_color = "#3d3d3d"
+            border_color_hover = "#555555"
+            background_color = "#2b2b2b"
+            background_color_hover = "#323232"
         else:
-            self.setStyleSheet("""
-                        PeakTileWidget {
-                            background-color: #2b2b2b;
-                            border: 1px solid #3d3d3d;
-                            border-radius: 5px;
-                        }
-                        PeakTileWidget:hover {
-                            border: 1px solid #555555;
-                            background-color: #323232;
-                        }
-                    """)
+            border_color = "#3d3d3d"
+            border_color_hover = "#555555"
+            background_color = "#480038"
+            background_color_hover = "#66004f"
+
+        self.setStyleSheet(f"""
+                            PeakTileWidget {{
+                                background-color: {background_color};
+                                border: 1px solid {border_color};
+                                border-radius: 5px;
+                            }}
+                            PeakTileWidget:hover {{
+                                background-color: {background_color_hover};
+                                border: 1px solid {border_color_hover};
+                                border-radius: 5px;
+                            }}
+                        """)
 
 
     def set_peak_tile_image(self,
