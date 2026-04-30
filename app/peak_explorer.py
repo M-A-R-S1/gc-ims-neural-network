@@ -685,12 +685,14 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         # Remove the highlight from the peak widget tile.
         if self.selected_peak_id in self.peak_widgets:
-            self.peak_widgets[self.selected_peak_id].change_tile_style(False)
+            self.peak_widgets[self.selected_peak_id].set_selected(False)
+            self.peak_widgets[self.selected_peak_id].change_tile_style()
 
         # Highlight the clicked peak tile in the scroll area.
         self.selected_peak_id = peak_id
         if peak_id in self.peak_widgets:
-            self.peak_widgets[peak_id].change_tile_style(True)
+            self.peak_widgets[peak_id].set_selected(True)
+            self.peak_widgets[peak_id].change_tile_style()
             self.scrollArea_peak.ensureWidgetVisible(self.peak_widgets[peak_id])
 
         # Maintain the zoom status of the canvas.
@@ -1044,6 +1046,7 @@ class PeakTileWidget(QtWidgets.QFrame):
         self.db_path = db_path
         self.retention_time = retention_time
         self.drift_time = drift_time
+        self.is_selected = False
 
         # Connect to the database and get the activity status of this peak.
         conn = sqlite3.connect(self.db_path)
@@ -1108,6 +1111,9 @@ class PeakTileWidget(QtWidgets.QFrame):
         self.setCursor(QtCore.Qt.PointingHandCursor)
 
 
+    def set_selected(self, is_selected: bool) -> None:
+        self.is_selected = is_selected
+
     def change_peak_activity_button(self) -> None:
         """
         This function is called when the user clicked on the peak activity button.
@@ -1120,7 +1126,7 @@ class PeakTileWidget(QtWidgets.QFrame):
         # Change the peak activity and update the icon.
         self.is_active = not self.is_active
         self.change_button_icon()
-        self.change_tile_style(False)
+        self.change_tile_style()
         # Emmit a signal which will update the peak entry in the database.
         self.peakActivityChanged.emit(self.peak_id, self.is_active)
 
@@ -1139,27 +1145,24 @@ class PeakTileWidget(QtWidgets.QFrame):
         self.activity_button.setIconSize(QtCore.QSize(20, 20))
 
 
-    def change_tile_style(self,
-                          selected: bool) -> None:
+    def change_tile_style(self) -> None:
         """
         This function changed the style of a peak tile if it is currently selected or not.
-        =============================================================================
-        :param selected: Boolean value of a tile [True = selected, False = not selected].
         =============================================================================
         :return: None.
         """
 
-        if selected and self.is_active:
+        if self.is_selected and self.is_active:
             border_color = "#ff9000"
             border_color_hover = "#ff9000"
             background_color = "#1b1b1b"
             background_color_hover = "#323232"
-        elif selected and not self.is_active:
+        elif self.is_selected and not self.is_active:
             border_color = "#ff9000"
             border_color_hover = "#ff9000"
             background_color = "#480038"
             background_color_hover = "#66004f"
-        elif not selected and self.is_active:
+        elif not self.is_selected and self.is_active:
             border_color = "#3d3d3d"
             border_color_hover = "#555555"
             background_color = "#2b2b2b"
