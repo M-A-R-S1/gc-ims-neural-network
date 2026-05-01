@@ -1,4 +1,5 @@
 from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtCore import QSize, Qt, Signal
 from PeakExplorerWidget import Ui_PeakExplorerWidget
 from dialogs import CustomYesNoDialog, CustomProgressDialog
@@ -76,6 +77,10 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         super().resizeEvent(event)
         self.overlay.resize(self.size())
+
+        # Replot the canvas and adjust it to the new window size.
+        if self.current_selected_spectrum:
+            self.plot_spectrum(self.current_selected_spectrum)
 
 
     def showEvent(self, event) -> None:
@@ -1152,26 +1157,16 @@ class PeakTileWidget(QtWidgets.QFrame):
         :return: None.
         """
 
-        if self.is_selected and self.is_active:
+        if self.is_selected:
             border_color = "#ff9000"
             border_color_hover = "#ff9000"
             background_color = "#1b1b1b"
             background_color_hover = "#323232"
-        elif self.is_selected and not self.is_active:
-            border_color = "#ff9000"
-            border_color_hover = "#ff9000"
-            background_color = "#480038"
-            background_color_hover = "#66004f"
-        elif not self.is_selected and self.is_active:
+        else:
             border_color = "#3d3d3d"
             border_color_hover = "#555555"
             background_color = "#2b2b2b"
             background_color_hover = "#323232"
-        else:
-            border_color = "#3d3d3d"
-            border_color_hover = "#555555"
-            background_color = "#480038"
-            background_color_hover = "#66004f"
 
         self.setStyleSheet(f"""
                             PeakTileWidget {{
@@ -1185,6 +1180,13 @@ class PeakTileWidget(QtWidgets.QFrame):
                                 border-radius: 5px;
                             }}
                         """)
+
+        self.opacity_effect = QGraphicsOpacityEffect()
+        if self.is_active or self.is_selected:
+            self.opacity_effect.setOpacity(1.0)
+        else:
+            self.opacity_effect.setOpacity(0.3)
+        self.setGraphicsEffect(self.opacity_effect)
 
 
     def set_peak_tile_image(self,
