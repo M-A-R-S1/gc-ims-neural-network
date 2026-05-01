@@ -1,6 +1,6 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtWidgets import QGraphicsOpacityEffect
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal, QTimer
 from PeakExplorerWidget import Ui_PeakExplorerWidget
 from dialogs import CustomYesNoDialog, CustomProgressDialog
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
@@ -51,6 +51,11 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.scrollArea_peak.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.scrollArea_peak_Contents.layout().setSpacing(10)
 
+        # Timer for window resizing.
+        self.resize_timer = QTimer()
+        self.resize_timer.setSingleShot(True)
+        self.resize_timer.timeout.connect(self.finished_resizing)
+
         # Canvas plot element.
         self.canvas = PlottingCanvas(self, width=5, height=4, dpi=50)
         # Initialize the plot canvas.
@@ -77,8 +82,17 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         super().resizeEvent(event)
         self.overlay.resize(self.size())
+        # Start a timer, which will eventually call the finished_resizing method.
+        self.resize_timer.start(250)
 
-        # Replot the canvas and adjust it to the new window size.
+
+    def finished_resizing(self):
+        """
+        This function redraws the canvas after the user finished resizing the mainwindow.
+        =============================================================================
+        :return: None.
+        """
+
         if self.current_selected_spectrum:
             self.plot_spectrum(self.current_selected_spectrum)
 
