@@ -63,7 +63,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.peak_explorer_page = PeakExplorerPage(self.project_path)
         self.Main_container.addWidget(self.peak_explorer_page)
         # Consensus Peak
-        self.consensus_peak_page = ConsensusPeakPage()
+        self.consensus_peak_page = ConsensusPeakPage(self.project_path)
         self.Main_container.addWidget(self.consensus_peak_page)
         # Classifier
         self.classifier_page = ClassifierPage()
@@ -134,6 +134,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         elif page == self.consensus_peak_page:
             self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_orange.png"))
             self.sb_consensus_label.setPalette(self.palette_active)
+            self.consensus_peak_page.load_data()
         elif page == self.classifier_page:
             self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_orange.png"))
             self.sb_classifier_label.setPalette(self.palette_active)
@@ -213,6 +214,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 label_id INTEGER NOT NULL,
                                 spectrum_id INTEGER NOT NULL,
+                                consensus_id INTEGER DEFAULT NULL,
                                 ret_time REAL,
                                 drift_time REAL,
                                 intensity REAL,
@@ -222,6 +224,18 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                                 FOREIGN KEY (spectrum_id) REFERENCES spectra (id) ON DELETE CASCADE
                             )
                         ''')
+
+        # Create the consensus peak table.
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS consensus_peaks
+                       (
+                           id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                           ret_time         REAL,
+                           drift_time       REAL,
+                           min_intensity    REAL,
+                           is_active        INTEGER DEFAULT 1
+                       )
+                       ''')
 
         conn.commit()
         conn.close()
