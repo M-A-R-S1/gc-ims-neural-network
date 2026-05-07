@@ -15,6 +15,9 @@ from functools import partial
 import numpy as np
 import pandas as pd
 import shutil
+import networkx as nx
+from scipy.spatial import KDTree
+from sklearn.preprocessing import MinMaxScaler
 import sqlite3
 import ims
 
@@ -121,7 +124,6 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         # If the user accepted the dialog, call the start_peak_detection method.
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.start_consensus_peak_calculation()
-            # TODO ... Methode gibt es noch nicht.
         else:
             main_window = self.window()
             # The user declined the calculation -> Redirect to the peaks page.
@@ -130,6 +132,38 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
             else:
                 print("Error: Sidebar button 'Peak Explorer' not found.")
 
+
+    def start_consensus_peak_calculation(self) -> None:
+        """
+        This function is called when the user accepted the "start consensus peak calculation" prompt to calculate consensus peaks.
+        A Thread is created and started on which the consensus peaks are calculated.
+        =============================================================================
+        :return: None
+        """
+
+        # Open the progress dialog which informs the user about the current state.
+        self.consensus_progress_dialog = CustomProgressDialog(title="Consensus peak calculation...", header="Calculating consensus peaks...",)
+        # Reset the start time.
+        self.consensus_progress_dialog.start_time = None
+        self.consensus_progress_dialog.show()
+
+        # Create a thread and worker for the progress dialog.
+        self.thread = QtCore.QThread()
+        self.worker = ConsensusPeakCalculationWorker(path=self.project_path)
+        self.worker.moveToThread(self.thread)
+
+        # Connect some signals to the worker and thread.
+        self.thread.started.connect(self.worker.run)
+        self.worker.progress_update.connect(self.consensus_progress_dialog.update_progress)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.consensus_progress_dialog.accept)
+        self.worker.finished.connect(self.check_speaks_for_consensus)
+        self.consensus_progress_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
+        self.thread.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        # Start the thread.
+        self.thread.start()
 
 
     def check_speaks_for_consensus(self) -> None:
@@ -499,6 +533,7 @@ class ConsensusPeakTileWidget(QtWidgets.QFrame):
     def set_selected(self, is_selected: bool) -> None:
         self.is_selected = is_selected
 
+
     def change_peak_activity_button(self) -> None:
         """
         This function is called when the user clicked on the peak activity button.
@@ -612,3 +647,155 @@ class ConsensusPeakTileWidget(QtWidgets.QFrame):
             self.image_label.setPixmap(pixmap)
         except:
             self.image_label.setText("N/A")
+
+
+class ConsensusPeakCalculationWorker(QtCore.QObject):
+    # Signal definitions.
+    finished = Signal()
+    progress_update = Signal(int, int)
+
+    def __init__(self, path: Path):
+
+        super().__init__()
+        self.project_path = path.parent
+        self.db_path = self.project_path / "database" / "project_database.db"
+        # Worker stopped signal [The user has canceled the preprocessing].
+        self.worker_stopped = False
+
+
+    @QtCore.Slot()
+    def stop(self):
+        self.worker_stopped = True
+
+
+    def run(self) -> None:
+        """
+        This function overrides the run function of a thread worker and starts the consensus peak calculation process.
+        =============================================================================
+        :return: None.
+        """
+
+        # Calculate connected components.
+        graph = calculate_connected_components(db_path=self.db_path,
+                                               max_node_distance=0.006,
+                                               batch_size=20000)
+
+        # TODO ... continue here.
+
+        self.finished.emit()
+
+
+def calculate_connected_components(db_path: Path,
+                                   max_node_distance: float,
+                                   batch_size: int) -> nx.Graph:
+    """
+    Not yet described ... TODO
+
+    :param db_path: Path to the database.
+    :param max_node_distance: The max. distance between nodes for the connected components calculation.
+    :param batch_size: Limits the number of nodes during computation [prevents ram overflow problems].
+
+    :return: Unidirected graph of the connected components calculation.
+    """
+
+    # Connect to the database and get all relevant peak, label and spectra information.
+    conn = sqlite3.connect(db_path)
+    query = """
+            SELECT p.id,
+                   p.ret_time,
+                   p.drift_time,
+                   p.intensity,
+                   p.npy_file,
+                   l.name AS label,
+                   s.name AS spectrum
+            FROM peaks p
+                     JOIN labels l ON p.label_id = l.id
+                     JOIN spectra s ON p.spectrum_id = s.id
+            WHERE p.is_active = 1
+            """
+
+    peak_dataframe = pd.read_sql_query(query, conn)
+
+    # normalize the retention and drifttime
+    scaler = MinMaxScaler()
+    times_normalized = scaler.fit_transform(peak_dataframe[['ret_time', 'drift_time']].values)
+
+    # Initialize a graph.
+    graph = nx.Graph()
+    unique_coords = {}
+
+    # Wir iterieren durch das DataFrame und nutzen times_normalized für die Koordinate
+    for idx in range(len(peak_dataframe)):
+        node = tuple(times_normalized[idx])
+        peak_data = peak_dataframe.iloc[idx]
+
+        # Finde alle Peaks mit identischer Koordinate (Original-Logik)
+        # Wir suchen im Original-DF nach gleichen Zeiten
+        peak_count_df = peak_dataframe[(peak_dataframe['ret_time'] == peak_data['ret_time']) &
+                                       (peak_dataframe['drift_time'] == peak_data['drift_time'])]
+
+        # Metadaten extrahieren
+        labels = peak_count_df['label'].to_list()
+        npy_files = peak_count_df['npy_file'].to_list()
+        db_ids = peak_count_df['id'].to_list()
+        spectrum_names = peak_count_df['spectrum'].to_list()
+        intensities = peak_count_df['intensity'].to_list()
+
+        # Knoten hinzufügen (überschreibt existierende Knoten mit gleichen Koordinaten,
+        # fügt aber durch die Listen-Logik oben alle Informationen zusammen)
+        graph.add_node(node_for_adding=node,
+                       labels=labels,
+                       npy_files=npy_files,
+                       db_ids=db_ids,
+                       ret_time=peak_data['ret_time'],
+                       drift_time=peak_data['drift_time'],
+                       peak_count=len(peak_count_df),
+                       spectrum_names=spectrum_names,
+                       intensities=intensities)
+
+    # 4. KDTree & Kanten (wie gehabt)
+    tree = KDTree(times_normalized)
+    # Number of nodes in the graph.
+    node_count = graph.number_of_nodes()
+
+    # Create edges between all nodes within a defined radius. Create batches of nodes and walk through them.
+    # neighbor_nodes is a list with lists inside. The position of the list is the index of the node.
+    # The inner list contains the positions of nodes which are considered the nodes neighbors.
+    for start_node in range(0, node_count, batch_size):
+        end_node = min(start_node + batch_size, node_count)
+        sub_nodes = times_normalized[start_node:end_node]
+        neighbor_nodes = tree.query_ball_point(sub_nodes, r=max_node_distance, p=2)
+
+        for sub_node_idx, neighbors in enumerate(neighbor_nodes):
+            global_idx = start_node + sub_node_idx
+            node_1 = tuple(times_normalized[global_idx])
+            for neighbor_idx in neighbors:
+                node_2 = tuple(times_normalized[neighbor_idx])
+                if not node_1 == node_2:
+                    graph.add_edge(node_1, node_2)
+
+    # 5. Connected Components & DB-Update Vorbereitung
+    connected_components = list(nx.connected_components(graph))
+    db_update_data = []
+
+    for component_idx, component in enumerate(connected_components):
+        for node in component:
+            node_data = graph.nodes[node]
+            for p_id in node_data['db_ids']:
+                db_update_data.append((component_idx, p_id))
+
+    # 6. Batch-Update in der DB
+    cursor = conn.cursor()
+    try:
+        # Reset all old consensus_ids
+        cursor.execute("UPDATE peaks SET consensus_id = NULL")
+        # TODO ... Delete old consensus peak entries from the consensus_peaks table.
+        cursor.executemany("UPDATE peaks SET consensus_id = ? WHERE id = ?", db_update_data)
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Database Error: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+    return graph
