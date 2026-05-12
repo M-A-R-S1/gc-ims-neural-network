@@ -229,7 +229,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         cursor.execute('''
                        CREATE TABLE IF NOT EXISTS consensus_peaks
                        (
-                           id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                           id               INTEGER PRIMARY KEY,
                            ret_time         REAL,
                            drift_time       REAL,
                            min_intensity    REAL,

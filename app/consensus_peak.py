@@ -12,6 +12,7 @@ from skimage.measure import label, regionprops
 from pathlib import Path
 import multiprocessing as mp
 from functools import partial
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 import shutil
@@ -177,8 +178,10 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         # Connect to the database and get the number of peaks where the consensus id is NULL.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM peaks WHERE consensus_id IS NULL")
+        cursor.execute("SELECT COUNT(*) FROM peaks WHERE consensus_id IS NULL AND is_active = 1")
         peaks_without_consensus = cursor.fetchone()[0]
+
+        print(peaks_without_consensus)
 
         # If there are peaks without a consensus id show the user the "consensus peak calculation dialog".
         if peaks_without_consensus > 0:
@@ -680,6 +683,9 @@ class ConsensusPeakCalculationWorker(QtCore.QObject):
                                                max_node_distance=0.006,
                                                batch_size=20000)
 
+        calculate_consensus_peaks(db_path=self.db_path,
+                                  graph=graph)
+
         # TODO ... continue here.
 
         self.finished.emit()
@@ -789,7 +795,7 @@ def calculate_connected_components(db_path: Path,
     try:
         # Reset all old consensus_ids
         cursor.execute("UPDATE peaks SET consensus_id = NULL")
-        # TODO ... Delete old consensus peak entries from the consensus_peaks table.
+        cursor.execute("DELETE FROM consensus_peaks")
         cursor.executemany("UPDATE peaks SET consensus_id = ? WHERE id = ?", db_update_data)
         conn.commit()
     except sqlite3.Error as e:
@@ -799,3 +805,88 @@ def calculate_connected_components(db_path: Path,
         conn.close()
 
     return graph
+
+
+def calculate_consensus_peaks(db_path: Path,
+                              graph: nx.Graph) -> None:
+    """
+    Not yet described ... TODO
+
+    :param db_path: Path to the database.
+    :param graph: Unidirected graph with all peaks as nodes.
+
+    :return: List with consensus peak dictionaries [One dictionary per consensus peak].
+    """
+
+    # List of all connected components.
+    components = list(nx.connected_components(graph))
+    # List of dictionaries with consensus peak information (returned by this function).
+    consensus_peaks = []
+
+    # Walk through all components.
+    for component_idx, component in enumerate(components):
+        # Create a temporary dictionary which counts the occurrences of each label per component.
+        temp_dictionary = defaultdict(int)
+        total_peaks = 0
+
+        # Create a peak dictionary and fill it with peak and label information.
+        peak_dictionary = {}
+
+        # Create lists with all retention and drift times for the current component.
+        ret_times = []
+        drift_times = []
+        min_intensity = -1
+
+        # Walk through each node.
+        for node in component:
+            # Get all labels of this node
+            # If multiple labels are there, it means that this node consists of multiple peaks.
+            node_data = graph.nodes[node]
+            labels = node_data['labels']
+
+            if min_intensity == -1 or min_intensity > min(node_data['intensities']):
+                min_intensity = min(node_data['intensities'])
+
+            # Each label represents one peak of this node. This loop makes sure that each peak of a node is
+            # considered for the consensus peak calculation.
+            for label in labels:
+                ret_times.append(node_data['ret_time'])
+                drift_times.append(node_data['drift_time'])
+                temp_dictionary[label] += 1
+                total_peaks += 1
+
+        # TODO - Experimental
+        # Skip a component, if it only consists of x peaks. This removes rare encountered peaks.
+        #if total_peaks <= 5:
+        #    continue
+
+        # Calculate the consensus peak retention and drift time.
+        mean_ret_time = sum(ret_times) / len(ret_times)
+        mean_drift_time = sum(drift_times) / len(drift_times)
+
+        # Insert consensus peak information to the peak_dictionary.
+        peak_dictionary["id"] = component_idx
+        peak_dictionary["ret_time"] = mean_ret_time
+        peak_dictionary["drift_time"] = mean_drift_time
+        peak_dictionary["min_intensity"] = min_intensity
+
+        # Append a dictionary to the list.
+        consensus_peaks.append(peak_dictionary)
+
+    consensus_peaks_dataframe = pd.DataFrame(consensus_peaks)
+
+    # Connect to the database and save the consensus peaks.
+    conn = sqlite3.connect(db_path)
+
+    try:
+        # 3. Dataframe in die SQL-Tabelle schreiben
+        # Wir nutzen 'if_exists=append', da wir die Tabelle behalten, aber die Zeilen füllen wollen.
+        # index=False verhindert, dass der Pandas-Index als eigene Spalte geladen wird.
+        consensus_peaks_dataframe.to_sql("consensus_peaks", conn, if_exists="append", index=False)
+        conn.commit()
+
+    except Exception as e:
+        print(f"Error while saving to the database: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
