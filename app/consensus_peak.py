@@ -188,6 +188,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
             QtCore.QTimer.singleShot(100, self.show_consensus_peak_calc_dialog)
         else:
             self.overlay.hide()
+            self.load_data()
 
         conn.close()
 
@@ -686,8 +687,6 @@ class ConsensusPeakCalculationWorker(QtCore.QObject):
         calculate_consensus_peaks(db_path=self.db_path,
                                   graph=graph)
 
-        # TODO ... continue here.
-
         self.finished.emit()
 
 
@@ -857,8 +856,8 @@ def calculate_consensus_peaks(db_path: Path,
 
         # TODO - Experimental
         # Skip a component, if it only consists of x peaks. This removes rare encountered peaks.
-        #if total_peaks <= 5:
-        #    continue
+        if total_peaks <= 5:
+            continue
 
         # Calculate the consensus peak retention and drift time.
         mean_ret_time = sum(ret_times) / len(ret_times)
