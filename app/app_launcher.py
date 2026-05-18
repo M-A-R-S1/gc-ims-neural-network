@@ -345,6 +345,7 @@ def load_custom_fonts():
     for font_file in font_path.glob("*.ttf"):
         QFontDatabase.addApplicationFont(str(font_file))
 
+
 def main():
     # Create an application instance!
     app = QtWidgets.QApplication(sys.argv)

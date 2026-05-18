@@ -36,6 +36,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         self.show_peak_marker = True
         # Connect the button to the toggle methode.
         self.pushButton_toggle_peak_marker.clicked.connect(self.toggle_peak_markers)
+        self.consensus_peak_widgets = {}
 
         # Background overlay -> This overlay blocks the view to the peak explorer while the consensus peak detection process is running.
         self.overlay = QtWidgets.QWidget(self)
@@ -159,7 +160,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         self.worker.progress_update.connect(self.consensus_progress_dialog.update_progress)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.consensus_progress_dialog.accept)
-        self.worker.finished.connect(self.check_speaks_for_consensus)
+        self.worker.finished.connect(self.load_consensus_peaks)
         self.consensus_progress_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
         self.thread.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
@@ -208,15 +209,136 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         # Clear the canvas.
         self.clear_canvas()
 
-        # Connect to the database.
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM labels", )
-        labels_data = cursor.fetchall()
-
         # TODO ...
         # Load consensus peak data from the database
+        self.load_consensus_peaks()
+
+
+
+    def load_consensus_peaks(self) -> None:
+        """
+        This function is called when this page is loaded or when the consensus peak detection is finished.
+        It displays all consensus peaks as widgets in the peak scroll area.
+        =============================================================================
+        :return: None.
+        """
+
+        # Clear the consensus peak widget dictionary.
+        self.clear_canvas()
+        self.clear_peak_markers()
+
+        # Clear the old layout before the new peaks are added to the scroll area.
+        self.clear_layout(self.scrollArea_peak_Contents.layout())
+
+        # Connect to the database and get all peaks from the selected spectrum.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        query = "SELECT id, ret_time, drift_time, min_intensity, is_active FROM consensus_peaks ORDER BY drift_time"
+        cursor.execute(query)
+        consensus_peaks_data = cursor.fetchall()
+
+        # Get the number of unique labels.
+        label_count_query = "SELECT COUNT(DISTINCT name) FROM labels"
+        cursor.execute(label_count_query)
+        label_count = cursor.fetchone()[0]
+
+        # Get the number of unique spectra.
+        spectra_count_query = "SELECT COUNT(DISTINCT path) FROM spectra"
+        cursor.execute(spectra_count_query)
+        spectra_count = cursor.fetchone()[0]
+        conn.close()
+
+        # The number of columns inside the scroll area.
+        max_columns = 2
+
+        # Loop through all peaks.
+        for index, (consensus_id, retention_time, drift_time, min_intensity, is_active) in enumerate(consensus_peaks_data):
+            # Calculate the position of the peak widget inside the peak scroll area.
+            row = index // max_columns
+            column = index % max_columns
+            # The path to the peak .npy file.
+            absolute_npy_path = Path(self.project_path).parent / "dataset"
+            # Create the consensus peak widget tile and add it to the scroll area.
+            consensus_peak_tile = ConsensusPeakTile(db_path=self.db_path,
+                                                    consensus_id=consensus_id,
+                                                    retention_time=retention_time,
+                                                    drift_time=drift_time,
+                                                    unique_labels=label_count,
+                                                    unique_spectra=spectra_count,
+                                                    npy_path=absolute_npy_path,
+                                                    is_active=is_active)
+
+            # Connect the peak tile widget handler.
+            consensus_peak_tile.consensusPeakActivityChanged.connect(self.set_consensus_peak_activity)
+            # Add the consensus peak to the dictionary.
+            self.consensus_peak_widgets[consensus_id] = consensus_peak_tile
+            # Add a mouse click event listener to the peak tile.
+            # consensus_peak_tile.mousePressEvent = lambda event, peak_id=consensus_id: self.on_peak_tile_clicked(peak_id)
+            # Add the peak widget to the scroll area.
+            self.scrollArea_peak_Contents.layout().addWidget(consensus_peak_tile, row, column)
+
+        self.scrollArea_peak_Contents.layout().setRowStretch(self.scrollArea_peak_Contents.layout().rowCount(), 1)
+        self.scrollArea_peak_Contents.layout().setColumnStretch(max_columns, 1)
+
+        # Plot the clicked spectrum to the canvas.
+        #self.plot_spectrum(spectrum_widget)
+        #self.canvas.draw()
+        #self.selected_spectrum_name = spectrum_widget.label_name.text()
+        #self.label_preview.setText(f"{spectrum_widget.parent.label_name.text()} - {self.selected_spectrum_name}")
+
+
+    def set_consensus_peak_activity(self,
+                                    consensus_id: int,
+                                    is_active: bool) -> None:
+        """
+        This function is called when the user changes the visibility of a consensus peak. If a consensus peak is set to "inactive" or "invisible"
+        the consensus peak is no longer considered an important consensus peak and will be ignored in later steps. The consensus peak status is here
+        updated to the database and the canvas is redrawn.
+        =============================================================================
+        :param consensus_id: The id of the consensus peak.
+        :param is_active: The new activity status of the peak.
+        =============================================================================
+        :return: None.
+        """
+
+        # Connect to the database and update the peak activity.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE consensus_peaks SET is_active = ? WHERE id = ?", (is_active, consensus_id))
+        conn.commit()
+
+        # TODO ... Draw stuff here after updating.
+        # Save the current zoom status [limits].
+        #old_xlim = self.canvas.axes.get_xlim()
+        #old_ylim = self.canvas.axes.get_ylim()
+        # Plot the spectrum.
+        #self.draw_peak_markers(self.current_selected_spectrum)
+        # Apply the saved zoom status.
+        #self.canvas.axes.set_xlim(old_xlim)
+        #self.canvas.axes.set_ylim(old_ylim)
+        # Draw the canvas.
+        #self.canvas.draw()
+        #self.canvas.blit(self.canvas.axes.bbox)
+
+
+    def clear_layout(self, layout) -> None:
+        """
+        This function clears the content of a scroll area.
+        =============================================================================
+        :param layout: The layout of the scroll area.
+        =============================================================================
+        :return: None
+        """
+
+        # If there is a layout then remove all of its items [Peak tile widgets].
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
+                else:
+                    self.clear_layout(item.layout())
 
 
     def init_plot_canvas(self) -> None:
@@ -412,7 +534,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
 
 
     def clear_peak_markers(self):
-        self.peak_widgets.clear()
+        self.consensus_peak_widgets.clear()
 
         if hasattr(self, 'canvas_peak_marker_base') and self.canvas_peak_marker_base is not None:
             self.canvas_peak_marker_base.remove()
@@ -453,67 +575,56 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
             self.canvas.draw()
 
 
-class ConsensusPeakTileWidget(QtWidgets.QFrame):
+class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
     # Signal definition.
-    peakActivityChanged = QtCore.Signal(int, bool)
+    consensusPeakActivityChanged = QtCore.Signal(int, bool)
 
     def __init__(self,
-                 peak_id: int,
-                 npy_path: Path,
+                 db_path: Path,
+                 consensus_id: int,
                  retention_time: float,
                  drift_time: float,
-                 db_path: Path,
-                 parent=None) -> None:
+                 unique_labels: int,
+                 unique_spectra: int,
+                 npy_path: Path,
+                 is_active: bool):
 
-        super().__init__(parent)
-        self.peak_id = peak_id
+        super().__init__()
+        self.setupUi(self)
+
         self.db_path = db_path
+        self.consensus_id = consensus_id
         self.retention_time = retention_time
         self.drift_time = drift_time
+        self.is_active = is_active
         self.is_selected = False
-
-        # Connect to the database and get the activity status of this peak.
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT is_active FROM peaks WHERE id = ?", (peak_id,))
-        peak_data = cursor.fetchone()
-
-        # Set the peak activity.
-        self.is_active = bool(peak_data[0]) if peak_data else False
-        conn.close()
 
         # Image paths for the activity icons.
         self.icon_active = QtGui.QIcon("ui/_pics/icons/eye_open.png")
         self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")
 
-        # Set the size and the style for the peak tile widget.
-        self.setFixedSize(90, 120)
-        self.setStyleSheet("""
-            PeakTileWidget {
-                background-color: #2b2b2b;
-                border: 1px solid #3d3d3d;
-                border-radius: 5px;
-            }
-            PeakTileWidget:hover {
-                border: 1px solid #555555;
-                background-color: #323232;
-            }
-        """)
-
         # Define the main layout of this widget and its margins.
         self.main_layout = QtWidgets.QVBoxLayout(self)
         self.main_layout.setContentsMargins(5, 5, 5, 5)
 
-        # Create a label for the image
-        self.image_label = QtWidgets.QLabel()
-        self.image_label.setAlignment(QtCore.Qt.AlignCenter)
-        # Set the image to the label.
-        self.set_peak_tile_image(npy_path)
+        # Connect to the datase and get one of the peak npy files which is connected to this consensus peak.
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        npy_file_query = "SELECT npy_file FROM peaks WHERE consensus_id = ? LIMIT 1"
+        cursor.execute(npy_file_query, (consensus_id,))
+        npy_file_result = cursor.fetchone()
+        conn.close()
+
+        # Define the absolute path to the npy file.
+        npy_file = npy_path / npy_file_result[0]
+
+        # Set the image to the peak image label.
+        self.set_peak_tile_image(npy_file)
 
         # Create a button which is placed on top of the peak image.
-        self.activity_button = QtWidgets.QPushButton(self.image_label)
+        self.activity_button = QtWidgets.QPushButton(self.peak_window)
         self.activity_button.setFixedSize(20, 20)
-        self.activity_button.move(58, 50)
+        self.activity_button.move(80, 75)
         self.activity_button.setCursor(QtCore.Qt.PointingHandCursor)
         self.activity_button.setStyleSheet("background: rgba(0,0,0,100); border: none;")
         # Set the correct peak button icon for the current peak activity.
@@ -521,15 +632,25 @@ class ConsensusPeakTileWidget(QtWidgets.QFrame):
         # Connect the button.
         self.activity_button.clicked.connect(self.change_peak_activity_button)
 
-        # Add the image label to the main layout.
-        self.main_layout.addWidget(self.image_label)
+        # Connect to the database check to how many labels and spectra this consensus peak is connected too.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        query = """
+                SELECT COUNT(DISTINCT label_id)    AS unique_labels_count,
+                       COUNT(DISTINCT spectrum_id) AS unique_spectra_count
+                FROM peaks
+                WHERE consensus_id = ?
+                """
+
+        cursor.execute(query, (consensus_id,))
+        result = cursor.fetchone()
+        labels_count, spectra_count = result
+        conn.close()
 
         # Text area of the widget.
-        info_text = f"DT: {drift_time:.2f}\nRT: {retention_time:.2f}"
-        self.info_label = QtWidgets.QLabel(info_text)
-        self.info_label.setStyleSheet("font-size: 12px; color: #aaaaaa;")
-        self.info_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.main_layout.addWidget(self.info_label)
+        self.label_count_label.setText(f"In labels: {labels_count} / {unique_labels}")
+        self.spectra_count_label.setText(f"In spectra: {spectra_count} / {unique_spectra}")
+        self.position_label.setText(f"DT: {drift_time:.2f} | RT: {retention_time:.2f}")
 
         # Set hover mouse icon
         self.setCursor(QtCore.Qt.PointingHandCursor)
@@ -552,8 +673,8 @@ class ConsensusPeakTileWidget(QtWidgets.QFrame):
         self.is_active = not self.is_active
         self.change_button_icon()
         self.change_tile_style()
-        # Emmit a signal which will update the peak entry in the database.
-        self.peakActivityChanged.emit(self.peak_id, self.is_active)
+        # Emmit a signal which will update the consensus peak entry in the database.
+        self.consensusPeakActivityChanged.emit(self.consensus_id, self.is_active)
 
 
     def change_button_icon(self) -> None:
@@ -589,12 +710,12 @@ class ConsensusPeakTileWidget(QtWidgets.QFrame):
             background_color_hover = "#323232"
 
         self.setStyleSheet(f"""
-                            PeakTileWidget {{
+                            QWidget {{
                                 background-color: {background_color};
                                 border: 1px solid {border_color};
                                 border-radius: 5px;
                             }}
-                            PeakTileWidget:hover {{
+                            QWidget:hover {{
                                 background-color: {background_color_hover};
                                 border: 1px solid {border_color_hover};
                                 border-radius: 5px;
@@ -648,10 +769,10 @@ class ConsensusPeakTileWidget(QtWidgets.QFrame):
 
             # Apply the color pallet to the image.
             q_image.setColorTable(qt_color_table)
-            pixmap = QtGui.QPixmap.fromImage(q_image).scaled(80, 80, QtCore.Qt.KeepAspectRatio)
-            self.image_label.setPixmap(pixmap)
+            pixmap = QtGui.QPixmap.fromImage(q_image).scaled(100, 100, QtCore.Qt.KeepAspectRatio)
+            self.peak_window.setPixmap(pixmap)
         except:
-            self.image_label.setText("N/A")
+            pass
 
 
 class ConsensusPeakCalculationWorker(QtCore.QObject):
@@ -978,13 +1099,3 @@ def create_consensus_peak_npy(project_path: Path,
                 np.save(npy_filename, peak_window_intensities)
 
     conn.close()
-
-
-class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
-
-    def __init__(self, db_path: Path, consensus_id: int):
-        super().__init__()
-        self.setupUi(self)
-
-        self.db_path = db_path
-        self.consensus_id = consensus_id

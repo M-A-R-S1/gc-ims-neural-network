@@ -22,9 +22,9 @@ class Ui_ConsensusPeakTile(object):
     def setupUi(self, ConsensusPeakTile):
         if not ConsensusPeakTile.objectName():
             ConsensusPeakTile.setObjectName(u"ConsensusPeakTile")
-        ConsensusPeakTile.resize(389, 100)
-        ConsensusPeakTile.setMinimumSize(QSize(0, 100))
-        ConsensusPeakTile.setMaximumSize(QSize(16777215, 100))
+        ConsensusPeakTile.resize(350, 100)
+        ConsensusPeakTile.setMinimumSize(QSize(350, 100))
+        ConsensusPeakTile.setMaximumSize(QSize(350, 100))
         ConsensusPeakTile.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         ConsensusPeakTile.setStyleSheet(u"QWidget {\n"
 "	background-color: #1d1d1d;\n"
@@ -35,8 +35,8 @@ class Ui_ConsensusPeakTile(object):
         self.horizontalLayout = QHBoxLayout(ConsensusPeakTile)
         self.horizontalLayout.setSpacing(15)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.peak_window = QWidget(ConsensusPeakTile)
+        self.horizontalLayout.setContentsMargins(6, 6, 6, 6)
+        self.peak_window = QLabel(ConsensusPeakTile)
         self.peak_window.setObjectName(u"peak_window")
         self.peak_window.setMinimumSize(QSize(100, 100))
         self.peak_window.setMaximumSize(QSize(100, 100))
@@ -54,7 +54,7 @@ class Ui_ConsensusPeakTile(object):
         self.label_count_label.setObjectName(u"label_count_label")
         font = QFont()
         font.setFamilies([u"Lato"])
-        font.setPointSize(14)
+        font.setPointSize(12)
         font.setWeight(QFont.Light)
         self.label_count_label.setFont(font)
         self.label_count_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -95,6 +95,7 @@ class Ui_ConsensusPeakTile(object):
 
     def retranslateUi(self, ConsensusPeakTile):
         ConsensusPeakTile.setWindowTitle(QCoreApplication.translate("ConsensusPeakTile", u"Form", None))
+        self.peak_window.setText(QCoreApplication.translate("ConsensusPeakTile", u"TextLabel", None))
         self.label_count_label.setText(QCoreApplication.translate("ConsensusPeakTile", u"In labels: X/X", None))
         self.spectra_count_label.setText(QCoreApplication.translate("ConsensusPeakTile", u"In spectra: X/X", None))
         self.position_label.setText(QCoreApplication.translate("ConsensusPeakTile", u"RT; XX,XX - DT: XX", None))
