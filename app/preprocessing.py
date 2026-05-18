@@ -968,7 +968,7 @@ class PreprocessingWorker(QtCore.QObject):
                     return
 
                 # Load the ims spectrum and create a copy.
-                spec = ims.Spectrum.read_mea(spectrum_path, compr="binning")
+                spec = ims.Spectrum.read_mea(spectrum_path).binning()
                 spectrum = spec.copy()
                 # Set the drifttime coordinate of the RIP to 0.
                 spectrum.riprel()
@@ -993,7 +993,7 @@ class PreprocessingWorker(QtCore.QObject):
                 intensity_min = spectrum.values.min()
                 intensity_max = spectrum.values.max()
 
-                # Create the path where the spectrum should be saved and create the folders if neccessary.
+                # Create the path where the spectrum should be saved and create the folders if necessary.
                 save_path =  self.project_path / "dataset" / label / spectrum.name
                 if not save_path.exists():
                     save_path.mkdir(parents=True, exist_ok=True)
@@ -1007,16 +1007,24 @@ class PreprocessingWorker(QtCore.QObject):
                 spectrum.to_hdf5(save_path)
                 processed_spectra_counter += 1
 
-                # Get the peaks directory.
+                # Get the peaks directory and delete it.
                 peak_dir = save_path / "peaks"
                 if peak_dir.exists():
                     shutil.rmtree(peak_dir)
+
+                # Get the consensus_peak directory and delete it.
+                consensus_peak_dir = save_path / "consensus_peaks"
+                if consensus_peak_dir.exists():
+                    shutil.rmtree(consensus_peak_dir)
 
                 cursor.execute("SELECT id FROM spectra WHERE path = ?", (str(spectrum_path),))
                 spectra_data = cursor.fetchone()
                 spectrum_id = spectra_data[0]
                 # Delete peaks which are associated with this spectrum.
                 cursor.execute("DELETE FROM peaks WHERE spectrum_id = ?", (spectrum_id,))
+                # Reset all old consensus_ids
+                cursor.execute("UPDATE peaks SET consensus_id = NULL")
+                cursor.execute("DELETE FROM consensus_peaks")
                 # Update the spectrum database entry.
                 cursor.execute("UPDATE spectra SET processing_done = ?, peaks_done = ?, intensity_max = ?, intensity_min = ? "
                                     "WHERE path = ?", (1, 0, intensity_max, intensity_min, str(spectrum_path)))

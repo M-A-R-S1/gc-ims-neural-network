@@ -10,6 +10,7 @@ from matplotlib import cm
 from skimage.morphology import max_tree, h_maxima, area_opening
 from skimage.measure import label, regionprops
 from pathlib import Path
+from ConsensusPeakTile import Ui_ConsensusPeakTile
 import multiprocessing as mp
 from functools import partial
 from collections import defaultdict
@@ -684,8 +685,14 @@ class ConsensusPeakCalculationWorker(QtCore.QObject):
                                                max_node_distance=0.006,
                                                batch_size=20000)
 
+        # Calculate consensus peaks.
         calculate_consensus_peaks(db_path=self.db_path,
                                   graph=graph)
+
+        # Save consensus peak npy files
+        create_consensus_peak_npy(project_path=self.project_path,
+                                  db_path=self.db_path,
+                                  peak_radius=5)
 
         self.finished.emit()
 
@@ -889,3 +896,95 @@ def calculate_consensus_peaks(db_path: Path,
         conn.rollback()
     finally:
         conn.close()
+
+
+def create_consensus_peak_npy(project_path: Path,
+                              db_path: Path,
+                              peak_radius: int) -> None:
+
+    # Connect to the database.
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    # Select all spectra paths, their associated label names and label ids for all spectra where the peak detection
+    # process was not performed on.
+    query = """
+            SELECT spectra.path, labels.name, labels.id, spectra.id
+            FROM spectra
+                     JOIN labels ON spectra.label_id = labels.id
+            """
+    cursor.execute(query)
+    spectra_dataset = cursor.fetchall()
+
+    # Connect to the database and get all relevant peak, label and spectra information.
+    query = "SELECT id, ret_time, drift_time, min_intensity, is_active FROM consensus_peaks"
+    consensus_peaks_dataframe = pd.read_sql_query(query, conn)
+
+    # Loop through all spectra of the dataset.
+    for spectra in spectra_dataset:
+        spectrum_path, label_name, label_id, spectrum_id = spectra
+        spec_name = Path(spectrum_path).stem
+        target_file = project_path / "dataset" / label_name / spec_name / f"{spec_name}.hdf5"
+        # Load the spectrum
+        spectrum = ims.Spectrum.read_hdf5(target_file)
+
+        # 1. Spectrum normalization.
+        # Keep the non normalized values for later use.
+        values_non_normalized = spectrum.values.copy()
+        # Normalize the spectrum [0-1].
+        spectrum.normalization()
+
+        padded_values = np.pad(
+            spectrum.values,
+            pad_width=peak_radius,
+            mode='constant',
+            constant_values=0
+        )
+
+        padded_values_non_normalized = np.pad(
+            values_non_normalized,
+            pad_width=peak_radius,
+            mode='constant',
+            constant_values=0
+        )
+
+        # Define the consensus_peaks folder.
+        npy_dir = project_path / "dataset" / label_name / spec_name / "consensus_peaks"
+        # Check if the directory exists, if so delete it with all it's content [clean up old stuff]
+        if npy_dir.exists():
+            shutil.rmtree(npy_dir)
+
+        # Walk through all consensus peaks.
+        for idx, consensus_peak in consensus_peaks_dataframe.iterrows():
+            # Calculate the retention and drifttime indices from the actual times saved in the Excel file.
+            ret_idx_original = np.abs(spectrum.ret_time - consensus_peak['ret_time']).argmin()
+            drift_idx_original = np.abs(spectrum.drift_time - consensus_peak['drift_time']).argmin()
+
+            # Calculate the min and max coordinates for the padded peak window.
+            start_ret_idx = ret_idx_original - peak_radius
+            end_ret_idx = ret_idx_original + 3 * peak_radius + 1
+            start_drift_idx = drift_idx_original - peak_radius
+            end_drift_idx = drift_idx_original + 3 * peak_radius + 1
+
+            # Set the adjusted peak window (One with normalized and one with non normalized intensity values)
+            peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+            peak_window_intensities_non_normalized = padded_values_non_normalized[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+
+            if np.max(peak_window_intensities_non_normalized) >= consensus_peak['min_intensity']:
+                # Create the directory if not already there.
+                if not npy_dir.exists():
+                    npy_dir.mkdir(parents=True, exist_ok=True)
+
+                npy_filename = npy_dir / f"PW_{label_name}_{spec_name}_RT{spectrum.ret_time[ret_idx_original]}_DT{spectrum.drift_time[drift_idx_original]}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
+                np.save(npy_filename, peak_window_intensities)
+
+    conn.close()
+
+
+class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
+
+    def __init__(self, db_path: Path, consensus_id: int):
+        super().__init__()
+        self.setupUi(self)
+
+        self.db_path = db_path
+        self.consensus_id = consensus_id

@@ -1,7 +1,7 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtCore import QSize, Qt, Signal, QTimer
-from PeakExplorerWidget import Ui_PeakExplorerWidget
+from ui.PeakExplorerWidget import Ui_PeakExplorerWidget
 from dialogs import CustomYesNoDialog, CustomProgressDialog
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
