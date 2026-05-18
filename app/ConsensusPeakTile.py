@@ -22,14 +22,20 @@ class Ui_ConsensusPeakTile(object):
     def setupUi(self, ConsensusPeakTile):
         if not ConsensusPeakTile.objectName():
             ConsensusPeakTile.setObjectName(u"ConsensusPeakTile")
-        ConsensusPeakTile.resize(350, 100)
-        ConsensusPeakTile.setMinimumSize(QSize(350, 100))
-        ConsensusPeakTile.setMaximumSize(QSize(350, 100))
+        ConsensusPeakTile.resize(370, 92)
+        ConsensusPeakTile.setMinimumSize(QSize(370, 92))
+        ConsensusPeakTile.setMaximumSize(QSize(370, 92))
         ConsensusPeakTile.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        ConsensusPeakTile.setStyleSheet(u"QWidget {\n"
+        ConsensusPeakTile.setStyleSheet(u"#ConsensusPeakTile  {\n"
 "	background-color: #1d1d1d;\n"
 "	border: 1px solid #1d1d1d;\n"
-"	border-radius: 0px;\n"
+"	border-radius: 5px;\n"
+"}\n"
+"\n"
+"#ConsensusPeakTile:hover {\n"
+"	background-color: #555555;\n"
+"	border: 1px solid #323232;\n"
+"	border-radius: 5px;\n"
 "}\n"
 "")
         self.horizontalLayout = QHBoxLayout(ConsensusPeakTile)
@@ -38,14 +44,15 @@ class Ui_ConsensusPeakTile(object):
         self.horizontalLayout.setContentsMargins(6, 6, 6, 6)
         self.peak_window = QLabel(ConsensusPeakTile)
         self.peak_window.setObjectName(u"peak_window")
-        self.peak_window.setMinimumSize(QSize(100, 100))
-        self.peak_window.setMaximumSize(QSize(100, 100))
+        self.peak_window.setMinimumSize(QSize(80, 80))
+        self.peak_window.setMaximumSize(QSize(80, 80))
 
         self.horizontalLayout.addWidget(self.peak_window)
 
         self.text_container = QWidget(ConsensusPeakTile)
         self.text_container.setObjectName(u"text_container")
-        self.text_container.setMaximumSize(QSize(16777215, 100))
+        self.text_container.setMinimumSize(QSize(0, 80))
+        self.text_container.setMaximumSize(QSize(16777215, 80))
         self.verticalLayout_2 = QVBoxLayout(self.text_container)
         self.verticalLayout_2.setSpacing(3)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")

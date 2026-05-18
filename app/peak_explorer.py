@@ -1077,6 +1077,12 @@ class PeakTileWidget(QtWidgets.QFrame):
         self.is_active = bool(peak_data[0]) if peak_data else False
         conn.close()
 
+        # lower the opacity of the widget if the peak is inactive.
+        self.opacity_effect = QGraphicsOpacityEffect()
+        if not self.is_active:
+            self.opacity_effect.setOpacity(0.3)
+            self.setGraphicsEffect(self.opacity_effect)
+
         # Image paths for the activity icons.
         self.icon_active = QtGui.QIcon("ui/_pics/icons/eye_open.png")
         self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")

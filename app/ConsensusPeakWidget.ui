@@ -80,6 +80,12 @@
       </property>
       <item>
        <widget class="QWidget" name="consensus_peak_container" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>800</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="maximumSize">
          <size>
           <width>800</width>
@@ -192,7 +198,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>780</width>
-                 <height>787</height>
+                 <height>786</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">

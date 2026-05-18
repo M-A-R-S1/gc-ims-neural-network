@@ -3,16 +3,12 @@ from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtCore import QSize, Qt, Signal, QTimer
 from ConsensusPeakWidget import Ui_ConsensusPeakWidget
 from dialogs import CustomYesNoDialog, CustomProgressDialog
-from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
+from preprocessing import PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
 from matplotlib import cm
-from skimage.morphology import max_tree, h_maxima, area_opening
-from skimage.measure import label, regionprops
 from pathlib import Path
 from ConsensusPeakTile import Ui_ConsensusPeakTile
-import multiprocessing as mp
-from functools import partial
 from collections import defaultdict
 import numpy as np
 import pandas as pd
@@ -37,6 +33,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         # Connect the button to the toggle methode.
         self.pushButton_toggle_peak_marker.clicked.connect(self.toggle_peak_markers)
         self.consensus_peak_widgets = {}
+        self.selected_consensus_peak_id = None
 
         # Background overlay -> This overlay blocks the view to the peak explorer while the consensus peak detection process is running.
         self.overlay = QtWidgets.QWidget(self)
@@ -58,8 +55,8 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         # Initialize the plot canvas.
         self.init_plot_canvas()
         # Connect pick events to the peaks from the canvas.
-        #self.canvas.mpl_connect('pick_event', self.on_canvas_pick)
-        #self.canvas.mpl_connect('motion_notify_event', self.on_canvas_hover)
+        self.canvas.mpl_connect('pick_event', self.on_canvas_pick)
+        self.canvas.mpl_connect('motion_notify_event', self.on_canvas_hover)
         # Saves the plotted canvas and it's markers.
         self.canvas_spectrum = None
         self.canvas_peak_marker_base = None
@@ -79,6 +76,8 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
 
         super().resizeEvent(event)
         self.overlay.resize(self.size())
+        # Start a timer, which will eventually call the finished_resizing method.
+        self.resize_timer.start(250)
 
 
     def finished_resizing(self):
@@ -88,8 +87,8 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         :return: None.
         """
 
-        if self.current_selected_spectrum:
-            self.plot_spectrum(self.current_selected_spectrum)
+        if self.consensus_peak_widgets:
+            self.plot_spectrum()
 
 
     def showEvent(self, event) -> None:
@@ -183,8 +182,6 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         cursor.execute("SELECT COUNT(*) FROM peaks WHERE consensus_id IS NULL AND is_active = 1")
         peaks_without_consensus = cursor.fetchone()[0]
 
-        print(peaks_without_consensus)
-
         # If there are peaks without a consensus id show the user the "consensus peak calculation dialog".
         if peaks_without_consensus > 0:
             QtCore.QTimer.singleShot(100, self.show_consensus_peak_calc_dialog)
@@ -203,14 +200,14 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         :return: None
         """
 
-        self.current_selected_spectrum = None
+
+        self.selected_consensus_peak_id = None
         self.label_preview.setText("Spectrum preview")
 
         # Clear the canvas.
         self.clear_canvas()
 
-        # TODO ...
-        # Load consensus peak data from the database
+        # Load the consensus peaks.
         self.load_consensus_peaks()
 
 
@@ -273,7 +270,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
             # Add the consensus peak to the dictionary.
             self.consensus_peak_widgets[consensus_id] = consensus_peak_tile
             # Add a mouse click event listener to the peak tile.
-            # consensus_peak_tile.mousePressEvent = lambda event, peak_id=consensus_id: self.on_peak_tile_clicked(peak_id)
+            consensus_peak_tile.mousePressEvent = lambda event, peak_id=consensus_id: self.on_peak_tile_clicked(peak_id)
             # Add the peak widget to the scroll area.
             self.scrollArea_peak_Contents.layout().addWidget(consensus_peak_tile, row, column)
 
@@ -281,10 +278,8 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         self.scrollArea_peak_Contents.layout().setColumnStretch(max_columns, 1)
 
         # Plot the clicked spectrum to the canvas.
-        #self.plot_spectrum(spectrum_widget)
-        #self.canvas.draw()
-        #self.selected_spectrum_name = spectrum_widget.label_name.text()
-        #self.label_preview.setText(f"{spectrum_widget.parent.label_name.text()} - {self.selected_spectrum_name}")
+        self.plot_spectrum()
+        self.canvas.draw()
 
 
     def set_consensus_peak_activity(self,
@@ -307,18 +302,17 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         cursor.execute("UPDATE consensus_peaks SET is_active = ? WHERE id = ?", (is_active, consensus_id))
         conn.commit()
 
-        # TODO ... Draw stuff here after updating.
         # Save the current zoom status [limits].
-        #old_xlim = self.canvas.axes.get_xlim()
-        #old_ylim = self.canvas.axes.get_ylim()
+        old_xlim = self.canvas.axes.get_xlim()
+        old_ylim = self.canvas.axes.get_ylim()
         # Plot the spectrum.
-        #self.draw_peak_markers(self.current_selected_spectrum)
+        self.draw_peak_markers()
         # Apply the saved zoom status.
-        #self.canvas.axes.set_xlim(old_xlim)
-        #self.canvas.axes.set_ylim(old_ylim)
+        self.canvas.axes.set_xlim(old_xlim)
+        self.canvas.axes.set_ylim(old_ylim)
         # Draw the canvas.
-        #self.canvas.draw()
-        #self.canvas.blit(self.canvas.axes.bbox)
+        self.canvas.draw()
+        self.canvas.blit(self.canvas.axes.bbox)
 
 
     def clear_layout(self, layout) -> None:
@@ -428,8 +422,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         self.canvas.draw()
 
 
-    def plot_spectrum(self,
-                      spectrum_widget: DatasetSubEntry) -> None:
+    def plot_spectrum(self) -> None:
         """
         This function loads the .mea file of one spectrum and plots it to the canvas.
         Additionally, all detected peaks are marked on the canvas.
@@ -439,20 +432,14 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         :return: None
         """
 
-        # Deselect the last selected spectrum and remove the highlight effect from the spectra scroll area.
-        if self.current_selected_spectrum:
-            self.current_selected_spectrum.set_active(False)
-
-        # Set the highlight to the currently clicked spectrum.
-        self.current_selected_spectrum = spectrum_widget
-        self.current_selected_spectrum.set_active(True)
-
         # Set a dark background for the plot.
         plt.style.use('dark_background')
 
+        best_spectrum = self.get_spectrum_with_most_consensus_peaks()
+
         # Path to the hdf5 file.
-        hdf5_path = self.project_path.parent / "dataset" / spectrum_widget.parent.label_name.text() / Path(spectrum_widget.spectrum_path).stem
-        hdf5_file = hdf5_path / f"{Path(spectrum_widget.spectrum_path).stem}.hdf5"
+        hdf5_path = self.project_path.parent / "dataset" / best_spectrum['label_name'] / best_spectrum['spectrum_name']
+        hdf5_file = hdf5_path / f"{best_spectrum['spectrum_name']}.hdf5"
         # Load the spectrum from the .hdf5 file.
         spectrum = ims.Spectrum.read_hdf5(hdf5_file)
 
@@ -488,15 +475,14 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         # Apply a tight layout and draw the canvas.
         self.canvas_spectrum = self.canvas.copy_from_bbox(self.canvas.axes.bbox)
         self.canvas.fig.tight_layout()
-        self.draw_peak_markers(spectrum_widget)
+        self.draw_peak_markers()
 
 
-    def draw_peak_markers(self, spectrum_widget: DatasetSubEntry) -> None:
-        # Connect to the database and get all peak retention- and drifttimes of the current spectrum.
+    def draw_peak_markers(self) -> None:
+        # Connect to the database and get all consensus peak retention- and drifttimes of the current spectrum.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, ret_time, drift_time, is_active FROM peaks WHERE spectrum_id = ?",
-                       (spectrum_widget.spectrum_id,))
+        cursor.execute("SELECT id, ret_time, drift_time, is_active FROM consensus_peaks")
         peak_times = cursor.fetchall()
         conn.close()
 
@@ -515,7 +501,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
             # Color list for the peak markers, depending on the activity status and their selection.
             colors = []
             for peak_id, activity in zip(peak_ids, is_active):
-                if peak_id == self.selected_peak_id:
+                if peak_id == self.selected_consensus_peak_id:
                     colors.append('#ff9000')
                 else:
                     colors.append('#00eaff' if activity == 1 else '#da05ab')
@@ -562,17 +548,124 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
             self.show_peak_marker = True
             self.pushButton_toggle_peak_marker.setText("Hide peak markers")
 
-        if self.current_selected_spectrum is not None:
-            # Save the current zoom status [limits].
-            old_xlim = self.canvas.axes.get_xlim()
-            old_ylim = self.canvas.axes.get_ylim()
-            # Update the markers
-            self.plot_spectrum(self.current_selected_spectrum)
-            # Apply the saved zoom status.
-            self.canvas.axes.set_xlim(old_xlim)
-            self.canvas.axes.set_ylim(old_ylim)
-            # Draw the canvas.
-            self.canvas.draw()
+        # Save the current zoom status [limits].
+        old_xlim = self.canvas.axes.get_xlim()
+        old_ylim = self.canvas.axes.get_ylim()
+        # Update the markers
+        self.plot_spectrum()
+        # Apply the saved zoom status.
+        self.canvas.axes.set_xlim(old_xlim)
+        self.canvas.axes.set_ylim(old_ylim)
+        # Draw the canvas.
+        self.canvas.draw()
+
+
+    def on_peak_tile_clicked(self,
+                             consensus_peak_id: int) -> None:
+        """
+        This function is called when the user clicked on one of the peak tiles in the peak scroll area.
+        The clicked tile is highlighted.
+        =============================================================================
+        :param consensus_peak_id: The ID of the peak tile.
+        =============================================================================
+        :return: None.
+        """
+
+        # Remove the highlight from the peak widget tile.
+        if self.selected_consensus_peak_id in self.consensus_peak_widgets:
+            self.consensus_peak_widgets[self.selected_consensus_peak_id].set_selected(False)
+            self.consensus_peak_widgets[self.selected_consensus_peak_id].change_tile_style()
+
+        # Highlight the clicked peak tile in the scroll area.
+        self.selected_consensus_peak_id = consensus_peak_id
+        if consensus_peak_id in self.consensus_peak_widgets:
+            self.consensus_peak_widgets[consensus_peak_id].set_selected(True)
+            self.consensus_peak_widgets[consensus_peak_id].change_tile_style()
+            self.scrollArea_peak.ensureWidgetVisible(self.consensus_peak_widgets[consensus_peak_id])
+
+        # Maintain the zoom status of the canvas.
+        xlim, ylim = self.canvas.axes.get_xlim(), self.canvas.axes.get_ylim()
+        self.draw_peak_markers()
+        self.canvas.axes.set_xlim(xlim)
+        self.canvas.axes.set_ylim(ylim)
+        self.canvas.draw()
+
+
+    def on_canvas_pick(self, event) -> None:
+        """
+        This function is called when the user clicks on one of the peak markings in the canvas.
+        The marked peak is highlighted on the canvas and in the peak scroll area.
+        =============================================================================
+        :param event: The click event.
+        =============================================================================
+        :return: None
+        """
+
+        if event.artist == self.canvas_peak_marker_fill:
+            idx = event.ind[0]
+            peak_id = event.artist.peak_ids[idx]
+            # Call the on tile clicked method.
+            self.on_peak_tile_clicked(peak_id)
+
+
+    def on_canvas_hover(self, event) -> None:
+        """
+        This function is called when the user hovers over one of the peak markings in the canvas.
+        The mouse icon is changed to the pointing hand cursor if the user currently not in the 'zoom' or 'pan' mode.
+        =============================================================================
+        :param event: The hover event.
+        =============================================================================
+        :return: None
+        """
+
+        # Are there reals peaks?
+        if hasattr(self, 'canvas_peak_marker_fill') and self.canvas_peak_marker_fill is not None:
+            # Get data of the current mouse location.
+            cont, _ = self.canvas_peak_marker_fill.contains(event)
+
+            # is the mouse hovering over a 'canvas_peak_marker_fill' element? [This is a peak marking].
+            if cont and self.toolbar.mode != 'zoom rect' and self.toolbar.mode != 'pan/zoom':
+                self.canvas.setCursor(QtCore.Qt.PointingHandCursor)
+            else:
+                # If the mouse is not hovering over a peak use the default style, according to the current mode.
+                if self.toolbar.mode == 'zoom rect':
+                    self.canvas.setCursor(QtCore.Qt.CrossCursor)
+                elif self.toolbar.mode == 'pan/zoom':
+                    self.canvas.setCursor(QtCore.Qt.SizeAllCursor)
+                else:
+                    self.canvas.setCursor(QtCore.Qt.ArrowCursor)
+
+
+    def get_spectrum_with_most_consensus_peaks(self) -> dict:
+
+        # Connect to the database and get the spectrum id with the most consensus peaks.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        query = """
+                SELECT p.spectrum_id, 
+                       REPLACE(s.name, '.mea', '')    AS spectrum_name,
+                       l.name                         AS label_name,
+                       COUNT(DISTINCT p.consensus_id) AS consensus_peak_count
+                FROM peaks p
+                         JOIN spectra s ON p.spectrum_id = s.id
+                         JOIN labels l ON p.label_id = l.id
+                WHERE p.consensus_id IS NOT NULL
+                GROUP BY p.spectrum_id
+                ORDER BY consensus_peak_count DESC
+                LIMIT 1
+                """
+
+        cursor.execute(query)
+        result = cursor.fetchone()
+        conn.close()
+
+        return {
+            "spectrum_id": result[0],
+            "spectrum_name": result[1],
+            "label_name": result[2],
+            "count": result[3]
+        }
 
 
 class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
@@ -599,6 +692,15 @@ class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
         self.is_active = is_active
         self.is_selected = False
 
+        # lower the opacity of the widget if the consensus peak is inactive.
+        self.opacity_effect = QGraphicsOpacityEffect()
+        if not is_active:
+            self.opacity_effect.setOpacity(0.3)
+            self.setGraphicsEffect(self.opacity_effect)
+
+        # Erlaube dem Custom QWidget, Hintergründe per Stylesheet zu zeichnen
+        self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+
         # Image paths for the activity icons.
         self.icon_active = QtGui.QIcon("ui/_pics/icons/eye_open.png")
         self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")
@@ -624,7 +726,7 @@ class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
         # Create a button which is placed on top of the peak image.
         self.activity_button = QtWidgets.QPushButton(self.peak_window)
         self.activity_button.setFixedSize(20, 20)
-        self.activity_button.move(80, 75)
+        self.activity_button.move(60, 60)
         self.activity_button.setCursor(QtCore.Qt.PointingHandCursor)
         self.activity_button.setStyleSheet("background: rgba(0,0,0,100); border: none;")
         # Set the correct peak button icon for the current peak activity.
@@ -704,18 +806,18 @@ class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
             background_color = "#1b1b1b"
             background_color_hover = "#323232"
         else:
-            border_color = "#3d3d3d"
+            border_color = "#1d1d1d"
             border_color_hover = "#555555"
-            background_color = "#2b2b2b"
+            background_color = "#1d1d1d"
             background_color_hover = "#323232"
 
         self.setStyleSheet(f"""
-                            QWidget {{
+                            #ConsensusPeakTile {{
                                 background-color: {background_color};
                                 border: 1px solid {border_color};
                                 border-radius: 5px;
                             }}
-                            QWidget:hover {{
+                            #ConsensusPeakTile:hover {{
                                 background-color: {background_color_hover};
                                 border: 1px solid {border_color_hover};
                                 border-radius: 5px;
@@ -741,38 +843,35 @@ class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
         :return: None.
         """
 
-        try:
-            # Load the peak .npy file and normalize the values.
-            peak_data = np.load(npy_path)
-            if peak_data.max() > peak_data.min():
-                normalized_peak_data = (peak_data - peak_data.min()) / (peak_data.max() - peak_data.min()) * 255
-            else:
-                normalized_peak_data = peak_data * 0
+        # Load the peak .npy file and normalize the values.
+        peak_data = np.load(npy_path)
+        if peak_data.max() > peak_data.min():
+            normalized_peak_data = (peak_data - peak_data.min()) / (peak_data.max() - peak_data.min()) * 255
+        else:
+            normalized_peak_data = peak_data * 0
 
-            # change the dataformat and define a colormap.
-            image_data = normalized_peak_data.astype(np.uint8)
-            height, width = image_data.shape
-            color_map = cm.get_cmap('RdBu_r', 256)
+        # change the dataformat and define a colormap.
+        image_data = normalized_peak_data.astype(np.uint8)
+        height, width = image_data.shape
+        color_map = cm.get_cmap('RdBu_r', 256)
 
-            # Create a greyscale QImage of the numpy array data.
-            q_image = QtGui.QImage(image_data.data, width, height, width, QtGui.QImage.Format_Indexed8)
+        # Create a greyscale QImage of the numpy array data.
+        q_image = QtGui.QImage(image_data.data, width, height, width, QtGui.QImage.Format_Indexed8)
 
-            # Convert into the right color format.
-            qt_color_table = []
-            for i in range(256):
-                rgba = color_map(i)
-                qt_color_table.append(QtGui.qRgb(
-                    int(rgba[0] * 255),
-                    int(rgba[1] * 255),
-                    int(rgba[2] * 255)
-                ))
+        # Convert into the right color format.
+        qt_color_table = []
+        for i in range(256):
+            rgba = color_map(i)
+            qt_color_table.append(QtGui.qRgb(
+                int(rgba[0] * 255),
+                int(rgba[1] * 255),
+                int(rgba[2] * 255)
+            ))
 
-            # Apply the color pallet to the image.
-            q_image.setColorTable(qt_color_table)
-            pixmap = QtGui.QPixmap.fromImage(q_image).scaled(100, 100, QtCore.Qt.KeepAspectRatio)
-            self.peak_window.setPixmap(pixmap)
-        except:
-            pass
+        # Apply the color pallet to the image.
+        q_image.setColorTable(qt_color_table)
+        pixmap = QtGui.QPixmap.fromImage(q_image).scaled(80, 80, QtCore.Qt.KeepAspectRatio)
+        self.peak_window.setPixmap(pixmap)
 
 
 class ConsensusPeakCalculationWorker(QtCore.QObject):
