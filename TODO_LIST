@@ -1,4 +1,18 @@
-- Dataset Page
-    - Highlight new added spectra [special color and/or the keyword NEW]
-    - Filter options? [Input bar for name filtering]
-    - Add spectra by using a upper folder and deepsearch
+- Filter for the Consensus Peaks
+    - Active / Inactive
+    - By DT or by RT
+    - Occurrence in labels or spectra
+
+- Optimize Consensus Peaks scroll list
+    - Try to display 3 rows
+    - Shrinking the image.
+
+- Add a button underneath the consensus peak scroll area
+    - "Recalculate Consensus Peaks"
+    - OR ... find a way so that the consensus peaks are recalculated automatically if:
+        - A label was added/removed
+        - A Spectrum was added/removed
+        - a Peak was set invisible/visible
+
+- Set Menu points to inactive if they should not be accessible
+    - E.g. At the start all menu points should be deactivated, only "Dataset" is visible
