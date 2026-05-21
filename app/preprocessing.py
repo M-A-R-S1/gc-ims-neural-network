@@ -912,7 +912,7 @@ class PreprocessingWorker(QtCore.QObject):
         used_dataset = defaultdict(list)
         spectra_to_process = 0
 
-        # Connect to the database.
+        # Connect to the database and get all labels.
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -927,7 +927,7 @@ class PreprocessingWorker(QtCore.QObject):
             for spectrum_path_data in spectra_paths:
                 spectrum_path = spectrum_path_data['path']
                 # Get the spectrum name.
-                spec_name = spectrum_path_data['name']
+                spec_name = Path(spectrum_path_data['name']).stem
                 # Set the folder where the processed spectrum will be saved.
                 target_folder = self.project_path / "dataset" / label['name'] / spec_name
                 target_file = target_folder / f"{spec_name}.hdf5"

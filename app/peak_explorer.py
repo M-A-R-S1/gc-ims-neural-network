@@ -1114,7 +1114,7 @@ class PeakTileWidget(QtWidgets.QFrame):
         # Create a button which is placed on top of the peak image.
         self.activity_button = QtWidgets.QPushButton(self.image_label)
         self.activity_button.setFixedSize(20, 20)
-        self.activity_button.move(58, 50)
+        self.activity_button.move(58, 56)
         self.activity_button.setCursor(QtCore.Qt.PointingHandCursor)
         self.activity_button.setStyleSheet("background: rgba(0,0,0,100); border: none;")
         # Set the correct peak button icon for the current peak activity.

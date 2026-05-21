@@ -159,7 +159,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         self.worker.progress_update.connect(self.consensus_progress_dialog.update_progress)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.consensus_progress_dialog.accept)
-        self.worker.finished.connect(self.load_consensus_peaks)
+        self.worker.finished.connect(self.check_speaks_for_consensus)
         self.consensus_progress_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
         self.thread.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
@@ -187,7 +187,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
             QtCore.QTimer.singleShot(100, self.show_consensus_peak_calc_dialog)
         else:
             self.overlay.hide()
-            self.load_data()
+            self.load_consensus_peaks()
 
         conn.close()
 
@@ -202,13 +202,14 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
 
 
         self.selected_consensus_peak_id = None
+        self.consensus_peak_widgets = {}
         self.label_preview.setText("Spectrum preview")
 
         # Clear the canvas.
         self.clear_canvas()
 
         # Load the consensus peaks.
-        self.load_consensus_peaks()
+        #self.load_consensus_peaks()
 
 
 
@@ -706,8 +707,8 @@ class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
         self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")
 
         # Define the main layout of this widget and its margins.
-        self.main_layout = QtWidgets.QVBoxLayout(self)
-        self.main_layout.setContentsMargins(5, 5, 5, 5)
+        #self.main_layout = QtWidgets.QVBoxLayout(self)
+        #self.main_layout.setContentsMargins(5, 5, 5, 5)
 
         # Connect to the datase and get one of the peak npy files which is connected to this consensus peak.
         conn = sqlite3.connect(db_path)

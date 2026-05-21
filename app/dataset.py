@@ -371,9 +371,16 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         result = cursor.fetchone()
         label_id = result[0]
 
+        cursor.execute("SELECT path FROM spectra WHERE label_id = ?", (label_id,))
+        existing_paths = {row[0] for row in cursor.fetchall()}
         spectra_to_insert = []
 
         for path in paths:
+            path_str = str(path)
+
+            if path_str in existing_paths:
+                continue
+
             p = Path(path)
             spectrum_name = str(p.name)
             spectra_to_insert.append((label_id, spectrum_name, str(path)))
