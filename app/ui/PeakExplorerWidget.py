@@ -15,9 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QLabel,
-    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout,
+    QLabel, QPushButton, QScrollArea, QSizePolicy,
+    QSpacerItem, QVBoxLayout, QWidget)
 
 class Ui_PeakExplorerWidget(object):
     def setupUi(self, PeakExplorerWidget):
@@ -155,6 +155,66 @@ class Ui_PeakExplorerWidget(object):
 
         self.verticalLayout_6.addWidget(self.label_container_header_2)
 
+        self.sorting_widget = QWidget(self.peak_inner_container)
+        self.sorting_widget.setObjectName(u"sorting_widget")
+        self.sorting_widget.setMinimumSize(QSize(0, 40))
+        self.sorting_widget.setStyleSheet(u"border: 0px;")
+        self.horizontalLayout_2 = QHBoxLayout(self.sorting_widget)
+        self.horizontalLayout_2.setSpacing(15)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label_sorting = QLabel(self.sorting_widget)
+        self.label_sorting.setObjectName(u"label_sorting")
+        self.label_sorting.setMinimumSize(QSize(0, 0))
+        self.label_sorting.setMaximumSize(QSize(100, 16777215))
+        font3 = QFont()
+        font3.setFamilies([u"Lato"])
+        font3.setPointSize(12)
+        self.label_sorting.setFont(font3)
+        self.label_sorting.setStyleSheet(u"color: #ebebeb;")
+        self.label_sorting.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.horizontalLayout_2.addWidget(self.label_sorting)
+
+        self.comboBox_sort_peaks = QComboBox(self.sorting_widget)
+        self.comboBox_sort_peaks.addItem("")
+        self.comboBox_sort_peaks.addItem("")
+        self.comboBox_sort_peaks.addItem("")
+        self.comboBox_sort_peaks.setObjectName(u"comboBox_sort_peaks")
+        self.comboBox_sort_peaks.setMinimumSize(QSize(200, 30))
+        self.comboBox_sort_peaks.setMaximumSize(QSize(200, 16777215))
+        font4 = QFont()
+        font4.setPointSize(12)
+        self.comboBox_sort_peaks.setFont(font4)
+        self.comboBox_sort_peaks.setStyleSheet(u"color: #ebebeb;\n"
+"background-color: #232323;\n"
+"border-top-left-radius: 0px;\n"
+"border-top-right-radius: 0px;\n"
+"border-bottom-left-radius: 0px;\n"
+"border-bottom-right-radius: 0px;\n"
+"padding-left: 10px;")
+
+        self.horizontalLayout_2.addWidget(self.comboBox_sort_peaks)
+
+        self.comboBox_sort_direction = QComboBox(self.sorting_widget)
+        self.comboBox_sort_direction.addItem("")
+        self.comboBox_sort_direction.addItem("")
+        self.comboBox_sort_direction.setObjectName(u"comboBox_sort_direction")
+        self.comboBox_sort_direction.setMinimumSize(QSize(100, 30))
+        self.comboBox_sort_direction.setMaximumSize(QSize(100, 16777215))
+        self.comboBox_sort_direction.setFont(font4)
+        self.comboBox_sort_direction.setStyleSheet(u"color: #ebebeb;\n"
+"background-color: #232323;\n"
+"border-top-left-radius: 0px;\n"
+"border-top-right-radius: 0px;\n"
+"border-bottom-left-radius: 0px;\n"
+"border-bottom-right-radius: 0px;\n"
+"padding-left: 10px;")
+
+        self.horizontalLayout_2.addWidget(self.comboBox_sort_direction)
+
+
+        self.verticalLayout_6.addWidget(self.sorting_widget, 0, Qt.AlignmentFlag.AlignLeft)
+
         self.scrollArea_peak = QScrollArea(self.peak_inner_container)
         self.scrollArea_peak.setObjectName(u"scrollArea_peak")
         self.scrollArea_peak.setStyleSheet(u"border: 0px;\n"
@@ -163,7 +223,7 @@ class Ui_PeakExplorerWidget(object):
         self.scrollArea_peak.setWidgetResizable(True)
         self.scrollArea_peak_Contents = QWidget()
         self.scrollArea_peak_Contents.setObjectName(u"scrollArea_peak_Contents")
-        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 787))
+        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 739))
         self.gridLayout = QGridLayout(self.scrollArea_peak_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -209,10 +269,10 @@ class Ui_PeakExplorerWidget(object):
         self.pushButton_toggle_peak_marker.setEnabled(True)
         self.pushButton_toggle_peak_marker.setMinimumSize(QSize(0, 60))
         self.pushButton_toggle_peak_marker.setMaximumSize(QSize(16777215, 16777215))
-        font3 = QFont()
-        font3.setFamilies([u"Lato"])
-        font3.setPointSize(20)
-        self.pushButton_toggle_peak_marker.setFont(font3)
+        font5 = QFont()
+        font5.setFamilies([u"Lato"])
+        font5.setPointSize(20)
+        self.pushButton_toggle_peak_marker.setFont(font5)
         self.pushButton_toggle_peak_marker.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.pushButton_toggle_peak_marker.setMouseTracking(True)
         self.pushButton_toggle_peak_marker.setTabletTracking(False)
@@ -252,6 +312,14 @@ class Ui_PeakExplorerWidget(object):
         self.label_header.setText(QCoreApplication.translate("PeakExplorerWidget", u"Peak Explorer", None))
         self.label_container_header.setText(QCoreApplication.translate("PeakExplorerWidget", u"Dataset", None))
         self.label_container_header_2.setText(QCoreApplication.translate("PeakExplorerWidget", u"Peaks", None))
+        self.label_sorting.setText(QCoreApplication.translate("PeakExplorerWidget", u"Sorting:", None))
+        self.comboBox_sort_peaks.setItemText(0, QCoreApplication.translate("PeakExplorerWidget", u"Drift time", None))
+        self.comboBox_sort_peaks.setItemText(1, QCoreApplication.translate("PeakExplorerWidget", u"Retention time", None))
+        self.comboBox_sort_peaks.setItemText(2, QCoreApplication.translate("PeakExplorerWidget", u"Active", None))
+
+        self.comboBox_sort_direction.setItemText(0, QCoreApplication.translate("PeakExplorerWidget", u"ASC", None))
+        self.comboBox_sort_direction.setItemText(1, QCoreApplication.translate("PeakExplorerWidget", u"DESC", None))
+
         self.label_preview.setText(QCoreApplication.translate("PeakExplorerWidget", u"Spectrum preview", None))
         self.pushButton_toggle_peak_marker.setText(QCoreApplication.translate("PeakExplorerWidget", u"Hide peak markers", None))
     # retranslateUi

@@ -51,6 +51,10 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.scrollArea_peak.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.scrollArea_peak_Contents.layout().setSpacing(10)
 
+        # Signale für die Sortier-ComboBoxen verbinden
+        self.comboBox_sort_peaks.currentTextChanged.connect(self.sort_peaks_in_layout)
+        self.comboBox_sort_direction.currentTextChanged.connect(self.sort_peaks_in_layout)
+
         # Timer for window resizing.
         self.resize_timer = QTimer()
         self.resize_timer.setSingleShot(True)
@@ -396,6 +400,8 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
 
         self.scrollArea_peak_Contents.layout().setRowStretch(self.scrollArea_peak_Contents.layout().rowCount(), 1)
         self.scrollArea_peak_Contents.layout().setColumnStretch(max_columns, 1)
+
+        self.sort_peaks_in_layout()
 
         # Plot the clicked spectrum to the canvas.
         self.plot_spectrum(spectrum_widget)
@@ -765,6 +771,54 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
                     self.canvas.setCursor(QtCore.Qt.SizeAllCursor)
                 else:
                     self.canvas.setCursor(QtCore.Qt.ArrowCursor)
+
+
+    def sort_peaks_in_layout(self) -> None:
+        """
+        Nimmt alle Peak-Tiles aus dem Layout, sortiert sie in-memory basierend
+        auf den beiden ComboBoxen (Kriterium & Richtung) und fügt sie wieder ein.
+        """
+        layout = self.scrollArea_peak_Contents.layout()
+
+        # 1. Nur die echten Peak-Tiles aus dem Layout sammeln
+        tiles = []
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            widget = item.widget()
+
+            # Wir prüfen mit hasattr, ob das Widget unsere Parameter hat.
+            # So ignorieren wir erfolgreich Spacer oder unsichtbare Qt-Platzhalter!
+            if widget is not None and hasattr(widget, 'retention_time'):
+                tiles.append(widget)
+
+        if not tiles:
+            return
+
+        # 2. Aktuelles Kriterium und Richtung auslesen
+        sort_criterion = self.comboBox_sort_peaks.currentText()
+        sort_direction = self.comboBox_sort_direction.currentText()
+
+        # DESC bedeutet absteigend (reverse=True)
+        is_reverse = (sort_direction == "DESC")
+
+        # 3. Sortieren anhand der Attribute
+        if sort_criterion == "Retention time":
+            tiles.sort(key=lambda t: t.retention_time, reverse=is_reverse)
+        elif sort_criterion == "Drift time":
+            tiles.sort(key=lambda t: t.drift_time, reverse=is_reverse)
+        elif sort_criterion == "Active":
+            tiles.sort(key=lambda t: t.is_active, reverse=is_reverse)
+
+        # 4. Widgets aus dem Grid-Layout lösen (ohne sie zu löschen)
+        for tile in tiles:
+            layout.removeWidget(tile)
+
+        # 5. Widgets in der neuen Reihenfolge wieder ins Gitter einfügen
+        max_columns = 5
+        for row_index, tile in enumerate(tiles):
+            row = row_index // max_columns
+            column = row_index % max_columns
+            layout.addWidget(tile, row, column)
 
 
 class PeakDetectionWorker(QtCore.QObject):
