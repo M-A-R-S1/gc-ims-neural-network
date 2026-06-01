@@ -66,7 +66,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.consensus_peak_page = ConsensusPeakPage(self.project_path)
         self.Main_container.addWidget(self.consensus_peak_page)
         # Classifier
-        self.classifier_page = ClassifierPage()
+        self.classifier_page = ClassifierPage(self.project_path)
         self.Main_container.addWidget(self.classifier_page)
         # Settings
         self.settings_page = SettingsPage()
@@ -253,8 +253,6 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                        (
                            id               INTEGER PRIMARY KEY,
                            classifier_id    INTEGER NOT NULL,
-                           label            TEXT,
-                           is_summary       INTEGER DEFAULT 0,
                            FOREIGN KEY (classifier_id) REFERENCES classifier (id) ON DELETE CASCADE
                        )
                        ''')
@@ -265,6 +263,8 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                        (
                            id                       INTEGER PRIMARY KEY,
                            classifier_result_id     INTEGER NOT NULL,
+                           label                    TEXT,
+                           is_summary               INTEGER DEFAULT 0,
                            precision                REAL,
                            recall                   REAL,
                            f1_score                 REAL,
