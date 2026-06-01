@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 import torch
 import model
+import plot
 import re
 import numpy as np
 import pandas as pd
@@ -53,16 +54,14 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         # SQL: Wir holen uns den Classifier und joinen die Tabellen, um den
         # is_summary=1 Wert (das Gesamtergebnis) direkt abzugreifen.
         query = """
-                SELECT c.id, \
-                       c.name, \
-                       c.consensus_count, \
-                       cv.f1_score -- (oder precision/accuracy, je nachdem was dein Hauptwert ist)
+                SELECT c.id,
+                       c.name,
+                       c.consensus_count,
+                       cv.f1_score
                 FROM classifier c
-                         LEFT JOIN classifier_result cr ON c.id = cr.classifier_id
-                         LEFT JOIN classifier_value cv ON cr.id = cv.classifier_result_id
-                WHERE cv.is_summary = 1 \
-                   OR cv.is_summary IS NULL
-                ORDER BY c.id DESC \
+                         LEFT JOIN classifier_result cr ON c.id = cr.classifier_id AND cr.consensus_id IS NULL
+                         LEFT JOIN classifier_value cv ON cr.id = cv.classifier_result_id AND cv.label = 'weighted avg'
+                ORDER BY c.id DESC
                 """
         cursor.execute(query)
         classifiers = cursor.fetchall()
@@ -136,7 +135,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
     def start_new_classification(self) -> None:
         """
         This function is called when the user accepted the "start new classification" prompt.
-        A Thread is created and started on which multiple pools are started to process the random forest classification.
+        A Thread is created and started on which the random forest classification is executed.
         =============================================================================
         :return: None
         """
@@ -183,6 +182,11 @@ class ClassificationWorker(QtCore.QObject):
     def stop(self):
         self.worker_stopped = True
 
+    def emit_progress(self, current_step: int, total_steps: int):
+        self.progress_update.emit(current_step, total_steps)
+
+    def check_stopped(self) -> bool:
+        return self.worker_stopped
 
     def run(self) -> None:
         """
@@ -203,158 +207,207 @@ class ClassificationWorker(QtCore.QObject):
         # Load the model state dict.
         vae_model.load_model(model_dir="models", file_name="GC-IMS-CNN-VAE-HONEY-RUB-E1500-DIM16.pt", device=device)
         # Start the random forest algorithm.
-        #start_random_forest(model=vae_model, device=device)
+        self.start_random_forest(model=vae_model,
+                                 device=device,
+                                 db_path=self.db_path,
+                                 project_path=self.project_path,
+                                 classification_name="Test Name",
+                                 progress_callback=self.emit_progress,
+                                 check_stopped_callback=self.check_stopped)
 
-
-
-
-
-
-        # Connect to the database.
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        # Select all spectra paths, their associated label names and label ids for all spectra where the peak detection
-        # process was not performed on.
-        query = """
-                SELECT spectra.path, labels.name, labels.id, spectra.id FROM spectra 
-                JOIN labels ON spectra.label_id = labels.id 
-                WHERE spectra.peaks_done = 0
-                """
-        cursor.execute(query)
-        spectra_todo_list = cursor.fetchall()
-
-        # Get the total number of spectra where the peak detection has to be performed.
-        total_spectra = len(spectra_todo_list)
-        if total_spectra == 0:
-            conn.close()
-            self.finished.emit()
-            return
-
-        # Get the number of available CPUs.
-        num_cores = mp.cpu_count()
-        # List where the peaks are saved to.
-        peak_data_all = []
-        # Number spectra where peaks have been calculated-
-        processed_count = 0
-
-        # Create a partial fixed function call, where the project_path and the peak_radis is set.
-        worker_function = partial(peak_detection,
-                                  project_path=self.project_path,
-                                  peak_radius=5)
-
-        # Start as many pools as possible [Depends on the number of CPU cores available].
-        with mp.Pool(processes=num_cores) as pool:
-            for result in pool.imap_unordered(worker_function, spectra_todo_list):
-                # Check if the user stopped the peak detection.
-                if self.worker_stopped:
-                    pool.terminate()
-                    pool.join()
-                    break
-
-                # Peak detection on one pool is done with results.
-                if result:
-                    spectrum_path, peaks = result
-
-                    # If there are peaks append them to the peak_data_all list.
-                    if peaks:
-                        peak_data_all.extend(peaks)
-
-                    # Update the database entry of this spectrum and commit the changes.
-                    cursor.execute("UPDATE spectra SET peaks_done = 1 WHERE path = ?", (spectrum_path,))
-                    conn.commit()
-
-                # Update the counter and send an update signal for the progress bar widget.
-                processed_count += 1
-                self.progress_update.emit(processed_count, total_spectra)
-
-        if peak_data_all:
-            # Convert the peak data to a pandas dataframe and commit the peaks to the database.
-            dataframe = pd.DataFrame(peak_data_all)
-            dataframe.to_sql('peaks', conn, if_exists='append', index=False)
-            conn.commit()
-            print(f"Erfolgreich {len(dataframe)} Peaks in die Datenbank gespeichert.")
-
-        conn.close()
         self.finished.emit()
 
 
-def start_random_forest(model: torch.nn.Module,
-                        device: torch.device) -> None:
+    def start_random_forest(self,
+                            model: torch.nn.Module,
+                            device: torch.device,
+                            db_path: Path,
+                            project_path: Path,
+                            classification_name: str,
+                            progress_callback=None,
+                            check_stopped_callback=None) -> None:
 
-    """
-    This function prepares and executes the random forest algorithm.
-    1. All .npy files from the consensus peaks are located and loaded.
-    2. The latent mean vector from the autoencoder is calculated for each .npy file and appended by the
-    retention and drifttime. Together this information is stored as a new vector.
-    3. All these new vectors are split into train and test datasets.
-    4. A random forest classifier is trained and tested with these vectors.
-    5. The results are plotted and saved additionally as an Excel file.
+        """
+        This function prepares and executes the random forest algorithm.
+        1. All .npy files from the consensus peaks are located and loaded via Database.
+        2. The latent mean vector from the autoencoder is calculated.
+        3. Split into train and test datasets.
+        4. A random forest classifier is trained and tested.
+        5. The results are plotted, saved as Excel, and written to the DB.
+        """
 
-    :param model: the trained Autoencoder model for the peak reconstruction.
-    :param device: the device to run the model on.
+        print("=======================================================")
+        print("VI. RANDOM FOREST CLASSIFICATION")
 
-    :return: None.
-    """
+        # 1. Daten aus der DB laden (inklusive ret_time und drift_time!)
+        conn = sqlite3.connect(db_path)
+        query = """
+                SELECT DISTINCT cp.id  AS consensus_id,
+                                cp.ret_time,
+                                cp.drift_time,
+                                s.id   AS spectrum_id,
+                                l.name AS label_name,
+                                s.name AS spectrum_name
+                FROM consensus_peaks cp
+                         JOIN peaks p ON p.consensus_id = cp.id
+                         JOIN spectra s ON p.spectrum_id = s.id
+                         JOIN labels l ON s.label_id = l.id
+                WHERE cp.is_active = 1
+                  AND p.is_active = 1
+                """
+        df = pd.read_sql_query(query, conn)
 
-    print("=======================================================")
-    print("VI. RANDOM FOREST CLASSIFICATION")
+        if df.empty:
+            print("Keine aktiven Peaks für die Klassifizierung gefunden!")
+            conn.close()
+            return
 
-    output_dir = Path(config.OUTPUT_DIR)
-    # Get all consensus .npy files.
-    npy_paths = list(output_dir.glob("*/npy/consensus peak/*/*.npy"))
-    # Set with all consensus peak times.
-    unique_consensus_peaks = set()
+        # 2. Den Pfad blind und mit 100%iger Sicherheit zusammenbauen
+        def build_abs_path(row):
+            c_id = int(row['consensus_id'])
+            dimension = 4 * 5 + 1
+            clean_spec_name = row['spectrum_name'].replace('.mea', '')
+            filename = f"CID_{c_id}_PW_{row['label_name']}_{clean_spec_name}_{dimension}x{dimension}.npy"
+            full_path = project_path / "dataset" / row['label_name'] / clean_spec_name / "consensus_peaks" / filename
+            return full_path
 
-    # Find out how many spectra files are there.
-    #folders = list(output_dir.glob("*/npy/consensus peak/*/"))
-    # 2. Filtern, um sicherzugehen, dass es wirklich Verzeichnisse sind
-    # (Optional, falls du sicher bist, dass dort keine Dateien liegen)
-    spectra_count = len([f for f in list(output_dir.glob("*/npy/consensus peak/*/")) if f.is_dir()])
-    # 3. Anzahl ermitteln
+        df['abs_npy_path'] = df.apply(build_abs_path, axis=1)
 
+        # 3. Sicherheitscheck: Existiert die Datei wirklich?
+        df['file_exists'] = df['abs_npy_path'].apply(lambda p: p.exists())
+        df = df[df['file_exists'] == True]
 
-    # Collect all unique consensus peak times and save them in a set.
-    for path in npy_paths:
-        filename = path.stem
-        consensus_peak = re.search(r'(RT[\d.]+_(DT[\d.]+))', filename)
+        spectra_count = df['spectrum_id'].nunique()
+        unique_consensus_count = df['consensus_id'].nunique()
 
-        if consensus_peak:
-            unique_consensus_peaks.add(consensus_peak.group(1))
+        total_steps = unique_consensus_count + 1
 
-    model.eval()
+        # ---------------------------------------------------------
+        # NEU: Haupt-Eintrag für den Classifier in der DB erstellen
+        # ---------------------------------------------------------
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO classifier (name, consensus_count) VALUES (?, ?)",
+                       (classification_name, unique_consensus_count))
+        classifier_id = cursor.lastrowid
+        conn.commit()
 
+        model.eval()
 
-    # Walk through all consensus times and create a random forest for each individual consensus peak.
-    for idx, consensus_peak in enumerate(unique_consensus_peaks):
-        # List of all features and labels which will be used for the random forest algorithm.
-        rf_features = []
-        labels = []
-        original_features = []
-        reconstructions = []
+        # ---------------------------------------------------------
+        # INDIVIDUELLE KLASSIFIZIERUNG (Pro Consensus Peak)
+        # ---------------------------------------------------------
+        for idx, (consensus_id, group_df) in enumerate(df.groupby('consensus_id')):
+            rf_features = []
+            labels = []
+            original_features = []
+            reconstructions = []
 
-        # Get the retention and drifttimes from the filename.
-        # This code uses a regular expression. It looks for the pattern 'RT' followed by a number, followed by a dot.
-        # Like RT125.154 -> By using group(1) the RT part is omitted and only "125.154" is selected.
-        rt_val = float(re.search(r'RT([\d.]+)', consensus_peak).group(1))
-        dt_val = float(re.search(r'DT([\d.]+)', consensus_peak).group(1))
+            if check_stopped_callback and check_stopped_callback():
+                print("Klassifizierung vom User abgebrochen!")
+                conn.close()
+                return
 
-        # Walk through all npy paths.
-        for path in npy_paths:
-            filename = path.stem
+            # RT/DT direkt aus dem DataFrame ziehen (kein Regex mehr nötig!)
+            rt_val = group_df.iloc[0]['ret_time']
+            dt_val = group_df.iloc[0]['drift_time']
 
-            if consensus_peak not in filename:
+            for _, row in group_df.iterrows():
+                path = row['abs_npy_path']
+                label = row['label_name']
+
+                peak_window = np.load(path)
+                peak_window_dimension = 4 * 5 + 1
+
+                # Normalize the peak window.
+                min_intensity = peak_window.min()
+                max_intensity = peak_window.max()
+                if max_intensity - min_intensity == 0:
+                    npy_file_normalized = np.zeros_like(peak_window)
+                else:
+                    npy_file_normalized = (peak_window - min_intensity) / (max_intensity - min_intensity)
+
+                peak_window_tensor = torch.from_numpy(npy_file_normalized).float().view(1, 1, peak_window_dimension,
+                                                                                        peak_window_dimension).to(
+                    device)
+
+                with torch.inference_mode():
+                    reconstruction, mean, log_variance = model(peak_window_tensor)
+
+                combined_feature = np.hstack((mean.cpu().numpy().flatten(),
+                                              log_variance.cpu().numpy().flatten()))
+
+                original_features.append(peak_window_tensor)
+                reconstructions.append(reconstruction)
+                rf_features.append(combined_feature)
+                labels.append(label)
+
+            if len(rf_features) * 0.2 <= 4:
+                print(f"Index: {idx + 1} - Skipping. Not enough peak windows: {len(rf_features)}x")
                 continue
 
-            parts = filename.split('_')
+            train_feature, test_feature, train_label, test_label = train_test_split(rf_features, labels, test_size=0.2,
+                                                                                    random_state=42)
+            rf_model = RandomForestClassifier(n_estimators=1000, class_weight='balanced', random_state=42)
+            rf_model.fit(train_feature, train_label)
 
-            # Get the label from the filename.
-            label = parts[1]
-            # Load the peak window from the path.
+            label_predictions = rf_model.predict(test_feature)
+            results_dict = classification_report(test_label, label_predictions, output_dict=True, zero_division=0)
+            results_dataframe = pd.DataFrame(results_dict).transpose()
+
+            print(
+                f"Index: {idx + 1} - {(results_dict['accuracy'] * 100): .0f} % - RT{rt_val: .2f}_DT{dt_val: .2f} - {len(rf_features)}/{spectra_count}x")
+
+            # --- DB SPEICHERN (Individueller Peak) ---
+            cursor.execute("INSERT INTO classifier_result (classifier_id, consensus_id) VALUES (?, ?)",
+                           (classifier_id, consensus_id))
+            result_id = cursor.lastrowid
+
+            for key, metrics in results_dict.items():
+                if key == 'accuracy': continue
+                is_summary = 1 if key in ['macro avg', 'weighted avg'] else 0
+                cursor.execute("""
+                               INSERT INTO classifier_value (classifier_result_id, label, is_summary, precision, recall, f1_score, support)
+                               VALUES (?, ?, ?, ?, ?, ?, ?)
+                               """, (result_id, key, is_summary, metrics['precision'], metrics['recall'], metrics['f1-score'], metrics['support']))
+            conn.commit()
+            # -----------------------------------------
+
+            filedir = project_path / "random forest" / f"{(results_dict['accuracy'] * 100):.0f}% - RT{rt_val:.2f}_DT{dt_val:.2f} - {len(rf_features)}-{spectra_count}x"
+            if not filedir.exists(): filedir.mkdir(parents=True, exist_ok=True)
+            results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
+
+            plot.plot_all_rf_peak_windows(labels=labels, features=original_features, feature_recons=reconstructions,
+                                          plot_dir=filedir)
+            plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=False)
+            plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,
+                                                output_dir=filedir)
+            plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
+
+            if progress_callback:
+                progress_callback(idx + 1, total_steps)
+
+        print("Random Forest: All Individual peaks classified")
+
+        # ---------------------------------------------------------
+        # KOMBINIERTE KLASSIFIZIERUNG (Alle Peaks zusammen)
+        # ---------------------------------------------------------
+        rf_features = []
+        labels = []
+
+        for _, row in df.iterrows():
+            path = row['abs_npy_path']
+            label = row['label_name']
+            rt_val = row['ret_time']
+            dt_val = row['drift_time']
+
+            if check_stopped_callback and check_stopped_callback():
+                print("Klassifizierung vor Gesamt-Klassifizierung abgebrochen!")
+                conn.close()
+                return
+
             peak_window = np.load(path)
-            # Calculating the peak window size.
-            peak_window_dimension = 4 * config.PEAK_RADIUS + 1
+            peak_window_dimension = 4 * 5 + 1
 
-           # Normalize the peak window.
             min_intensity = peak_window.min()
             max_intensity = peak_window.max()
             if max_intensity - min_intensity == 0:
@@ -362,173 +415,61 @@ def start_random_forest(model: torch.nn.Module,
             else:
                 npy_file_normalized = (peak_window - min_intensity) / (max_intensity - min_intensity)
 
-            # Changing the peak window to a tensor and converting the tensor format.
-            peak_window_tensor = torch.from_numpy(npy_file_normalized).float().view(1, 1, peak_window_dimension, peak_window_dimension).to(device)
+            peak_window_tensor = torch.from_numpy(npy_file_normalized).float().view(1, 1, peak_window_dimension,
+                                                                                    peak_window_dimension).to(device)
 
-            # Calculate the latent dimension vector for the current peak window.
             with torch.inference_mode():
                 reconstruction, mean, log_variance = model(peak_window_tensor)
 
-            # Combine the mean and variance vector.
-            combined_feature = np.hstack((mean.cpu().numpy().flatten(),
-                                          log_variance.cpu().numpy().flatten()))
+            # Combine the latent vector with the retention and drifttime.
+            combined_feature = np.hstack(
+                (mean.cpu().numpy().flatten(), log_variance.cpu().numpy().flatten(), [rt_val, dt_val]))
 
-            # Append the feature and labe to the list.
-            original_features.append(peak_window_tensor)
-            reconstructions.append(reconstruction)
             rf_features.append(combined_feature)
             labels.append(label)
 
-
-        # Check if features and labels were found. If not, continue with the next consensus peak.
-        if len(rf_features)*0.2 <= 4:
-            print(f"Index: {idx + 1} - Skipping. Not enough peak windows: {len(rf_features)}x")
-            continue
-
-        # Split in Training und Test datasets.
-        train_feature, test_feature, train_label, test_label = train_test_split(rf_features,
-                                                                                labels,
-                                                                                test_size=0.2,
+        train_feature, test_feature, train_label, test_label = train_test_split(rf_features, labels, test_size=0.2,
                                                                                 random_state=42)
-        # Initialize the random forest algorithm.
-        rf_model = RandomForestClassifier(n_estimators=1000,
-                                          class_weight='balanced',
-                                          random_state=42)
-
-        # Start the random forest training.
+        rf_model = RandomForestClassifier(n_estimators=1000, random_state=42)
         rf_model.fit(train_feature, train_label)
-        # Get the random forest predictions.
+
         label_predictions = rf_model.predict(test_feature)
-        # Save the results as a dictionary.
-        results_dict = classification_report(test_label, label_predictions, output_dict=True)
-        # Convert the dictionary to a pandas dataframe.
+        results_dict = classification_report(test_label, label_predictions, output_dict=True, zero_division=0)
         results_dataframe = pd.DataFrame(results_dict).transpose()
 
-        # Print the results to the console.
-        print(f"Index: {idx + 1} - {(results_dict['accuracy'] * 100): .0f} % - RT{rt_val: .2f}_DT{dt_val: .2f} - {len(rf_features)}/{spectra_count}x")
+        print(
+            f"All Peak Results: {(results_dict['accuracy'] * 100): .0f}% - {results_dict['weighted avg']['support']}x")
 
-        # Check and create the directory.
-        filedir = Path(config.PLOT_DIR) / "random forest" / f"{(results_dict['accuracy']*100):.0f}% - RT{rt_val:.2f}_DT{dt_val:.2f} - {len(rf_features)}-{spectra_count}x"
-        if not filedir.exists():
-            filedir.mkdir(parents=True, exist_ok=True)
-         # Save the dataframe as an Excel file.
-        filename = filedir /"classification_results.xlsx"
-        results_dataframe.to_excel(filename, index=True)
+        # --- DB SPEICHERN (Kombiniertes Ergebnis) ---
+        # consensus_id = NULL bedeutet "Ergebnis über alle Peaks"
+        cursor.execute("INSERT INTO classifier_result (classifier_id, consensus_id) VALUES (?, NULL)", (classifier_id,))
+        result_id = cursor.lastrowid
 
-        # Plot the all used peak windows and their reconstructions as an overlay image.
-        plot.plot_all_rf_peak_windows(labels=labels,
-                                      features=original_features,
-                                      feature_recons=reconstructions,
-                                      plot_dir=filedir)
+        for key, metrics in results_dict.items():
+            if key == 'accuracy': continue
+            is_summary = 1 if key in ['macro avg', 'weighted avg'] else 0
+            cursor.execute("""
+                           INSERT INTO classifier_value (classifier_result_id, label, is_summary, precision, recall, f1_score, support)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)
+                           """,
+                           (result_id, key, is_summary, metrics['precision'], metrics['recall'], metrics['f1-score'], metrics['support']))
+        conn.commit()
+        conn.close()
+        # --------------------------------------------
 
-        # Plot the Importance graph.
-        plot.random_forest_importance_plot(model=rf_model,
-                                           output_dir=filedir,
-                                           coordinates=False)
-        # Plot the confusion matrix.
-        plot.random_forest_confusion_matrix(model=rf_model,
-                                            test_feature=test_feature,
-                                            test_label=test_label,
+        filedir = project_path / "random forest" / f"_ALL - {(results_dict['accuracy'] * 100):.0f}% - {results_dict['weighted avg']['support']}x"
+        if not filedir.exists(): filedir.mkdir(parents=True, exist_ok=True)
+        results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
+
+        plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=True)
+        plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,
                                             output_dir=filedir)
-        # Plot the comparison boxplot.
-        plot.random_forest_boxplot(features=rf_features,
-                                   labels=labels,
-                                   output_dir=filedir)
+        plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
 
-    print("Random Forest: All Individual peaks classified")
+        if progress_callback:
+            progress_callback(total_steps, total_steps)
 
-
-
-    # List of all features and labels which will be used for the random forest algorithm.
-    rf_features = []
-    labels = []
-
-    # Walk through all consensus times and create a random forest for each all consensus peak together.
-    for path in npy_paths:
-        filename = path.stem
-
-        parts = filename.split('_')
-
-        # Get the label from the filename.
-        label = parts[1]
-        # Load the peak window from the path.
-        peak_window = np.load(path)
-        # Calculating the peak window size.
-        peak_window_dimension = 4 * config.PEAK_RADIUS + 1
-
-        # Normalize the peak window.
-        min_intensity = peak_window.min()
-        max_intensity = peak_window.max()
-        if max_intensity - min_intensity == 0:
-            npy_file_normalized = np.zeros_like(peak_window)
-        else:
-            npy_file_normalized = (peak_window - min_intensity) / (max_intensity - min_intensity)
-
-        # Changing the peak window to a tensor and converting the tensor format.
-        peak_window_tensor = torch.from_numpy(npy_file_normalized).float().view(1, 1, peak_window_dimension,
-                                                                                peak_window_dimension).to(device)
-
-        # Calculate the latent dimension vector for the current peak window.
-        with torch.inference_mode():
-            reconstruction, mean, log_variance = model(peak_window_tensor)
-
-        rt_val = float(re.search(r'RT([\d.]+)', filename).group(1))
-        dt_val = float(re.search(r'DT([\d.]+)', filename).group(1))
-
-        # Combine the latent vector with the retention and drifttime.
-        combined_feature = np.hstack((mean.cpu().numpy().flatten(), log_variance.cpu().numpy().flatten(), [rt_val, dt_val]))
-
-        # Append the feature and labe to the list.
-        rf_features.append(combined_feature)
-        labels.append(label)
-
-
-    # Split in Training und Test datasets.
-    train_feature, test_feature, train_label, test_label = train_test_split(rf_features,
-                                                                            labels,
-                                                                            test_size=0.2,
-                                                                            random_state=42)
-    # Initialize the random forest algorithm.
-    rf_model = RandomForestClassifier(n_estimators=1000,
-                                      random_state=42)
-
-    # Start the random forest training.
-    rf_model.fit(train_feature, train_label)
-    # Get the random forest predictions.
-    label_predictions = rf_model.predict(test_feature)
-    # Save the results as a dictionary.
-    results_dict = classification_report(test_label, label_predictions, output_dict=True)
-    # Convert the dictionary to a pandas dataframe.
-    results_dataframe = pd.DataFrame(results_dict).transpose()
-
-    # Print the results to the console.
-    print(
-        f"All Peak Results: {(results_dict['accuracy'] * 100): .0f}% - {results_dict['weighted avg']['support']}x")
-
-    # Check and create the directory.
-    filedir = Path(
-        config.PLOT_DIR) / "random forest" / f"_ALL - {(results_dict['accuracy'] * 100):.0f}% - {results_dict['weighted avg']['support']}x"
-    if not filedir.exists():
-        filedir.mkdir(parents=True, exist_ok=True)
-    # Save the dataframe as an Excel file.
-    filename = filedir / "classification_results.xlsx"
-    results_dataframe.to_excel(filename, index=True)
-
-    # Plot the Importance graph.
-    plot.random_forest_importance_plot(model=rf_model,
-                                       output_dir=filedir,
-                                       coordinates=True)
-    # Plot the confusion matrix.
-    plot.random_forest_confusion_matrix(model=rf_model,
-                                        test_feature=test_feature,
-                                        test_label=test_label,
-                                        output_dir=filedir)
-    # Plot the comparison boxplot.
-    plot.random_forest_boxplot(features=rf_features,
-                               labels=labels,
-                               output_dir=filedir)
-
-    print("Random Forest: Combined Peaks classified")
+        print("Random Forest: Combined Peaks classified")
 
 
 class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):

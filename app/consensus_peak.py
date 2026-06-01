@@ -1195,7 +1195,9 @@ def create_consensus_peak_npy(project_path: Path,
                 if not npy_dir.exists():
                     npy_dir.mkdir(parents=True, exist_ok=True)
 
-                npy_filename = npy_dir / f"PW_{label_name}_{spec_name}_RT{spectrum.ret_time[ret_idx_original]}_DT{spectrum.drift_time[drift_idx_original]}_{4 * peak_radius + 1}x{4 * peak_radius + 1}.npy"
+                c_id = int(consensus_peak['id'])
+                dimension = 4 * peak_radius + 1
+                npy_filename = npy_dir / f"CID_{c_id}_PW_{label_name}_{spec_name}_{dimension}x{dimension}.npy"
                 np.save(npy_filename, peak_window_intensities)
 
     conn.close()

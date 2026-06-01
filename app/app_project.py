@@ -253,6 +253,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                        (
                            id               INTEGER PRIMARY KEY,
                            classifier_id    INTEGER NOT NULL,
+                           consensus_id     INTEGER DEFAULT NULL,
                            FOREIGN KEY (classifier_id) REFERENCES classifier (id) ON DELETE CASCADE
                        )
                        ''')
@@ -268,6 +269,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                            precision                REAL,
                            recall                   REAL,
                            f1_score                 REAL,
+                           support                  INTEGER,
                            FOREIGN KEY (classifier_result_id) REFERENCES classifier_result (id) ON DELETE CASCADE
                        )
                        ''')
