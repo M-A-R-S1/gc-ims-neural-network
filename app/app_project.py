@@ -237,6 +237,41 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                        )
                        ''')
 
+        # Create the classifier table.
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS classifier
+                       (
+                           id                   INTEGER PRIMARY KEY,
+                           name                 TEXT NOT NULL,
+                           consensus_count      INTEGER
+                       )
+                       ''')
+
+        # Create the classifier result table.
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS classifier_result
+                       (
+                           id               INTEGER PRIMARY KEY,
+                           classifier_id    INTEGER NOT NULL,
+                           label            TEXT,
+                           is_summary       INTEGER DEFAULT 0,
+                           FOREIGN KEY (classifier_id) REFERENCES classifier (id) ON DELETE CASCADE
+                       )
+                       ''')
+
+        # Create the classifier value table.
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS classifier_value
+                       (
+                           id                       INTEGER PRIMARY KEY,
+                           classifier_result_id     INTEGER NOT NULL,
+                           precision                REAL,
+                           recall                   REAL,
+                           f1_score                 REAL,
+                           FOREIGN KEY (classifier_result_id) REFERENCES classifier_result (id) ON DELETE CASCADE
+                       )
+                       ''')
+
         conn.commit()
         conn.close()
 
