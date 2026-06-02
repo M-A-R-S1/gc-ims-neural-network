@@ -1,6 +1,7 @@
-from PySide6 import QtWidgets, QtCore
-from ui.ClassifierWidget import Ui_ClassifierWidget
-from ui.ClassifierTile import Ui_ClassifierTile
+from __future__ import annotations
+from PySide6 import QtWidgets, QtCore, QtGui
+from ClassifierWidget import Ui_ClassifierWidget
+from ClassifierTile import Ui_ClassifierTile
 from dialogs import CustomYesNoDialog, CustomProgressDialog
 import sqlite3
 from pathlib import Path
@@ -8,6 +9,7 @@ import torch
 import model
 import plot
 import re
+import shutil
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -61,7 +63,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
                 FROM classifier c
                          LEFT JOIN classifier_result cr ON c.id = cr.classifier_id AND cr.consensus_id IS NULL
                          LEFT JOIN classifier_value cv ON cr.id = cv.classifier_result_id AND cv.label = 'weighted avg'
-                ORDER BY c.id DESC
+                ORDER BY c.id ASC
                 """
         cursor.execute(query)
         classifiers = cursor.fetchall()
@@ -85,21 +87,42 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
             # Ab ins UI-Layout
             layout.addWidget(tile)
 
-    # --- SLOTS (Reaktionen auf die Tile-Klicks) ---
 
-    def on_delete_classifier(self, classifier_id: int):
-        # Hier später: QMessageBox "Wirklich löschen?"
-        print(f"Lösche Classifier mit ID: {classifier_id}")
+    def on_delete_classifier(self,
+                             label_widget: ClassifierTileWidget) -> None:
 
-        # Dank "ON DELETE CASCADE" in deinem SQL musst du nur in der
-        # Tabelle 'classifier' löschen, SQLite löscht die Results/Values automatisch mit!
-        conn = sqlite3.connect(self.db_path)
-        conn.execute("DELETE FROM classifier WHERE id = ?", (classifier_id,))
-        conn.commit()
-        conn.close()
+        # Get the name of the classification.
+        label_name = label_widget.label_name.text()
+        # Get the ID of this classification.
+        classification_id = label_widget.classifier_id
+        # Define a Yes/No Dialog for the deletion.
+        dialog = CustomYesNoDialog(title="Delete classification results",
+                                   message=f"Are you sure you want to delete classification results for '{label_name}'?",
+                                   type="warning",
+                                   parent=self)
 
-        # UI aktualisieren
-        self.load_classifiers_to_ui()
+        # The user wants to delete the classification.
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+
+            # Try to delete from the "classification" folder.
+            try:
+                classification_folder = self.project_path.parent / "classification" / f"{classification_id}"
+                if classification_folder.exists() and classification_folder.is_dir():
+                    shutil.rmtree(classification_folder)
+            except Exception as e:
+                print(f"Error while deleting: {e}")
+
+            # Delete the database entry.
+            conn = sqlite3.connect(self.db_path)
+            conn.execute("PRAGMA foreign_keys = ON;")
+            conn.execute("DELETE FROM classifier WHERE id = ?", (classification_id,))
+            conn.commit()
+            conn.close()
+
+            # Reload the classification list.
+            self.load_classifiers_to_ui()
+
+
 
     def on_rename_classifier(self, classifier_id: int, old_name: str):
         # Hier später: QInputDialog öffnen
@@ -296,6 +319,7 @@ class ClassificationWorker(QtCore.QObject):
         # ---------------------------------------------------------
         # INDIVIDUELLE KLASSIFIZIERUNG (Pro Consensus Peak)
         # ---------------------------------------------------------
+        """
         for idx, (consensus_id, group_df) in enumerate(df.groupby('consensus_id')):
             rf_features = []
             labels = []
@@ -366,9 +390,9 @@ class ClassificationWorker(QtCore.QObject):
                 if key == 'accuracy': continue
                 is_summary = 1 if key in ['macro avg', 'weighted avg'] else 0
                 cursor.execute("""
-                               INSERT INTO classifier_value (classifier_result_id, label, is_summary, precision, recall, f1_score, support)
-                               VALUES (?, ?, ?, ?, ?, ?, ?)
-                               """, (result_id, key, is_summary, metrics['precision'], metrics['recall'], metrics['f1-score'], metrics['support']))
+        #                   INSERT INTO classifier_value (classifier_result_id, label, is_summary, precision, recall, f1_score, support)
+        #                   VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (result_id, key, is_summary, metrics['precision'], metrics['recall'], metrics['f1-score'], metrics['support']))
             conn.commit()
             # -----------------------------------------
 
@@ -376,17 +400,16 @@ class ClassificationWorker(QtCore.QObject):
             if not filedir.exists(): filedir.mkdir(parents=True, exist_ok=True)
             results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
 
-            plot.plot_all_rf_peak_windows(labels=labels, features=original_features, feature_recons=reconstructions,
-                                          plot_dir=filedir)
-            plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=False)
-            plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,
-                                                output_dir=filedir)
-            plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
+            #plot.plot_all_rf_peak_windows(labels=labels, features=original_features, feature_recons=reconstructions,plot_dir=filedir)
+            #plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=False)
+            plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,output_dir=filedir)
+            #plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
 
             if progress_callback:
                 progress_callback(idx + 1, total_steps)
 
         print("Random Forest: All Individual peaks classified")
+        """
 
         # ---------------------------------------------------------
         # KOMBINIERTE KLASSIFIZIERUNG (Alle Peaks zusammen)
@@ -447,7 +470,7 @@ class ClassificationWorker(QtCore.QObject):
 
         for key, metrics in results_dict.items():
             if key == 'accuracy': continue
-            is_summary = 1 if key in ['macro avg', 'weighted avg'] else 0
+            is_summary = 1
             cursor.execute("""
                            INSERT INTO classifier_value (classifier_result_id, label, is_summary, precision, recall, f1_score, support)
                            VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -457,14 +480,13 @@ class ClassificationWorker(QtCore.QObject):
         conn.close()
         # --------------------------------------------
 
-        filedir = project_path / "random forest" / f"_ALL - {(results_dict['accuracy'] * 100):.0f}% - {results_dict['weighted avg']['support']}x"
+        filedir = project_path / "classification" / f"{classifier_id}" /f"_ALL - {(results_dict['accuracy'] * 100):.0f}% - {results_dict['weighted avg']['support']}x"
         if not filedir.exists(): filedir.mkdir(parents=True, exist_ok=True)
         results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
 
-        plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=True)
-        plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,
-                                            output_dir=filedir)
-        plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
+        #plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=True)
+        plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,output_dir=filedir)
+        #plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
 
         if progress_callback:
             progress_callback(total_steps, total_steps)
@@ -474,15 +496,17 @@ class ClassificationWorker(QtCore.QObject):
 
 class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
     # Eigene Signale definieren, die an die Hauptseite gesendet werden
-    delete_clicked = QtCore.Signal(int)  # Übergibt die classifier_id
+    delete_clicked = QtCore.Signal(object)  # Übergibt die classifier_id
     rename_clicked = QtCore.Signal(int, str)  # Übergibt ID und aktuellen Namen
     tile_clicked = QtCore.Signal(int)  # Übergibt die ID, um Details zu öffnen
 
     def __init__(self, classifier_id: int, name: str, peak_count: int, accuracy: float):
         super().__init__()
         self.setupUi(self)
-
         self.classifier_id = classifier_id
+
+        # Make the background styleable [sometimes needed if a widget is not complex enough].
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
 
         # 1. Texte in der UI setzen
         self.label_name.setText(name)
@@ -498,11 +522,42 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
         self.button_labelDelete.clicked.connect(self.emit_delete)
         self.button_labelRename.clicked.connect(self.emit_rename)
 
+        # Hover effects for buttons.
+        self.button_labelRename.enterEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_orange', True)
+        self.button_labelRename.leaveEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_grey', False)
+        self.button_labelDelete.enterEvent = lambda e: self.button_hover_effect(self.button_labelDelete, 'delete_magenta', True)
+        self.button_labelDelete.leaveEvent = lambda e: self.button_hover_effect(self.button_labelDelete, 'delete_grey', False)
+
+
+    def button_hover_effect(self,
+                            button: QtWidgets.QPushButton,
+                            icon_name: str,
+                            hover: bool) -> None:
+        """
+        This function takes in a PushButton widget and changes the button icon depending on whether the mouse of the user
+        is hovering over the button or not and creates a button hover effect.
+        =============================================================================
+        :param button: The button widget where the mouse is hovering over.
+        :param icon_name: The name of the button icon to display.
+        :param hover: Boolean value for the hovering mouse [True - Mouse is hovering | False - Mouse is not hovering]
+        =============================================================================
+        :return: None.
+        """
+
+        # If the mouse is hovering over the button show this button picture.
+        if hover:
+            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+        else:
+            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+
+
     def emit_delete(self):
-        self.delete_clicked.emit(self.classifier_id)
+        self.delete_clicked.emit(self)
+
 
     def emit_rename(self):
         self.rename_clicked.emit(self.classifier_id, self.label_name.text())
+
 
     # 3. Klick auf das gesamte Tile abfangen (für das Detail-Fenster später)
     def mousePressEvent(self, event):

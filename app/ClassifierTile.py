@@ -29,6 +29,10 @@ class Ui_ClassifierTile(object):
         ClassifierTile.setStyleSheet(u"QWidget {\n"
 "	background-color: #2e2e2e;\n"
 "	border-bottom: 1px solid #666666;\n"
+"    border-top-left-radius: 0px;\n"
+"	border-top-right-radius: 0px;\n"
+"	border-bottom-left-radius: 0px;\n"
+"	border-bottom-right-radius: 0px;\n"
 "}\n"
 "\n"
 "QWidget:hover {\n"
@@ -46,7 +50,7 @@ class Ui_ClassifierTile(object):
 "    border: none;\n"
 "}")
         icon = QIcon()
-        icon.addFile(u"dataset_ui/ui/_pics/icons/delete_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u"ui/_pics/icons/delete_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_labelDelete.setIcon(icon)
         self.button_labelDelete.setIconSize(QSize(30, 30))
 
@@ -62,7 +66,7 @@ class Ui_ClassifierTile(object):
 "	background-image: url(\"ui/_pics/icons/classifier_grey.png\");\n"
 "}")
         icon1 = QIcon()
-        icon1.addFile(u"dataset_ui/ui/_pics/icons/edit_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(u"ui/_pics/icons/edit_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_labelRename.setIcon(icon1)
         self.button_labelRename.setIconSize(QSize(30, 30))
 
@@ -78,9 +82,19 @@ class Ui_ClassifierTile(object):
         self.label_name.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.label_name.setStyleSheet(u"border: None;\n"
 "color: #ebebeb;\n"
-"background-color: transparent;")
+"background-color: transparent;\n"
+"")
 
         self.horizontalLayout.addWidget(self.label_name)
+
+        self.label_model = QLabel(ClassifierTile)
+        self.label_model.setObjectName(u"label_model")
+        self.label_model.setFont(font)
+        self.label_model.setStyleSheet(u"border: None;\n"
+"color: #ebebeb;\n"
+"background-color: transparent;")
+
+        self.horizontalLayout.addWidget(self.label_model)
 
         self.consensus_peak_counter = QLabel(ClassifierTile)
         self.consensus_peak_counter.setObjectName(u"consensus_peak_counter")
@@ -120,7 +134,8 @@ class Ui_ClassifierTile(object):
         ClassifierTile.setWindowTitle(QCoreApplication.translate("ClassifierTile", u"Form", None))
         self.button_labelDelete.setText("")
         self.button_labelRename.setText("")
-        self.label_name.setText(QCoreApplication.translate("ClassifierTile", u"TextLabel", None))
+        self.label_name.setText(QCoreApplication.translate("ClassifierTile", u"Name Text", None))
+        self.label_model.setText(QCoreApplication.translate("ClassifierTile", u"Model Text", None))
         self.consensus_peak_counter.setText(QCoreApplication.translate("ClassifierTile", u"0x", None))
         self.label_result.setText(QCoreApplication.translate("ClassifierTile", u"92.4%", None))
     # retranslateUi

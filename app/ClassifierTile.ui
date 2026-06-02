@@ -32,6 +32,10 @@
    <string notr="true">QWidget {
 	background-color: #2e2e2e;
 	border-bottom: 1px solid #666666;
+    border-top-left-radius: 0px;
+	border-top-right-radius: 0px;
+	border-bottom-left-radius: 0px;
+	border-bottom-right-radius: 0px;
 }
 
 QWidget:hover {
@@ -64,7 +68,7 @@ QWidget:hover {
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>dataset_ui/ui/_pics/icons/delete_grey.png</normaloff>dataset_ui/ui/_pics/icons/delete_grey.png</iconset>
+       <normaloff>ui/_pics/icons/delete_grey.png</normaloff>ui/_pics/icons/delete_grey.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -97,7 +101,7 @@ QWidget:hover {
      </property>
      <property name="icon">
       <iconset>
-       <normaloff>dataset_ui/ui/_pics/icons/edit_grey.png</normaloff>dataset_ui/ui/_pics/icons/edit_grey.png</iconset>
+       <normaloff>ui/_pics/icons/edit_grey.png</normaloff>ui/_pics/icons/edit_grey.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -122,10 +126,30 @@ QWidget:hover {
      <property name="styleSheet">
       <string notr="true">border: None;
 color: #ebebeb;
+background-color: transparent;
+</string>
+     </property>
+     <property name="text">
+      <string>Name Text</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_model">
+     <property name="font">
+      <font>
+       <family>Lato</family>
+       <pointsize>15</pointsize>
+       <fontweight>Light</fontweight>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border: None;
+color: #ebebeb;
 background-color: transparent;</string>
      </property>
      <property name="text">
-      <string>TextLabel</string>
+      <string>Model Text</string>
      </property>
     </widget>
    </item>
