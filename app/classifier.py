@@ -2,7 +2,7 @@ from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from ClassifierWidget import Ui_ClassifierWidget
 from ClassifierTile import Ui_ClassifierTile
-from dialogs import CustomYesNoDialog, CustomProgressDialog
+from dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
 import sqlite3
 from pathlib import Path
 import torch
@@ -89,15 +89,15 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
 
     def on_delete_classifier(self,
-                             label_widget: ClassifierTileWidget) -> None:
+                             classification_widget: ClassifierTileWidget) -> None:
 
         # Get the name of the classification.
-        label_name = label_widget.label_name.text()
+        classification_name = classification_widget.label_name.text()
         # Get the ID of this classification.
-        classification_id = label_widget.classifier_id
+        classification_id = classification_widget.classifier_id
         # Define a Yes/No Dialog for the deletion.
         dialog = CustomYesNoDialog(title="Delete classification results",
-                                   message=f"Are you sure you want to delete classification results for '{label_name}'?",
+                                   message=f"Are you sure you want to delete the classification results for '{classification_name}'?",
                                    type="warning",
                                    parent=self)
 
@@ -124,9 +124,69 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
 
 
-    def on_rename_classifier(self, classifier_id: int, old_name: str):
-        # Hier später: QInputDialog öffnen
-        print(f"Benenne Classifier um: {old_name} (ID: {classifier_id})")
+    def on_rename_classifier(self,
+                             classification_widget: ClassifierTileWidget) -> None:
+
+        # Create the rename dialog.
+        dialog = RenameLabelDialog(classification_widget.label_name.text(), self)
+
+        # The user chooses to rename the label.
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            # get the new label name from the dialog data.
+            new_classification_name = dialog.get_data()['name']
+
+            # If the old and the new name are the same skip renaming.
+            if new_classification_name == classification_widget.label_name.text():
+                return
+
+            # If the new label name is a duplicate [name already exits in list] skip renaming and rollback.
+            if self.duplication_check(new_classification_name, exclude_widget=classification_widget):
+                CustomMessageDialog.show_error("Error - Duplication",
+                                               "Classification name already exists, please choose another name")
+                classification_widget.label_name.setText(classification_widget.old_label_name)
+                return
+
+            # Exchange the classification name in the database.
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM classifier WHERE name = ?", (classification_widget.old_label_name,))
+            result = cursor.fetchone()
+            classifier_id = result[0]
+            cursor.execute("UPDATE classifier SET name = ? WHERE id = ?", (new_classification_name, classifier_id))
+            conn.commit()
+            conn.close()
+
+            # Display the new name.
+            classification_widget.label_name.setText(new_classification_name)
+            classification_widget.old_label_name = new_classification_name
+
+    def duplication_check(self,
+                          name: str,
+                          exclude_widget=None) -> bool:
+        """
+        This function takes in the name of a classification and checks if there is already
+        a classification with this name present. If so this classification is considered a duplication and is not added or renamed!
+        =============================================================================
+        :param name: The name of the classification.
+        :param exclude_widget: The widget of the classification.
+        =============================================================================
+        :return: Boolean value for the duplication check [True = duplicate | False = No duplicate]
+        """
+
+        # Walks through all classifications and check if the name is unique
+        for i in range(self.scrollArea_classifier_Contents.layout().count()):
+            # Get the widget of the classification.
+            widget = self.scrollArea_classifier_Contents.layout().itemAt(i).widget()
+
+            # Check if the widget is of the correct type "ClassifierTileWidget" and if the widget should be excluded.
+            if isinstance(widget, ClassifierTileWidget) and widget is not exclude_widget:
+                # If the new name matches on of the existing names return true.
+                if widget.label_name.text() == name:
+                    return True
+
+        # No duplications found.
+        return False
+
 
     def on_open_results(self, classifier_id: int):
         # Hier später: Deinen QDialog öffnen!
@@ -314,106 +374,9 @@ class ClassificationWorker(QtCore.QObject):
         classifier_id = cursor.lastrowid
         conn.commit()
 
+        # Switch into evaluation mode.
         model.eval()
 
-        # ---------------------------------------------------------
-        # INDIVIDUELLE KLASSIFIZIERUNG (Pro Consensus Peak)
-        # ---------------------------------------------------------
-        """
-        for idx, (consensus_id, group_df) in enumerate(df.groupby('consensus_id')):
-            rf_features = []
-            labels = []
-            original_features = []
-            reconstructions = []
-
-            if check_stopped_callback and check_stopped_callback():
-                print("Klassifizierung vom User abgebrochen!")
-                conn.close()
-                return
-
-            # RT/DT direkt aus dem DataFrame ziehen (kein Regex mehr nötig!)
-            rt_val = group_df.iloc[0]['ret_time']
-            dt_val = group_df.iloc[0]['drift_time']
-
-            for _, row in group_df.iterrows():
-                path = row['abs_npy_path']
-                label = row['label_name']
-
-                peak_window = np.load(path)
-                peak_window_dimension = 4 * 5 + 1
-
-                # Normalize the peak window.
-                min_intensity = peak_window.min()
-                max_intensity = peak_window.max()
-                if max_intensity - min_intensity == 0:
-                    npy_file_normalized = np.zeros_like(peak_window)
-                else:
-                    npy_file_normalized = (peak_window - min_intensity) / (max_intensity - min_intensity)
-
-                peak_window_tensor = torch.from_numpy(npy_file_normalized).float().view(1, 1, peak_window_dimension,
-                                                                                        peak_window_dimension).to(
-                    device)
-
-                with torch.inference_mode():
-                    reconstruction, mean, log_variance = model(peak_window_tensor)
-
-                combined_feature = np.hstack((mean.cpu().numpy().flatten(),
-                                              log_variance.cpu().numpy().flatten()))
-
-                original_features.append(peak_window_tensor)
-                reconstructions.append(reconstruction)
-                rf_features.append(combined_feature)
-                labels.append(label)
-
-            if len(rf_features) * 0.2 <= 4:
-                print(f"Index: {idx + 1} - Skipping. Not enough peak windows: {len(rf_features)}x")
-                continue
-
-            train_feature, test_feature, train_label, test_label = train_test_split(rf_features, labels, test_size=0.2,
-                                                                                    random_state=42)
-            rf_model = RandomForestClassifier(n_estimators=1000, class_weight='balanced', random_state=42)
-            rf_model.fit(train_feature, train_label)
-
-            label_predictions = rf_model.predict(test_feature)
-            results_dict = classification_report(test_label, label_predictions, output_dict=True, zero_division=0)
-            results_dataframe = pd.DataFrame(results_dict).transpose()
-
-            print(
-                f"Index: {idx + 1} - {(results_dict['accuracy'] * 100): .0f} % - RT{rt_val: .2f}_DT{dt_val: .2f} - {len(rf_features)}/{spectra_count}x")
-
-            # --- DB SPEICHERN (Individueller Peak) ---
-            cursor.execute("INSERT INTO classifier_result (classifier_id, consensus_id) VALUES (?, ?)",
-                           (classifier_id, consensus_id))
-            result_id = cursor.lastrowid
-
-            for key, metrics in results_dict.items():
-                if key == 'accuracy': continue
-                is_summary = 1 if key in ['macro avg', 'weighted avg'] else 0
-                cursor.execute("""
-        #                   INSERT INTO classifier_value (classifier_result_id, label, is_summary, precision, recall, f1_score, support)
-        #                   VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (result_id, key, is_summary, metrics['precision'], metrics['recall'], metrics['f1-score'], metrics['support']))
-            conn.commit()
-            # -----------------------------------------
-
-            filedir = project_path / "random forest" / f"{(results_dict['accuracy'] * 100):.0f}% - RT{rt_val:.2f}_DT{dt_val:.2f} - {len(rf_features)}-{spectra_count}x"
-            if not filedir.exists(): filedir.mkdir(parents=True, exist_ok=True)
-            results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
-
-            #plot.plot_all_rf_peak_windows(labels=labels, features=original_features, feature_recons=reconstructions,plot_dir=filedir)
-            #plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=False)
-            plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,output_dir=filedir)
-            #plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
-
-            if progress_callback:
-                progress_callback(idx + 1, total_steps)
-
-        print("Random Forest: All Individual peaks classified")
-        """
-
-        # ---------------------------------------------------------
-        # KOMBINIERTE KLASSIFIZIERUNG (Alle Peaks zusammen)
-        # ---------------------------------------------------------
         rf_features = []
         labels = []
 
@@ -495,10 +458,10 @@ class ClassificationWorker(QtCore.QObject):
 
 
 class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
-    # Eigene Signale definieren, die an die Hauptseite gesendet werden
-    delete_clicked = QtCore.Signal(object)  # Übergibt die classifier_id
-    rename_clicked = QtCore.Signal(int, str)  # Übergibt ID und aktuellen Namen
-    tile_clicked = QtCore.Signal(int)  # Übergibt die ID, um Details zu öffnen
+    # Signal definitions.
+    delete_clicked = QtCore.Signal(object)
+    rename_clicked = QtCore.Signal(object)
+    tile_clicked = QtCore.Signal(int)
 
     def __init__(self, classifier_id: int, name: str, peak_count: int, accuracy: float):
         super().__init__()
@@ -509,7 +472,8 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
 
         # 1. Texte in der UI setzen
-        self.label_name.setText(name)
+        self.label_name.setText(name.strip())
+        self.old_label_name = name.strip()
         self.consensus_peak_counter.setText(f"{peak_count}x")
 
         # Genauigkeit formatieren (z.B. 95.4%)
@@ -556,7 +520,7 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
 
 
     def emit_rename(self):
-        self.rename_clicked.emit(self.classifier_id, self.label_name.text())
+        self.rename_clicked.emit(self)
 
 
     # 3. Klick auf das gesamte Tile abfangen (für das Detail-Fenster später)

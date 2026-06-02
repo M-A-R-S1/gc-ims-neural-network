@@ -92,8 +92,8 @@ class Ui_RenameLabelDialog(object):
 
     def retranslateUi(self, RenameLabelDialog):
         RenameLabelDialog.setWindowTitle(QCoreApplication.translate("RenameLabelDialog", u"Dialog", None))
-        self.lineEdit_label_name.setPlaceholderText(QCoreApplication.translate("RenameLabelDialog", u"Label name ...", None))
-        self.label_dialog_text.setText(QCoreApplication.translate("RenameLabelDialog", u"Specify the new label name", None))
+        self.lineEdit_label_name.setPlaceholderText(QCoreApplication.translate("RenameLabelDialog", u"new name ...", None))
+        self.label_dialog_text.setText(QCoreApplication.translate("RenameLabelDialog", u"Specify the new name", None))
         self.button_ok.setText(QCoreApplication.translate("RenameLabelDialog", u"Rename", None))
         self.button_cancel.setText(QCoreApplication.translate("RenameLabelDialog", u"Cancel", None))
     # retranslateUi
