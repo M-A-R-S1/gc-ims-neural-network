@@ -16,15 +16,16 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QHBoxLayout, QLabel, QLayout, QLineEdit,
-    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
-    QVBoxLayout, QWidget)
+    QHBoxLayout, QHeaderView, QLabel, QLayout,
+    QLineEdit, QPushButton, QScrollArea, QSizePolicy,
+    QSpacerItem, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QWidget)
 
 class Ui_ClassifierWidget(object):
     def setupUi(self, ClassifierWidget):
         if not ClassifierWidget.objectName():
             ClassifierWidget.setObjectName(u"ClassifierWidget")
-        ClassifierWidget.resize(1717, 993)
+        ClassifierWidget.resize(1741, 993)
         font = QFont()
         font.setWeight(QFont.Black)
         ClassifierWidget.setFont(font)
@@ -48,14 +49,14 @@ class Ui_ClassifierWidget(object):
 
         self.classifier_container = QWidget(ClassifierWidget)
         self.classifier_container.setObjectName(u"classifier_container")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.classifier_container.sizePolicy().hasHeightForWidth())
         self.classifier_container.setSizePolicy(sizePolicy)
         self.classifier_container.setMinimumSize(QSize(0, 0))
         self.horizontalLayout = QHBoxLayout(self.classifier_container)
-        self.horizontalLayout.setSpacing(50)
+        self.horizontalLayout.setSpacing(20)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -63,18 +64,18 @@ class Ui_ClassifierWidget(object):
         self.classifier_list_container.setObjectName(u"classifier_list_container")
         sizePolicy.setHeightForWidth(self.classifier_list_container.sizePolicy().hasHeightForWidth())
         self.classifier_list_container.setSizePolicy(sizePolicy)
-        self.classifier_list_container.setMinimumSize(QSize(1000, 0))
+        self.classifier_list_container.setMinimumSize(QSize(0, 0))
         self.classifier_list_container.setMaximumSize(QSize(16777215, 16777215))
         self.classifier_list_container.setStyleSheet(u"")
         self.verticalLayout_5 = QVBoxLayout(self.classifier_list_container)
-        self.verticalLayout_5.setSpacing(10)
+        self.verticalLayout_5.setSpacing(20)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.verticalLayout_5.setContentsMargins(9, 30, -1, 9)
         self.classifier_list_inner_container = QWidget(self.classifier_list_container)
         self.classifier_list_inner_container.setObjectName(u"classifier_list_inner_container")
         sizePolicy.setHeightForWidth(self.classifier_list_inner_container.sizePolicy().hasHeightForWidth())
         self.classifier_list_inner_container.setSizePolicy(sizePolicy)
-        self.classifier_list_inner_container.setMinimumSize(QSize(0, 0))
+        self.classifier_list_inner_container.setMinimumSize(QSize(750, 0))
         self.classifier_list_inner_container.setMaximumSize(QSize(16777215, 16777215))
         self.classifier_list_inner_container.setFont(font)
         self.classifier_list_inner_container.setStyleSheet(u"QWidget {\n"
@@ -114,7 +115,7 @@ class Ui_ClassifierWidget(object):
         self.scrollArea_classifier.setWidgetResizable(True)
         self.scrollArea_classifier_Contents = QWidget()
         self.scrollArea_classifier_Contents.setObjectName(u"scrollArea_classifier_Contents")
-        self.scrollArea_classifier_Contents.setGeometry(QRect(0, 0, 980, 786))
+        self.scrollArea_classifier_Contents.setGeometry(QRect(0, 0, 748, 466))
         self.gridLayout = QGridLayout(self.scrollArea_classifier_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -129,19 +130,12 @@ class Ui_ClassifierWidget(object):
 
         self.verticalLayout_5.addWidget(self.classifier_list_inner_container)
 
-        self.verticalLayout_5.setStretch(0, 1)
-
-        self.horizontalLayout.addWidget(self.classifier_list_container)
-
-        self.frame_new_classification = QFrame(self.classifier_container)
+        self.frame_new_classification = QFrame(self.classifier_list_container)
         self.frame_new_classification.setObjectName(u"frame_new_classification")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.frame_new_classification.sizePolicy().hasHeightForWidth())
-        self.frame_new_classification.setSizePolicy(sizePolicy1)
-        self.frame_new_classification.setMinimumSize(QSize(500, 350))
-        self.frame_new_classification.setMaximumSize(QSize(500, 400))
+        sizePolicy.setHeightForWidth(self.frame_new_classification.sizePolicy().hasHeightForWidth())
+        self.frame_new_classification.setSizePolicy(sizePolicy)
+        self.frame_new_classification.setMinimumSize(QSize(750, 300))
+        self.frame_new_classification.setMaximumSize(QSize(750, 300))
         self.frame_new_classification.setStyleSheet(u".QFrame  {\n"
 "	background-color: #2e2e2e;\n"
 "	border: 1px solid #ff9000;\n"
@@ -152,7 +146,7 @@ class Ui_ClassifierWidget(object):
         self.frame_new_classification.setFrameShadow(QFrame.Shadow.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.frame_new_classification)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(30, 30, 30, 30)
+        self.verticalLayout_2.setContentsMargins(30, 10, 30, 10)
         self.label_header_2 = QLabel(self.frame_new_classification)
         self.label_header_2.setObjectName(u"label_header_2")
         self.label_header_2.setFont(font2)
@@ -165,7 +159,7 @@ class Ui_ClassifierWidget(object):
         self.lineEdit_name = QLineEdit(self.frame_new_classification)
         self.lineEdit_name.setObjectName(u"lineEdit_name")
         self.lineEdit_name.setMinimumSize(QSize(0, 50))
-        self.lineEdit_name.setMaximumSize(QSize(500, 16777215))
+        self.lineEdit_name.setMaximumSize(QSize(16777215, 16777215))
         font3 = QFont()
         font3.setFamilies([u"Lato"])
         font3.setPointSize(14)
@@ -190,7 +184,7 @@ class Ui_ClassifierWidget(object):
         self.label_model = QLabel(self.classification_model_container)
         self.label_model.setObjectName(u"label_model")
         self.label_model.setMinimumSize(QSize(0, 0))
-        self.label_model.setMaximumSize(QSize(16777215, 40))
+        self.label_model.setMaximumSize(QSize(200, 40))
         font4 = QFont()
         font4.setFamilies([u"Lato"])
         font4.setPointSize(14)
@@ -204,15 +198,16 @@ class Ui_ClassifierWidget(object):
         self.comboBox_sort_peaks = QComboBox(self.classification_model_container)
         self.comboBox_sort_peaks.setObjectName(u"comboBox_sort_peaks")
         self.comboBox_sort_peaks.setMinimumSize(QSize(200, 40))
-        self.comboBox_sort_peaks.setMaximumSize(QSize(300, 40))
+        self.comboBox_sort_peaks.setMaximumSize(QSize(20000, 40))
         self.comboBox_sort_peaks.setFont(font4)
-        self.comboBox_sort_peaks.setStyleSheet(u"color: #ebebeb;\n"
-"background-color: #232323;\n"
-"border-top-left-radius: 0px;\n"
-"border-top-right-radius: 0px;\n"
-"border-bottom-left-radius: 0px;\n"
-"border-bottom-right-radius: 0px;\n"
-"padding-left: 10px;")
+        self.comboBox_sort_peaks.setStyleSheet(u"\n"
+"    border: 1px solid #ff9000;\n"
+"    background-color: #232323; \n"
+"    color: #9e9e9e;\n"
+"    border-radius: 10px;\n"
+"   padding-left: 10px;\n"
+"\n"
+"")
 
         self.horizontalLayout_2.addWidget(self.comboBox_sort_peaks)
 
@@ -236,7 +231,7 @@ class Ui_ClassifierWidget(object):
 
         self.pushButton_new_classification = QPushButton(self.frame_new_classification)
         self.pushButton_new_classification.setObjectName(u"pushButton_new_classification")
-        self.pushButton_new_classification.setMinimumSize(QSize(0, 60))
+        self.pushButton_new_classification.setMinimumSize(QSize(0, 50))
         font6 = QFont()
         font6.setFamilies([u"Lato"])
         font6.setPointSize(20)
@@ -257,9 +252,77 @@ class Ui_ClassifierWidget(object):
         self.verticalLayout_2.addWidget(self.pushButton_new_classification)
 
 
-        self.horizontalLayout.addWidget(self.frame_new_classification)
+        self.verticalLayout_5.addWidget(self.frame_new_classification)
+
+        self.verticalLayout_5.setStretch(0, 1)
+
+        self.horizontalLayout.addWidget(self.classifier_list_container)
+
+        self.right_container = QWidget(self.classifier_container)
+        self.right_container.setObjectName(u"right_container")
+        self.verticalLayout_3 = QVBoxLayout(self.right_container)
+        self.verticalLayout_3.setSpacing(40)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(-1, 30, -1, -1)
+        self.frame_classification_details = QFrame(self.right_container)
+        self.frame_classification_details.setObjectName(u"frame_classification_details")
+        self.frame_classification_details.setMinimumSize(QSize(750, 0))
+        self.frame_classification_details.setStyleSheet(u".QFrame  {\n"
+"	background-color: #2e2e2e;\n"
+"	border: 1px solid #ff9000;\n"
+"	border-radius: 10px;\n"
+"}\n"
+"")
+        self.frame_classification_details.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_classification_details.setFrameShadow(QFrame.Shadow.Raised)
+        self.verticalLayout_4 = QVBoxLayout(self.frame_classification_details)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.label_detail_header = QLabel(self.frame_classification_details)
+        self.label_detail_header.setObjectName(u"label_detail_header")
+        self.label_detail_header.setMinimumSize(QSize(0, 60))
+        self.label_detail_header.setMaximumSize(QSize(16777215, 60))
+        self.label_detail_header.setFont(font2)
+        self.label_detail_header.setStyleSheet(u"color: #ebebeb;\n"
+"background-color: #2e2e2e;")
+        self.label_detail_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.verticalLayout_4.addWidget(self.label_detail_header)
+
+        self.details_container = QWidget(self.frame_classification_details)
+        self.details_container.setObjectName(u"details_container")
+        self.details_container.setStyleSheet(u"background-color: #2e2e2e;")
+        self.verticalLayout_7 = QVBoxLayout(self.details_container)
+        self.verticalLayout_7.setSpacing(20)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.tableWidget_results = QTableWidget(self.details_container)
+        self.tableWidget_results.setObjectName(u"tableWidget_results")
+        font7 = QFont()
+        font7.setFamilies([u"Lato"])
+        font7.setPointSize(12)
+        self.tableWidget_results.setFont(font7)
+        self.tableWidget_results.setStyleSheet(u"border: none;\n"
+"color: #ebebeb;")
+
+        self.verticalLayout_7.addWidget(self.tableWidget_results)
+
+        self.widget_confusion_matrix = QWidget(self.details_container)
+        self.widget_confusion_matrix.setObjectName(u"widget_confusion_matrix")
+
+        self.verticalLayout_7.addWidget(self.widget_confusion_matrix)
+
+        self.verticalLayout_7.setStretch(0, 1)
+        self.verticalLayout_7.setStretch(1, 2)
+
+        self.verticalLayout_4.addWidget(self.details_container)
+
+
+        self.verticalLayout_3.addWidget(self.frame_classification_details)
+
+
+        self.horizontalLayout.addWidget(self.right_container)
 
         self.horizontalLayout.setStretch(0, 1)
+        self.horizontalLayout.setStretch(1, 2)
 
         self.verticalLayout.addWidget(self.classifier_container, 0, Qt.AlignmentFlag.AlignLeft)
 
@@ -279,5 +342,6 @@ class Ui_ClassifierWidget(object):
         self.label_model.setText(QCoreApplication.translate("ClassifierWidget", u"Classification model:", None))
         self.label_open.setText(QCoreApplication.translate("ClassifierWidget", u"This classification uses x consensus peaks.", None))
         self.pushButton_new_classification.setText(QCoreApplication.translate("ClassifierWidget", u"Start classification", None))
+        self.label_detail_header.setText(QCoreApplication.translate("ClassifierWidget", u"Classification details", None))
     # retranslateUi
 

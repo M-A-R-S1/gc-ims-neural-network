@@ -1,5 +1,6 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtGui import QFont
 from ClassifierWidget import Ui_ClassifierWidget
 from ClassifierTile import Ui_ClassifierTile
 from dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
@@ -26,6 +27,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         self.project_path = Path(project_path)
         # Database path.
         self.db_path = self.project_path.parent / "database" / "project_database.db"
+        self.current_selected_classifier_id = None
 
         # ScrollArea-Layout oben ausrichten, damit Elemente nicht mittig schweben
         self.scrollArea_classifier_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
@@ -35,6 +37,10 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
         # Connect the button
         self.pushButton_new_classification.clicked.connect(self.show_new_classifier_dialog)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_confusion_matrix_image()
 
 
     def load_classifiers_to_ui(self):
@@ -189,8 +195,151 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
 
     def on_open_results(self, classifier_id: int):
-        # Hier später: Deinen QDialog öffnen!
-        print(f"Öffne Detail-Ansicht für Classifier ID: {classifier_id}")
+
+        self.current_selected_classifier_id = classifier_id
+
+        # 1. DATEN AUS DER DATENBANK HOLEN
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Wir holen nur die Werte für das "Combined" Ergebnis (consensus_id IS NULL)
+        query = """
+                SELECT cv.label, cv.precision, cv.recall, cv.f1_score, cv.support, cv.is_summary
+                FROM classifier_value cv
+                         JOIN classifier_result cr ON cv.classifier_result_id = cr.id
+                WHERE cr.classifier_id = ? \
+                  AND cr.consensus_id IS NULL
+                ORDER BY cv.is_summary ASC, cv.label ASC
+                """
+        cursor.execute(query, (classifier_id,))
+        results = cursor.fetchall()
+        conn.close()
+
+        if not results:
+            print("Keine Detaildaten in der Datenbank gefunden!")
+            return
+
+        # 2. DIE TABELLE (QTableWidget) FÜLLEN
+        table = self.tableWidget_results
+        table.clearContents()
+        table.setRowCount(len(results))
+        table.setColumnCount(5)
+
+        # Spaltenüberschriften setzen
+        table.setHorizontalHeaderLabels(["Label", "Precision", "Recall", "F1-Score", "Support"])
+        table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        table.verticalHeader().setVisible(False)
+
+        table.horizontalHeader().setStyleSheet("""
+            QHeaderView::section {
+                font-family: 'Lato';
+                font-size: 16px;
+                font-weight: bold;
+                background-color: #232323;
+                color: #ebebeb;
+                border: None;
+                border-bottom: 1px solid #ff9000;
+            }
+        """)
+
+        header = table.horizontalHeader()
+        font = QFont("Lato", 16, QFont.Bold)
+        header.setFont(font)
+
+        for row_idx, row_data in enumerate(results):
+            label, precision, recall, f1, support, is_summary = row_data
+
+            row_values = [
+                str(label),
+                f"{precision*100:.1f} %",
+                f"{recall*100:.1f} %",
+                f"{f1*100:.1f} %",
+                f"{str(support)}x"
+            ]
+
+            for col_idx, value in enumerate(row_values):
+                item = QtWidgets.QTableWidgetItem(value)
+                item.setTextAlignment(QtCore.Qt.AlignCenter)
+
+                if is_summary == 1:
+                    item.setBackground(QtGui.QColor("#232323"))
+
+                table.setItem(row_idx, col_idx, item)
+
+            # 3. DAS BILD DER CONFUSION MATRIX LADEN
+            plot_widget = self.widget_confusion_matrix
+
+            # Falls das Widget noch kein Layout hat, geben wir ihm eins
+            if plot_widget.layout() is None:
+                layout = QtWidgets.QVBoxLayout()
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(0)
+                plot_widget.setLayout(layout)
+            else:
+                # Alten Inhalt (altes Bild) restlos löschen
+                while plot_widget.layout().count():
+                    child = plot_widget.layout().takeAt(0)
+                    if child.widget():
+                        child.widget().deleteLater()
+
+            # Leeres Label erstellen und ins Layout setzen
+            image_label = QtWidgets.QLabel()
+            image_label.setAlignment(QtCore.Qt.AlignCenter)
+            image_label.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Ignored)
+            plot_widget.layout().addWidget(image_label)
+
+            # --- FIX 1: Verhindern, dass die Tabelle den gesamten Platz frisst ---
+            plot_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+            plot_widget.setMinimumHeight(300)  # Mindesthöhe erzwingen!
+
+            # --- FIX 2: Qt einen Wimpernschlag (10ms) Zeit geben, um das Layout zu berechnen ---
+            QtCore.QTimer.singleShot(10, self.update_confusion_matrix_image)
+
+
+    def update_confusion_matrix_image(self):
+        """
+        Liest das aktuelle Bild ein und skaliert es live auf die
+        aktuelle Größe des Containers.
+        """
+        if not hasattr(self, "current_selected_classifier_id") or self.current_selected_classifier_id is None:
+            return
+
+        plot_widget = self.widget_confusion_matrix
+
+        # Das Label finden
+        image_label = None
+        if plot_widget.layout():
+            for i in range(plot_widget.layout().count()):
+                widget = plot_widget.layout().itemAt(i).widget()
+                if isinstance(widget, QtWidgets.QLabel):
+                    image_label = widget
+                    break
+
+        if not image_label:
+            return
+
+        size = plot_widget.size()
+
+        if size.width() <= 0 or size.height() <= 0:
+            return
+
+        # Pfad zum Bild bauen
+        img_path = self.project_path.parent / "classification" / f"{self.current_selected_classifier_id}" / "total" / "confusion_matrix.png"
+
+        if img_path.exists():
+            pixmap = QtGui.QPixmap(str(img_path))
+
+            # Bild auf die jetzige echte Größe skalieren
+            pixmap_scaled = pixmap.scaled(
+                size,
+                QtCore.Qt.KeepAspectRatio,
+                QtCore.Qt.SmoothTransformation
+            )
+            image_label.setPixmap(pixmap_scaled)
+        else:
+            image_label.setText(f"Bild nicht gefunden:\n{img_path.name}")
+            image_label.setStyleSheet("color: #ff4444; font-weight: bold;")
 
 
     def show_new_classifier_dialog(self) -> None:
@@ -433,7 +582,7 @@ class ClassificationWorker(QtCore.QObject):
 
         for key, metrics in results_dict.items():
             if key == 'accuracy': continue
-            is_summary = 1
+            is_summary = 1 if key in ['macro avg', 'weighted avg'] else 0
             cursor.execute("""
                            INSERT INTO classifier_value (classifier_result_id, label, is_summary, precision, recall, f1_score, support)
                            VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -443,7 +592,7 @@ class ClassificationWorker(QtCore.QObject):
         conn.close()
         # --------------------------------------------
 
-        filedir = project_path / "classification" / f"{classifier_id}" /f"_ALL - {(results_dict['accuracy'] * 100):.0f}% - {results_dict['weighted avg']['support']}x"
+        filedir = project_path / "classification" / f"{classifier_id}" / "total"
         if not filedir.exists(): filedir.mkdir(parents=True, exist_ok=True)
         results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
 
