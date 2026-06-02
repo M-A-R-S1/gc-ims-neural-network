@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1660</width>
+    <width>1717</width>
     <height>993</height>
    </rect>
   </property>
@@ -65,9 +65,24 @@
    </item>
    <item alignment="Qt::AlignmentFlag::AlignLeft">
     <widget class="QWidget" name="classifier_container" native="true">
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0">
       <property name="spacing">
-       <number>100</number>
+       <number>50</number>
+      </property>
+      <property name="sizeConstraint">
+       <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
       </property>
       <property name="leftMargin">
        <number>0</number>
@@ -83,6 +98,12 @@
       </property>
       <item>
        <widget class="QWidget" name="classifier_list_container" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="minimumSize">
          <size>
           <width>1000</width>
@@ -113,6 +134,18 @@
          </property>
          <item>
           <widget class="QWidget" name="classifier_list_inner_container" native="true">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
@@ -233,6 +266,12 @@ background-color: transparent;
       </item>
       <item>
        <widget class="QFrame" name="frame_new_classification">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="minimumSize">
          <size>
           <width>500</width>
@@ -259,56 +298,62 @@ background-color: transparent;
         <property name="frameShadow">
          <enum>QFrame::Shadow::Raised</enum>
         </property>
-        <widget class="QLabel" name="label_header_2">
-         <property name="geometry">
-          <rect>
-           <x>20</x>
-           <y>20</y>
-           <width>461</width>
-           <height>41</height>
-          </rect>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="leftMargin">
+          <number>30</number>
          </property>
-         <property name="font">
-          <font>
-           <family>Lato</family>
-           <pointsize>25</pointsize>
-          </font>
+         <property name="topMargin">
+          <number>30</number>
          </property>
-         <property name="styleSheet">
-          <string notr="true">color: #ebebeb;
+         <property name="rightMargin">
+          <number>30</number>
+         </property>
+         <property name="bottomMargin">
+          <number>30</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_header_2">
+           <property name="font">
+            <font>
+             <family>Lato</family>
+             <pointsize>25</pointsize>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: #ebebeb;
 background-color: #2e2e2e;</string>
-         </property>
-         <property name="text">
-          <string>Create new classification</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignCenter</set>
-         </property>
-        </widget>
-        <widget class="QLineEdit" name="lineEdit_name">
-         <property name="geometry">
-          <rect>
-           <x>20</x>
-           <y>110</y>
-           <width>461</width>
-           <height>41</height>
-          </rect>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>500</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <family>Lato</family>
-           <pointsize>14</pointsize>
-           <fontweight>Light</fontweight>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QLineEdit {
+           </property>
+           <property name="text">
+            <string>Create new classification</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_name">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>50</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>500</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Lato</family>
+             <pointsize>14</pointsize>
+             <fontweight>Light</fontweight>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QLineEdit {
     border: 1px solid #ff9000;
     background-color: #232323; 
     color: #9e9e9e;
@@ -316,149 +361,146 @@ background-color: #2e2e2e;</string>
    padding-left: 10px;
 }
 </string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="placeholderText">
-          <string>Classification name ...</string>
-         </property>
-        </widget>
-        <widget class="QPushButton" name="pushButton_new_classification">
-         <property name="geometry">
-          <rect>
-           <x>20</x>
-           <y>320</y>
-           <width>461</width>
-           <height>51</height>
-          </rect>
-         </property>
-         <property name="font">
-          <font>
-           <family>Lato</family>
-           <pointsize>20</pointsize>
-           <fontweight>Light</fontweight>
-          </font>
-         </property>
-         <property name="cursor">
-          <cursorShape>PointingHandCursor</cursorShape>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QPushButton {
-    border: 1px solid #00eaff;
-    background-color: #232323; 
-    color: #00eaff;
-    border-radius: 10px;
-}
-</string>
-         </property>
-         <property name="text">
-          <string>Start classification</string>
-         </property>
-        </widget>
-        <widget class="QLabel" name="label_model">
-         <property name="geometry">
-          <rect>
-           <x>20</x>
-           <y>170</y>
-           <width>191</width>
-           <height>30</height>
-          </rect>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <family>Lato</family>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">color: #ebebeb;
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="placeholderText">
+            <string>Classification name ...</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="classification_model_container" native="true">
+           <property name="styleSheet">
+            <string notr="true">background-color: #2e2e2e;</string>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QLabel" name="label_model">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>Lato</family>
+                <pointsize>14</pointsize>
+               </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">color: #ebebeb;
 background-color: #2e2e2e;</string>
-         </property>
-         <property name="text">
-          <string>Classification model:</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-         </property>
-        </widget>
-        <widget class="QComboBox" name="comboBox_sort_peaks">
-         <property name="geometry">
-          <rect>
-           <x>210</x>
-           <y>170</y>
-           <width>271</width>
-           <height>31</height>
-          </rect>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>200</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>300</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <family>Lato</family>
-           <pointsize>14</pointsize>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">color: #ebebeb;
+              </property>
+              <property name="text">
+               <string>Classification model:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox_sort_peaks">
+              <property name="minimumSize">
+               <size>
+                <width>200</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>300</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>Lato</family>
+                <pointsize>14</pointsize>
+               </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">color: #ebebeb;
 background-color: #232323;
 border-top-left-radius: 0px;
 border-top-right-radius: 0px;
 border-bottom-left-radius: 0px;
 border-bottom-right-radius: 0px;
 padding-left: 10px;</string>
-         </property>
-        </widget>
-        <widget class="QLabel" name="label_open">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>280</y>
-           <width>461</width>
-           <height>28</height>
-          </rect>
-         </property>
-         <property name="font">
-          <font>
-           <family>Lato</family>
-           <pointsize>12</pointsize>
-           <kerning>true</kerning>
-           <fontweight>Light</fontweight>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">color: #9e9e9e;
-background-color: #2e2e2e;</string>
-         </property>
-         <property name="text">
-          <string>This classification uses x consensus peaks.</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignCenter</set>
-         </property>
-        </widget>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_open">
+           <property name="font">
+            <font>
+             <family>Lato</family>
+             <pointsize>12</pointsize>
+             <kerning>true</kerning>
+             <fontweight>Light</fontweight>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: #9e9e9e;
+background-color: #2e2e2e;
+margin-bottom: 5px;</string>
+           </property>
+           <property name="text">
+            <string>This classification uses x consensus peaks.</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignHCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_new_classification">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>60</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <family>Lato</family>
+             <pointsize>20</pointsize>
+             <fontweight>Light</fontweight>
+            </font>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+    border: 1px solid #00eaff;
+    background-color: #232323; 
+    color: #00eaff;
+    border-radius: 10px;
+}
+
+QPushButton:hover {
+	background-color: #131313;
+}</string>
+           </property>
+           <property name="text">
+            <string>Start classification</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>

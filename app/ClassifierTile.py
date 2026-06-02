@@ -23,6 +23,11 @@ class Ui_ClassifierTile(object):
         if not ClassifierTile.objectName():
             ClassifierTile.setObjectName(u"ClassifierTile")
         ClassifierTile.resize(964, 50)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(ClassifierTile.sizePolicy().hasHeightForWidth())
+        ClassifierTile.setSizePolicy(sizePolicy)
         ClassifierTile.setMinimumSize(QSize(0, 50))
         ClassifierTile.setMaximumSize(QSize(16777215, 50))
         ClassifierTile.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
