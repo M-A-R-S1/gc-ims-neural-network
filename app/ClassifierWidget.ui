@@ -406,7 +406,7 @@ background-color: #2e2e2e;</string>
                 </widget>
                </item>
                <item>
-                <widget class="QComboBox" name="comboBox_sort_peaks">
+                <widget class="QComboBox" name="comboBox_model">
                  <property name="minimumSize">
                   <size>
                    <width>200</width>

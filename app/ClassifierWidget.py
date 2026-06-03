@@ -195,12 +195,12 @@ class Ui_ClassifierWidget(object):
 
         self.horizontalLayout_2.addWidget(self.label_model)
 
-        self.comboBox_sort_peaks = QComboBox(self.classification_model_container)
-        self.comboBox_sort_peaks.setObjectName(u"comboBox_sort_peaks")
-        self.comboBox_sort_peaks.setMinimumSize(QSize(200, 40))
-        self.comboBox_sort_peaks.setMaximumSize(QSize(20000, 40))
-        self.comboBox_sort_peaks.setFont(font4)
-        self.comboBox_sort_peaks.setStyleSheet(u"\n"
+        self.comboBox_model = QComboBox(self.classification_model_container)
+        self.comboBox_model.setObjectName(u"comboBox_model")
+        self.comboBox_model.setMinimumSize(QSize(200, 40))
+        self.comboBox_model.setMaximumSize(QSize(20000, 40))
+        self.comboBox_model.setFont(font4)
+        self.comboBox_model.setStyleSheet(u"\n"
 "    border: 1px solid #ff9000;\n"
 "    background-color: #232323; \n"
 "    color: #9e9e9e;\n"
@@ -209,7 +209,7 @@ class Ui_ClassifierWidget(object):
 "\n"
 "")
 
-        self.horizontalLayout_2.addWidget(self.comboBox_sort_peaks)
+        self.horizontalLayout_2.addWidget(self.comboBox_model)
 
 
         self.verticalLayout_2.addWidget(self.classification_model_container)

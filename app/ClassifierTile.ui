@@ -160,40 +160,6 @@ background-color: transparent;</string>
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="consensus_peak_counter">
-     <property name="maximumSize">
-      <size>
-       <width>120</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <family>Lato</family>
-       <pointsize>15</pointsize>
-       <fontweight>Light</fontweight>
-      </font>
-     </property>
-     <property name="cursor">
-      <cursorShape>PointingHandCursor</cursorShape>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::LayoutDirection::LeftToRight</enum>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">border: None;
-color: #ebebeb;
-background-color: transparent;</string>
-     </property>
-     <property name="text">
-      <string>0x</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QLabel" name="label_result">
      <property name="maximumSize">
       <size>

@@ -243,7 +243,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                        (
                            id                   INTEGER PRIMARY KEY,
                            name                 TEXT NOT NULL,
-                           consensus_count      INTEGER
+                           model                TEXT NOT NULL
                        )
                        ''')
 

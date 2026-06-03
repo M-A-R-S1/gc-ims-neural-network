@@ -101,19 +101,6 @@ class Ui_ClassifierTile(object):
 
         self.horizontalLayout.addWidget(self.label_model)
 
-        self.consensus_peak_counter = QLabel(ClassifierTile)
-        self.consensus_peak_counter.setObjectName(u"consensus_peak_counter")
-        self.consensus_peak_counter.setMaximumSize(QSize(120, 16777215))
-        self.consensus_peak_counter.setFont(font)
-        self.consensus_peak_counter.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.consensus_peak_counter.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.consensus_peak_counter.setStyleSheet(u"border: None;\n"
-"color: #ebebeb;\n"
-"background-color: transparent;")
-        self.consensus_peak_counter.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
-
-        self.horizontalLayout.addWidget(self.consensus_peak_counter)
-
         self.label_result = QLabel(ClassifierTile)
         self.label_result.setObjectName(u"label_result")
         self.label_result.setMaximumSize(QSize(120, 16777215))
@@ -141,7 +128,6 @@ class Ui_ClassifierTile(object):
         self.button_labelRename.setText("")
         self.label_name.setText(QCoreApplication.translate("ClassifierTile", u"Name Text", None))
         self.label_model.setText(QCoreApplication.translate("ClassifierTile", u"Model Text", None))
-        self.consensus_peak_counter.setText(QCoreApplication.translate("ClassifierTile", u"0x", None))
         self.label_result.setText(QCoreApplication.translate("ClassifierTile", u"92.4%", None))
     # retranslateUi
 

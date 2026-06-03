@@ -34,6 +34,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
         # Initiale Daten laden
         self.load_classifiers_to_ui()
+        self.load_models_to_dropdown()
 
         # Connect the button
         self.pushButton_new_classification.clicked.connect(self.show_new_classifier_dialog)
@@ -64,7 +65,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         query = """
                 SELECT c.id,
                        c.name,
-                       c.consensus_count,
+                       c.model,
                        cv.f1_score
                 FROM classifier c
                          LEFT JOIN classifier_result cr ON c.id = cr.classifier_id AND cr.consensus_id IS NULL
@@ -76,12 +77,12 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         conn.close()
 
         # 3. Tiles erstellen und dem Layout hinzufügen
-        for c_id, name, count, accuracy in classifiers:
+        for c_id, name, model, accuracy in classifiers:
             # Hier nutzen wir unsere Custom-Klasse von oben
             tile = ClassifierTileWidget(
                 classifier_id=c_id,
                 name=name,
-                peak_count=count if count else 0,
+                model_name=model,
                 accuracy=accuracy
             )
 
@@ -342,6 +343,23 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
             image_label.setStyleSheet("color: #ff4444; font-weight: bold;")
 
 
+    def load_models_to_dropdown(self):
+        # Pfad zum models-Ordner (passe diesen ggf. an deine Ordnerstruktur an)
+        models_dir = Path("models")
+
+        if not models_dir.exists():
+            print(f"Warnung: Models-Ordner nicht gefunden unter {models_dir}")
+            return
+
+        self.comboBox_model.clear()
+
+        # Geht alle .pt Dateien im Ordner durch
+        for file_path in models_dir.glob("*.pt"):
+            original_filename = file_path.name
+            display_name = file_path.stem
+            self.comboBox_model.addItem(display_name)
+
+
     def show_new_classifier_dialog(self) -> None:
         """
         This function is called when the user wants to create a new classification. It creates a dialog where the user is
@@ -349,6 +367,29 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         =============================================================================
         :return: None.
         """
+
+        classification_name = self.lineEdit_name.text().strip()
+        classification_name = re.sub(r'[^a-zA-Z0-9\s_-]', '', classification_name).strip()
+        model_name = self.comboBox_model.currentText()
+
+        # 2. Sicherheits-Check: Hat der Nutzer alles ausgefüllt?
+        if not classification_name:
+            CustomMessageDialog.show_error("Error - Empty", "Empty classification name! Please choose a name for the classification.")
+            return
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM classifier WHERE name = ?", (classification_name,))
+        name_exists = cursor.fetchone()[0] > 0
+        conn.close()
+
+        if name_exists:
+            CustomMessageDialog.show_error("Error - Duplication","Classification name already exists, please choose another name")
+            return
+
+        if not model_name:
+            CustomMessageDialog.show_error("Error - Empty model", "Please select a model which the classification process should work with.")
+            return
 
         # Create a custom yes/no dialog for the user where he can start the classification process.
         dialog = CustomYesNoDialog(
@@ -361,10 +402,13 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
         # If the user accepted the dialog, call the start_new_classification method.
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            self.start_new_classification()
+            self.start_new_classification(name=classification_name,
+                                          model=model_name)
 
 
-    def start_new_classification(self) -> None:
+    def start_new_classification(self,
+                                 name: str,
+                                 model: str) -> None:
         """
         This function is called when the user accepted the "start new classification" prompt.
         A Thread is created and started on which the random forest classification is executed.
@@ -380,7 +424,10 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
         # Create a thread and worker for the progress dialog.
         self.thread = QtCore.QThread()
-        self.worker = ClassificationWorker(path=self.project_path)
+        self.worker = ClassificationWorker(path=self.project_path,
+                                           classification_name=name,
+                                           model_filename=model)
+        self.worker.moveToThread(self.thread)
         self.worker.moveToThread(self.thread)
 
         # Connect some signals to the worker and thread.
@@ -393,6 +440,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         self.thread.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
 
+        self.lineEdit_name.clear()
         # Start the thread.
         self.thread.start()
 
@@ -402,20 +450,21 @@ class ClassificationWorker(QtCore.QObject):
     finished = QtCore.Signal()
     progress_update = QtCore.Signal(int, int)
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path,
+                 classification_name: str,
+                 model_filename: str):
 
         super().__init__()
         self.project_path = path.parent
         self.db_path = self.project_path / "database" / "project_database.db"
         self.worker_stopped = False
+        self.classification_name = classification_name
+        self.model_filename = model_filename
 
 
     @QtCore.Slot()
     def stop(self):
         self.worker_stopped = True
-
-    def emit_progress(self, current_step: int, total_steps: int):
-        self.progress_update.emit(current_step, total_steps)
 
     def check_stopped(self) -> bool:
         return self.worker_stopped
@@ -437,14 +486,14 @@ class ClassificationWorker(QtCore.QObject):
                                                 latent_dimension=16).to(device)
 
         # Load the model state dict.
-        vae_model.load_model(model_dir="models", file_name="GC-IMS-CNN-VAE-HONEY-RUB-E1500-DIM16.pt", device=device)
+        vae_model.load_model(model_dir="models", file_name=self.model_filename, device=device)
         # Start the random forest algorithm.
         self.start_random_forest(model=vae_model,
+                                 model_name=self.model_filename,
                                  device=device,
                                  db_path=self.db_path,
                                  project_path=self.project_path,
-                                 classification_name="Test Name",
-                                 progress_callback=self.emit_progress,
+                                 classification_name=self.classification_name,
                                  check_stopped_callback=self.check_stopped)
 
         self.finished.emit()
@@ -452,11 +501,11 @@ class ClassificationWorker(QtCore.QObject):
 
     def start_random_forest(self,
                             model: torch.nn.Module,
+                            model_name: str,
                             device: torch.device,
                             db_path: Path,
                             project_path: Path,
                             classification_name: str,
-                            progress_callback=None,
                             check_stopped_callback=None) -> None:
 
         """
@@ -509,17 +558,11 @@ class ClassificationWorker(QtCore.QObject):
         df['file_exists'] = df['abs_npy_path'].apply(lambda p: p.exists())
         df = df[df['file_exists'] == True]
 
-        spectra_count = df['spectrum_id'].nunique()
-        unique_consensus_count = df['consensus_id'].nunique()
-
-        total_steps = unique_consensus_count + 1
-
         # ---------------------------------------------------------
         # NEU: Haupt-Eintrag für den Classifier in der DB erstellen
         # ---------------------------------------------------------
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO classifier (name, consensus_count) VALUES (?, ?)",
-                       (classification_name, unique_consensus_count))
+        cursor.execute("INSERT INTO classifier (name, model) VALUES (?,?)", (classification_name, model_name))
         classifier_id = cursor.lastrowid
         conn.commit()
 
@@ -563,9 +606,8 @@ class ClassificationWorker(QtCore.QObject):
             rf_features.append(combined_feature)
             labels.append(label)
 
-        train_feature, test_feature, train_label, test_label = train_test_split(rf_features, labels, test_size=0.2,
-                                                                                random_state=42)
-        rf_model = RandomForestClassifier(n_estimators=1000, random_state=42)
+        train_feature, test_feature, train_label, test_label = train_test_split(rf_features, labels, test_size=0.2)
+        rf_model = RandomForestClassifier(n_estimators=1000)
         rf_model.fit(train_feature, train_label)
 
         label_predictions = rf_model.predict(test_feature)
@@ -599,10 +641,6 @@ class ClassificationWorker(QtCore.QObject):
         #plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=True)
         plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,output_dir=filedir)
         #plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
-
-        if progress_callback:
-            progress_callback(total_steps, total_steps)
-
         print("Random Forest: Combined Peaks classified")
 
 
@@ -612,7 +650,7 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
     rename_clicked = QtCore.Signal(object)
     tile_clicked = QtCore.Signal(int)
 
-    def __init__(self, classifier_id: int, name: str, peak_count: int, accuracy: float):
+    def __init__(self, classifier_id: int, name: str, model_name: str, accuracy: float):
         super().__init__()
         self.setupUi(self)
         self.classifier_id = classifier_id
@@ -623,7 +661,7 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
         # 1. Texte in der UI setzen
         self.label_name.setText(name.strip())
         self.old_label_name = name.strip()
-        self.consensus_peak_counter.setText(f"{peak_count}x")
+        self.label_model.setText(model_name)
 
         # Genauigkeit formatieren (z.B. 95.4%)
         if accuracy is not None:
