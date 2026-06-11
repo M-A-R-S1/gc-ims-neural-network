@@ -3,16 +3,31 @@
     - By DT or by RT
     - Occurrence in labels or spectra
 
-- Optimize Consensus Peaks scroll list
-    - Try to display 3 rows
-    - Shrinking the image.
+- find a way so that the consensus peaks are recalculated automatically if:
+    - A label was added/removed
+    - A Spectrum was added/removed
+    - a Peak was set invisible/visible
 
-- Add a button underneath the consensus peak scroll area
-    - "Recalculate Consensus Peaks"
-    - OR ... find a way so that the consensus peaks are recalculated automatically if:
-        - A label was added/removed
-        - A Spectrum was added/removed
-        - a Peak was set invisible/visible
+    - For this we create a new table 'system_state' which holds flags like
+        - dataset_changed
+        - peaks_changed
+        - processing_changed
 
 - Set Menu points to inactive if they should not be accessible
     - E.g. At the start all menu points should be deactivated, only "Dataset" is visible
+    - This can also be addressed with the new table 'system_state'
+
+- Add exports:
+    - Consensus Peak export function
+    - Peak export function
+    - python code export function [better show a github link instead?]
+
+- Consensus Peak info box below the scroll area which displays the label names ect.
+
+- New sidebar menu point -> Model
+    - The user can here train and test a model with the current dataset.
+
+- Classifier:
+    - Save consensus peaks which are part of a classification in a separate table like 'cl_consensus_peaks'
+    - Try to save the random forest model to a folder.
+    - this model and the saved consensus peaks can then be used to classify single spectrum files and outputs a label result and the probability.
