@@ -82,13 +82,13 @@
        <widget class="QWidget" name="consensus_peak_container" native="true">
         <property name="minimumSize">
          <size>
-          <width>800</width>
+          <width>950</width>
           <height>0</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>800</width>
+          <width>950</width>
           <height>16777215</height>
          </size>
         </property>
@@ -97,7 +97,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_5" stretch="1">
          <property name="spacing">
-          <number>10</number>
+          <number>9</number>
          </property>
          <property name="leftMargin">
           <number>9</number>
@@ -197,8 +197,8 @@ background-color: transparent;
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>780</width>
-                 <height>786</height>
+                 <width>930</width>
+                 <height>787</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">

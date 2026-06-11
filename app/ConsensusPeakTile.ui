@@ -6,20 +6,20 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>370</width>
-    <height>92</height>
+    <width>290</width>
+    <height>84</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>370</width>
-    <height>92</height>
+    <width>290</width>
+    <height>72</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>370</width>
-    <height>92</height>
+    <width>290</width>
+    <height>84</height>
    </size>
   </property>
   <property name="cursor">
@@ -62,14 +62,14 @@
     <widget class="QLabel" name="peak_window">
      <property name="minimumSize">
       <size>
-       <width>80</width>
-       <height>80</height>
+       <width>60</width>
+       <height>60</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>80</width>
-       <height>80</height>
+       <width>60</width>
+       <height>60</height>
       </size>
      </property>
      <property name="text">
@@ -82,13 +82,13 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>80</height>
+       <height>60</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>80</height>
+       <height>60</height>
       </size>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -112,7 +112,7 @@
         <property name="font">
          <font>
           <family>Lato</family>
-          <pointsize>12</pointsize>
+          <pointsize>10</pointsize>
           <fontweight>Light</fontweight>
          </font>
         </property>
@@ -134,7 +134,7 @@ background-color: transparent;</string>
         <property name="font">
          <font>
           <family>Lato</family>
-          <pointsize>12</pointsize>
+          <pointsize>10</pointsize>
           <fontweight>Light</fontweight>
          </font>
         </property>
@@ -156,7 +156,7 @@ background-color: transparent;</string>
         <property name="font">
          <font>
           <family>Lato</family>
-          <pointsize>12</pointsize>
+          <pointsize>10</pointsize>
           <fontweight>Light</fontweight>
          </font>
         </property>
@@ -169,7 +169,7 @@ color: #ebebeb;
 background-color: transparent;</string>
         </property>
         <property name="text">
-         <string>RT; XX,XX - DT: XX</string>
+         <string>RT; XX.X - DT: XXX.XX</string>
         </property>
        </widget>
       </item>

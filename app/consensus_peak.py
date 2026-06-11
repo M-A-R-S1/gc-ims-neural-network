@@ -200,17 +200,12 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         :return: None
         """
 
-
         self.selected_consensus_peak_id = None
         self.consensus_peak_widgets = {}
         self.label_preview.setText("Spectrum preview")
 
         # Clear the canvas.
         self.clear_canvas()
-
-        # Load the consensus peaks.
-        #self.load_consensus_peaks()
-
 
 
     def load_consensus_peaks(self) -> None:
@@ -247,7 +242,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         conn.close()
 
         # The number of columns inside the scroll area.
-        max_columns = 2
+        max_columns = 3
 
         # Loop through all peaks.
         for index, (consensus_id, retention_time, drift_time, min_intensity, is_active) in enumerate(consensus_peaks_data):
@@ -727,7 +722,7 @@ class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
         # Create a button which is placed on top of the peak image.
         self.activity_button = QtWidgets.QPushButton(self.peak_window)
         self.activity_button.setFixedSize(20, 20)
-        self.activity_button.move(60, 60)
+        self.activity_button.move(40, 40)
         self.activity_button.setCursor(QtCore.Qt.PointingHandCursor)
         self.activity_button.setStyleSheet("background: rgba(0,0,0,100); border: none;")
         # Set the correct peak button icon for the current peak activity.
@@ -871,7 +866,7 @@ class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
 
         # Apply the color pallet to the image.
         q_image.setColorTable(qt_color_table)
-        pixmap = QtGui.QPixmap.fromImage(q_image).scaled(80, 80, QtCore.Qt.KeepAspectRatio)
+        pixmap = QtGui.QPixmap.fromImage(q_image).scaled(60, 60, QtCore.Qt.KeepAspectRatio)
         self.peak_window.setPixmap(pixmap)
 
 
