@@ -28,6 +28,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         # Database path.
         self.db_path = self.project_path.parent / "database" / "project_database.db"
         self.current_selected_classifier_id = None
+        self.current_selected_tile = None
 
         # ScrollArea-Layout oben ausrichten, damit Elemente nicht mittig schweben
         self.scrollArea_classifier_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
@@ -49,6 +50,8 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         Lädt alle Classifier aus der Datenbank und baut die Tiles auf.
         """
         layout = self.scrollArea_classifier_Contents.layout()
+        self.current_selected_classifier_id = None
+        self.current_selected_tile = None
 
         # 1. Altes Layout bereinigen (Wichtig, falls die Liste neu geladen wird)
         while layout.count():
@@ -195,9 +198,18 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         return False
 
 
-    def on_open_results(self, classifier_id: int):
+    def on_open_results(self, tile_widget: ClassifierTileWidget):
 
+        classifier_id = tile_widget.classifier_id
         self.current_selected_classifier_id = classifier_id
+
+        # Deselect the last selected tile and remove the highlight effect from the scroll area.
+        if self.current_selected_tile:
+            self.current_selected_tile.set_selected(False)
+
+        # Set the highlight to the currently clicked tile.
+        self.current_selected_tile = tile_widget
+        self.current_selected_tile.set_selected(True)
 
         # 1. DATEN AUS DER DATENBANK HOLEN
         conn = sqlite3.connect(self.db_path)
@@ -648,7 +660,7 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
     # Signal definitions.
     delete_clicked = QtCore.Signal(object)
     rename_clicked = QtCore.Signal(object)
-    tile_clicked = QtCore.Signal(int)
+    tile_clicked = QtCore.Signal(object)
 
     def __init__(self, classifier_id: int, name: str, model_name: str, accuracy: float):
         super().__init__()
@@ -678,6 +690,17 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
         self.button_labelRename.leaveEvent = lambda e: self.button_hover_effect(self.button_labelRename, 'edit_grey', False)
         self.button_labelDelete.enterEvent = lambda e: self.button_hover_effect(self.button_labelDelete, 'delete_magenta', True)
         self.button_labelDelete.leaveEvent = lambda e: self.button_hover_effect(self.button_labelDelete, 'delete_grey', False)
+
+
+    def set_selected(self, is_selected: bool) -> None:
+        if is_selected:
+            self.label_name.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+            self.label_model.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+            self.label_result.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+        else:
+            self.label_name.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
+            self.label_model.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
+            self.label_result.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
 
 
     def button_hover_effect(self,
@@ -713,5 +736,5 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
     # 3. Klick auf das gesamte Tile abfangen (für das Detail-Fenster später)
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
-            self.tile_clicked.emit(self.classifier_id)
+            self.tile_clicked.emit(self)
         super().mousePressEvent(event)

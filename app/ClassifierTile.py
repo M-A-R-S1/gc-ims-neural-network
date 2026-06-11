@@ -22,7 +22,7 @@ class Ui_ClassifierTile(object):
     def setupUi(self, ClassifierTile):
         if not ClassifierTile.objectName():
             ClassifierTile.setObjectName(u"ClassifierTile")
-        ClassifierTile.resize(964, 50)
+        ClassifierTile.resize(1135, 50)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -81,7 +81,7 @@ class Ui_ClassifierTile(object):
         self.label_name.setObjectName(u"label_name")
         font = QFont()
         font.setFamilies([u"Lato"])
-        font.setPointSize(15)
+        font.setPointSize(13)
         font.setWeight(QFont.Light)
         self.label_name.setFont(font)
         self.label_name.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -103,10 +103,10 @@ class Ui_ClassifierTile(object):
 
         self.label_result = QLabel(ClassifierTile)
         self.label_result.setObjectName(u"label_result")
-        self.label_result.setMaximumSize(QSize(120, 16777215))
+        self.label_result.setMaximumSize(QSize(70, 16777215))
         font1 = QFont()
         font1.setFamilies([u"Lato"])
-        font1.setPointSize(15)
+        font1.setPointSize(13)
         font1.setWeight(QFont.Light)
         font1.setKerning(True)
         self.label_result.setFont(font1)
