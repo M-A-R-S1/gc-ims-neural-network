@@ -29,6 +29,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         self.db_path = self.project_path.parent / "database" / "project_database.db"
         self.current_selected_classifier_id = None
         self.current_selected_tile = None
+        self.active_consensus_peaks = 0
 
         # ScrollArea-Layout oben ausrichten, damit Elemente nicht mittig schweben
         self.scrollArea_classifier_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
@@ -44,6 +45,32 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         super().resizeEvent(event)
         self.update_confusion_matrix_image()
 
+    def showEvent(self, event) -> None:
+        """
+        This function is called every time the user enters this page and checks the number of active consensus peaks.
+        =============================================================================
+        :param event: The page display event.
+        =============================================================================
+        :return: None
+        """
+
+        super().showEvent(event)
+        # Check how many active consensus peaks are there.
+        self.active_consensus_peaks = self.get_active_consensus_peaks_count()
+
+        self.label_consesus_peak_counter.setText(f"This classification uses {self.active_consensus_peaks} consensus peaks.")
+
+
+    def get_active_consensus_peaks_count(self) -> int:
+        # Connect to the database and get the number of active consensus peaks.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        query = "SELECT COUNT(*) FROM consensus_peaks WHERE is_active = 1"
+        cursor.execute(query)
+        active_peaks_count = cursor.fetchone()[0]
+        conn.close()
+
+        return active_peaks_count
 
     def load_classifiers_to_ui(self):
         """
@@ -406,8 +433,10 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         # Create a custom yes/no dialog for the user where he can start the classification process.
         dialog = CustomYesNoDialog(
             title="Start new classification",
-            message="You are about to start a new classification process. Check the activity of all desired consensus peaks in the "
-                    "consensus peak tab, select a name and choose a classification model.",
+            message=f"Do you want to start the classification?\n\n"
+                    f"Name: {classification_name}\n"
+                    f"Model: {model_name}\n"
+                    f"Consensus Peaks: {self.active_consensus_peaks}",
             type="warning",
             parent=self
         )

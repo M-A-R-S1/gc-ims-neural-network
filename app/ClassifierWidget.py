@@ -115,7 +115,7 @@ class Ui_ClassifierWidget(object):
         self.scrollArea_classifier.setWidgetResizable(True)
         self.scrollArea_classifier_Contents = QWidget()
         self.scrollArea_classifier_Contents.setObjectName(u"scrollArea_classifier_Contents")
-        self.scrollArea_classifier_Contents.setGeometry(QRect(0, 0, 748, 466))
+        self.scrollArea_classifier_Contents.setGeometry(QRect(0, 0, 748, 467))
         self.gridLayout = QGridLayout(self.scrollArea_classifier_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -214,20 +214,20 @@ class Ui_ClassifierWidget(object):
 
         self.verticalLayout_2.addWidget(self.classification_model_container)
 
-        self.label_open = QLabel(self.frame_new_classification)
-        self.label_open.setObjectName(u"label_open")
+        self.label_consesus_peak_counter = QLabel(self.frame_new_classification)
+        self.label_consesus_peak_counter.setObjectName(u"label_consesus_peak_counter")
         font5 = QFont()
         font5.setFamilies([u"Lato"])
         font5.setPointSize(12)
         font5.setWeight(QFont.Light)
         font5.setKerning(True)
-        self.label_open.setFont(font5)
-        self.label_open.setStyleSheet(u"color: #9e9e9e;\n"
+        self.label_consesus_peak_counter.setFont(font5)
+        self.label_consesus_peak_counter.setStyleSheet(u"color: #9e9e9e;\n"
 "background-color: #2e2e2e;\n"
 "margin-bottom: 5px;")
-        self.label_open.setAlignment(Qt.AlignmentFlag.AlignBottom|Qt.AlignmentFlag.AlignHCenter)
+        self.label_consesus_peak_counter.setAlignment(Qt.AlignmentFlag.AlignBottom|Qt.AlignmentFlag.AlignHCenter)
 
-        self.verticalLayout_2.addWidget(self.label_open)
+        self.verticalLayout_2.addWidget(self.label_consesus_peak_counter)
 
         self.pushButton_new_classification = QPushButton(self.frame_new_classification)
         self.pushButton_new_classification.setObjectName(u"pushButton_new_classification")
@@ -340,7 +340,7 @@ class Ui_ClassifierWidget(object):
         self.lineEdit_name.setText("")
         self.lineEdit_name.setPlaceholderText(QCoreApplication.translate("ClassifierWidget", u"Classification name ...", None))
         self.label_model.setText(QCoreApplication.translate("ClassifierWidget", u"Classification model:", None))
-        self.label_open.setText(QCoreApplication.translate("ClassifierWidget", u"This classification uses x consensus peaks.", None))
+        self.label_consesus_peak_counter.setText(QCoreApplication.translate("ClassifierWidget", u"This classification uses x consensus peaks.", None))
         self.pushButton_new_classification.setText(QCoreApplication.translate("ClassifierWidget", u"Start classification", None))
         self.label_detail_header.setText(QCoreApplication.translate("ClassifierWidget", u"Classification details", None))
     # retranslateUi

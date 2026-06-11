@@ -234,7 +234,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>748</width>
-                 <height>466</height>
+                 <height>467</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">
@@ -441,7 +441,7 @@ background-color: #2e2e2e;</string>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="label_open">
+             <widget class="QLabel" name="label_consesus_peak_counter">
               <property name="font">
                <font>
                 <family>Lato</family>
