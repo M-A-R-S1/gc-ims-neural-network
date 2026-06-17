@@ -49,13 +49,13 @@ class Ui_ProjectWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.Sidebar_top.sizePolicy().hasHeightForWidth())
         self.Sidebar_top.setSizePolicy(sizePolicy)
-        self.Sidebar_top.setMinimumSize(QSize(80, 650))
-        self.Sidebar_top.setMaximumSize(QSize(80, 650))
+        self.Sidebar_top.setMinimumSize(QSize(80, 780))
+        self.Sidebar_top.setMaximumSize(QSize(80, 780))
         self.Sidebar_top.setStyleSheet(u"")
-        self.verticalLayout_9 = QVBoxLayout(self.Sidebar_top)
-        self.verticalLayout_9.setSpacing(6)
-        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
-        self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_10 = QVBoxLayout(self.Sidebar_top)
+        self.verticalLayout_10.setSpacing(6)
+        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
+        self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
         self.sb_dataset_container = QWidget(self.Sidebar_top)
         self.sb_dataset_container.setObjectName(u"sb_dataset_container")
         self.sb_dataset_container.setMinimumSize(QSize(0, 0))
@@ -94,7 +94,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout.addWidget(self.sb_dataset_label)
 
 
-        self.verticalLayout_9.addWidget(self.sb_dataset_container)
+        self.verticalLayout_10.addWidget(self.sb_dataset_container)
 
         self.sb_preprocessing_container = QWidget(self.Sidebar_top)
         self.sb_preprocessing_container.setObjectName(u"sb_preprocessing_container")
@@ -130,7 +130,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_2.addWidget(self.sb_preprocessing_label)
 
 
-        self.verticalLayout_9.addWidget(self.sb_preprocessing_container)
+        self.verticalLayout_10.addWidget(self.sb_preprocessing_container)
 
         self.sb_peak_explorer_container = QWidget(self.Sidebar_top)
         self.sb_peak_explorer_container.setObjectName(u"sb_peak_explorer_container")
@@ -164,7 +164,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_3.addWidget(self.sb_peak_explorer_label)
 
 
-        self.verticalLayout_9.addWidget(self.sb_peak_explorer_container)
+        self.verticalLayout_10.addWidget(self.sb_peak_explorer_container)
 
         self.sb_consensus_container = QWidget(self.Sidebar_top)
         self.sb_consensus_container.setObjectName(u"sb_consensus_container")
@@ -198,7 +198,41 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_4.addWidget(self.sb_consensus_label)
 
 
-        self.verticalLayout_9.addWidget(self.sb_consensus_container)
+        self.verticalLayout_10.addWidget(self.sb_consensus_container)
+
+        self.sb_model_container = QWidget(self.Sidebar_top)
+        self.sb_model_container.setObjectName(u"sb_model_container")
+        self.sb_model_container.setStyleSheet(u"")
+        self.verticalLayout_9 = QVBoxLayout(self.sb_model_container)
+        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
+        self.sb_model_button = QPushButton(self.sb_model_container)
+        self.sb_model_button.setObjectName(u"sb_model_button")
+        self.sb_model_button.setMaximumSize(QSize(16777215, 70))
+        self.sb_model_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.sb_model_button.setStyleSheet(u"QPushButton {\n"
+"    background-color: transparent;\n"
+"    border: none;\n"
+"    border-top: 2px solid #666666;\n"
+"	padding-top: 20px;\n"
+"}")
+        icon5 = QIcon()
+        icon5.addFile(u"ui/_pics/icons/neural_network_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.sb_model_button.setIcon(icon5)
+        self.sb_model_button.setIconSize(QSize(60, 60))
+
+        self.verticalLayout_9.addWidget(self.sb_model_button)
+
+        self.sb_model_label = QLabel(self.sb_model_container)
+        self.sb_model_label.setObjectName(u"sb_model_label")
+        self.sb_model_label.setFont(font)
+        self.sb_model_label.setStyleSheet(u"color: #ebebeb;")
+        self.sb_model_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sb_model_label.setWordWrap(True)
+
+        self.verticalLayout_9.addWidget(self.sb_model_label)
+
+
+        self.verticalLayout_10.addWidget(self.sb_model_container)
 
         self.sb_classifier_container = QWidget(self.Sidebar_top)
         self.sb_classifier_container.setObjectName(u"sb_classifier_container")
@@ -215,9 +249,9 @@ class Ui_ProjectWindow(object):
 "    border-top: 2px solid #666666;\n"
 "	padding-top: 20px;\n"
 "}")
-        icon5 = QIcon()
-        icon5.addFile(u"ui/_pics/icons/classifier_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.sb_classifier_button.setIcon(icon5)
+        icon6 = QIcon()
+        icon6.addFile(u"ui/_pics/icons/classifier_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.sb_classifier_button.setIcon(icon6)
         self.sb_classifier_button.setIconSize(QSize(60, 60))
 
         self.verticalLayout_5.addWidget(self.sb_classifier_button)
@@ -232,7 +266,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_5.addWidget(self.sb_classifier_label)
 
 
-        self.verticalLayout_9.addWidget(self.sb_classifier_container)
+        self.verticalLayout_10.addWidget(self.sb_classifier_container)
 
 
         self.verticalLayout_7.addWidget(self.Sidebar_top)
@@ -268,9 +302,9 @@ class Ui_ProjectWindow(object):
 "    border-top: 2px solid #666666;\n"
 "	padding-top: 20px;\n"
 "}")
-        icon6 = QIcon()
-        icon6.addFile(u"ui/_pics/icons/settings_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.sb_settings_button.setIcon(icon6)
+        icon7 = QIcon()
+        icon7.addFile(u"ui/_pics/icons/settings_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.sb_settings_button.setIcon(icon7)
         self.sb_settings_button.setIconSize(QSize(60, 60))
 
         self.verticalLayout_6.addWidget(self.sb_settings_button)
@@ -319,6 +353,8 @@ class Ui_ProjectWindow(object):
         self.sb_peak_explorer_label.setText(QCoreApplication.translate("ProjectWindow", u"Peak Explorer", None))
         self.sb_consensus_button.setText("")
         self.sb_consensus_label.setText(QCoreApplication.translate("ProjectWindow", u"Consensus Peaks", None))
+        self.sb_model_button.setText("")
+        self.sb_model_label.setText(QCoreApplication.translate("ProjectWindow", u"Model", None))
         self.sb_classifier_button.setText("")
         self.sb_classifier_label.setText(QCoreApplication.translate("ProjectWindow", u"Classifier", None))
         self.sb_settings_button.setText("")

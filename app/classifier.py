@@ -7,7 +7,7 @@ from dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, 
 import sqlite3
 from pathlib import Path
 import torch
-import model
+import vae_model
 import plot
 import re
 import shutil
@@ -522,14 +522,14 @@ class ClassificationWorker(QtCore.QObject):
         # Device agnostic code.
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # Initialize the model.
-        vae_model = model.VariationalAutoencoderCNN(input_layers=1,
-                                                hidden_layers=64,
-                                                latent_dimension=16).to(device)
+        model = vae_model.VariationalAutoencoderCNN(input_layers=1,
+                                                    hidden_layers=64,
+                                                    latent_dimension=16).to(device)
 
         # Load the model state dict.
-        vae_model.load_model(model_dir="models", file_name=self.model_filename, device=device)
+        model.load_model(model_dir="models", file_name=self.model_filename, device=device)
         # Start the random forest algorithm.
-        self.start_random_forest(model=vae_model,
+        self.start_random_forest(model=model,
                                  model_name=self.model_filename,
                                  device=device,
                                  db_path=self.db_path,

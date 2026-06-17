@@ -81,19 +81,19 @@
          <property name="minimumSize">
           <size>
            <width>80</width>
-           <height>650</height>
+           <height>780</height>
           </size>
          </property>
          <property name="maximumSize">
           <size>
            <width>80</width>
-           <height>650</height>
+           <height>780</height>
           </size>
          </property>
          <property name="styleSheet">
           <string notr="true"/>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_9">
+         <layout class="QVBoxLayout" name="verticalLayout_10">
           <property name="spacing">
            <number>6</number>
           </property>
@@ -386,6 +386,71 @@
                </property>
                <property name="text">
                 <string>Consensus Peaks</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QWidget" name="sb_model_container" native="true">
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_9">
+             <item>
+              <widget class="QPushButton" name="sb_model_button">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>70</height>
+                </size>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QPushButton {
+    background-color: transparent;
+    border: none;
+    border-top: 2px solid #666666;
+	padding-top: 20px;
+}</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset>
+                 <normaloff>ui/_pics/icons/neural_network_white.png</normaloff>ui/_pics/icons/neural_network_white.png</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>60</width>
+                 <height>60</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="sb_model_label">
+               <property name="font">
+                <font>
+                 <family>Lato</family>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">color: #ebebeb;</string>
+               </property>
+               <property name="text">
+                <string>Model</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignCenter</set>

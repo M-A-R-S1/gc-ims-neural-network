@@ -7,6 +7,7 @@ from dataset import DatasetPage
 from preprocessing import PreprocessingPage
 from peak_explorer import PeakExplorerPage
 from consensus_peak import ConsensusPeakPage
+from model import ModelPage
 from classifier import ClassifierPage
 from settings import SettingsPage
 import sqlite3
@@ -31,6 +32,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.preprocessing_page = None
         self.peak_explorer_page = None
         self.consensus_peak_page = None
+        self.model_page = None
         self.classifier_page = None
         self.settings_page = None
         self.current_page = {}
@@ -65,6 +67,9 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         # Consensus Peak
         self.consensus_peak_page = ConsensusPeakPage(self.project_path)
         self.Main_container.addWidget(self.consensus_peak_page)
+        # Model
+        self.model_page = ModelPage(self.project_path)
+        self.Main_container.addWidget(self.model_page)
         # Classifier
         self.classifier_page = ClassifierPage(self.project_path)
         self.Main_container.addWidget(self.classifier_page)
@@ -93,6 +98,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.sb_preprocessing_button.clicked.connect(lambda: self.change_page(self.preprocessing_page))
         self.sb_peak_explorer_button.clicked.connect(lambda: self.change_page(self.peak_explorer_page))
         self.sb_consensus_button.clicked.connect(lambda: self.change_page(self.consensus_peak_page))
+        self.sb_model_button.clicked.connect(lambda: self.change_page(self.model_page))
         self.sb_classifier_button.clicked.connect(lambda: self.change_page(self.classifier_page))
         self.sb_settings_button.clicked.connect(lambda: self.change_page(self.settings_page))
 
@@ -111,6 +117,9 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         elif self.current_page == self.consensus_peak_page:
             self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_white.png"))
             self.sb_consensus_label.setPalette(self.palette_normal)
+        elif self.current_page == self.model_page:
+            self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_white.png"))
+            self.sb_model_label.setPalette(self.palette_normal)
         elif self.current_page == self.classifier_page:
             self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_white.png"))
             self.sb_classifier_label.setPalette(self.palette_normal)
@@ -135,6 +144,9 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
             self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_orange.png"))
             self.sb_consensus_label.setPalette(self.palette_active)
             self.consensus_peak_page.load_data()
+        elif page == self.model_page:
+            self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_orange.png"))
+            self.sb_model_label.setPalette(self.palette_active)
         elif page == self.classifier_page:
             self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_orange.png"))
             self.sb_classifier_label.setPalette(self.palette_active)
