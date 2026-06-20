@@ -36,6 +36,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         self.pushButton_toggle_peak_marker.clicked.connect(self.toggle_peak_markers)
         self.consensus_peak_widgets = {}
         self.selected_consensus_peak_id = None
+        self.selected_model_tile = None
         self.best_spectrum = None
 
         # ScrollArea-Layout oben ausrichten, damit Modelle nicht vertikal zentriert schweben
@@ -108,6 +109,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         super().showEvent(event)
         self.best_spectrum = self.get_spectrum_with_most_consensus_peaks()
         self.load_consensus_peaks()
+        self.load_models_to_scrollarea()
 
 
     def clear_data(self):
@@ -543,6 +545,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         """
         models_dir = Path("models")
         layout = self.scrollArea_models_Contents.layout()
+        self.selected_model_tile = None
 
         # Falls das Widget im Designer versehentlich noch kein Layout bekommen hat:
         if layout is None:
@@ -562,23 +565,35 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
         # 3. Alle .pt Dateien finden und als Tiles anlegen
         for file_path in models_dir.glob("*.pt"):
-            original_filename = file_path.name
-            display_name = file_path.stem  # Name ohne '.pt'
+            file_name = file_path.stem
 
             # Tile instanziieren
-            tile = ModelTileWidget(original_filename, display_name)
+            tile = ModelTileWidget(file_name)
 
             # Klick-Event mit der Methode unten verknüpfen
             tile.tile_clicked.connect(self.on_model_selected)
+            tile.delete_clicked.connect(self.on_delete_model)
+            tile.rename_clicked.connect(self.on_rename_model)
 
             # Ins Layout packen
             layout.addWidget(tile)
 
+            if self.selected_model_tile is None:
+                self.on_model_selected(tile)
 
-    def on_model_selected(self, model_filename: str):
+    def on_model_selected(self,
+                          tile_widget: ModelTileWidget) -> None:
         """
         Wird aufgerufen, sobald der User auf ein Modell in der linken Liste klickt.
         """
+
+        # Deselect the last selected tile and remove the highlight effect from the scroll area.
+        if self.selected_model_tile:
+            self.selected_model_tile.set_selected(False)
+
+        # Set the highlight to the currently clicked tile.
+        self.selected_model_tile = tile_widget
+        self.selected_model_tile.set_selected(True)
 
         # 1. Das PyTorch Modell instanziieren (Parameter ggf. an dein Training anpassen!)
         self.current_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -589,13 +604,85 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         ).to(self.current_device)
 
         # 2. Die Gewichte (.pt Datei) laden
-        self.current_vae_model.load_model(model_dir="models", file_name=model_filename, device=self.current_device)
+        self.current_vae_model.load_model(model_dir="models", file_name=f"{tile_widget.name}.pt", device=self.current_device)
 
         # 3. WICHTIG: Das Modell in den Evaluierungs-Modus setzen (deaktiviert Dropout etc.)
         self.current_vae_model.eval()
 
         # 4. Alle Bilder auf der rechten Seite aktualisieren
         self.update_all_reconstructions()
+
+
+    def on_delete_model(self,
+                        model_widget: ModelTileWidget) -> None:
+
+        # Get the name of the model.
+        model_name = model_widget.name
+        # Define a Yes/No Dialog for the deletion.
+        dialog = CustomYesNoDialog(title="Delete model",
+                                   message=f"Are you sure you want to delete this model'{model_name}'?",
+                                   type="warning",
+                                   parent=self)
+
+        # The user wants to delete the classification.
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+
+            # Try to delete the model file from the "model" folder.
+            try:
+                model_file = Path("models") / f"{model_name}.pt"
+                if model_file.exists():
+                    model_file.unlink()
+            except Exception as e:
+                print(f"Error while deleting: {e}")
+
+            # Reload the model list.
+            self.load_models_to_scrollarea()
+
+
+    def on_rename_model(self,
+                        model_widget: ModelTileWidget) -> None:
+
+        # Create the rename dialog.
+        dialog = RenameLabelDialog(model_widget.label_name.text(), self)
+
+        # The user chooses to rename the label.
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            # get the new label name from the dialog data.
+            new_model_name = dialog.get_data()['name']
+
+            # If the old and the new name are the same skip renaming.
+            if new_model_name == model_widget.label_name.text():
+                return
+
+            # Duplikation check.
+            new_file_path = Path("models") / f"{new_model_name}.pt"
+            if new_file_path.exists():
+                CustomMessageDialog.show_error("Error - Duplication",
+                                               f"A model with the name '{new_model_name}' already exists. Please choose another name.")
+                model_widget.label_name.setText(model_widget.old_label_name)
+                return
+
+            # Change the actual file name.
+            old_model_name = model_widget.label_name.text()
+            old_file_path = Path("models") / f"{old_model_name}.pt"
+            if old_file_path.exists():
+                old_file_path.rename(new_file_path)
+
+            # Change the name for the model on all classifications which used this model.
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                           UPDATE classifier
+                           SET model = ?
+                           WHERE model = ?
+                           """, (new_model_name, old_model_name))
+            conn.commit()
+            conn.close()
+
+            # Display the new name.
+            model_widget.label_name.setText(new_model_name)
+            model_widget.old_label_name = new_model_name
+            model_widget.name = new_model_name
 
 
     def numpy_to_qimage(self, peak_data: np.ndarray) -> QtGui.QImage:
@@ -686,28 +773,78 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
 
 class ModelTileWidget(QtWidgets.QWidget, Ui_ModelTile):
-    tile_clicked = QtCore.Signal(str)
+    # Signal definitions.
+    delete_clicked = QtCore.Signal(object)
+    rename_clicked = QtCore.Signal(object)
+    tile_clicked = QtCore.Signal(object)
 
-    def __init__(self, original_filename: str, display_name: str):
+    def __init__(self, name: str):
         super().__init__()
         self.setupUi(self)
 
-        # Daten speichern
-        self.original_filename = original_filename
-        self.display_name = display_name
+        # 1. Texte in der UI setzen
+        self.name = name
+        self.label_name.setText(name)
+        self.old_label_name = name
 
-        # Den Namen im UI-Label setzen
-        self.label_name.setText(self.display_name)
+        # 2. Buttons mit den Signalen verknüpfen
+        self.button_delete.clicked.connect(self.emit_delete)
+        self.button_rename.clicked.connect(self.emit_rename)
 
-        # Optional: Rename Button Signal verknüpfen (falls du das später brauchst)
-        # self.button_rename.clicked.connect(self.emit_rename)
+        # Hover effects for buttons.
+        self.button_rename.enterEvent = lambda e: self.button_hover_effect(self.button_rename, 'edit_orange', True)
+        self.button_rename.leaveEvent = lambda e: self.button_hover_effect(self.button_rename, 'edit_grey', False)
+        self.button_delete.enterEvent = lambda e: self.button_hover_effect(self.button_delete, 'delete_magenta', True)
+        self.button_delete.leaveEvent = lambda e: self.button_hover_effect(self.button_delete, 'delete_grey', False)
+
+        # Make the background styleable [sometimes needed if a widget is not complex enough].
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_StyledBackground, True)
+
 
     def mousePressEvent(self, event):
         """Fängt Klicks auf das gesamte Tile ab."""
         if event.button() == QtCore.Qt.LeftButton:
-            self.tile_clicked.emit(self.original_filename)
+            self.tile_clicked.emit(self)
         super().mousePressEvent(event)
 
+
+    def set_selected(self, is_selected: bool) -> None:
+        if is_selected:
+            self.label_name.setStyleSheet(
+                "border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
+        else:
+            self.label_name.setStyleSheet(
+                "border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
+
+
+    def button_hover_effect(self,
+                            button: QtWidgets.QPushButton,
+                            icon_name: str,
+                            hover: bool) -> None:
+        """
+        This function takes in a PushButton widget and changes the button icon depending on whether the mouse of the user
+        is hovering over the button or not and creates a button hover effect.
+        =============================================================================
+        :param button: The button widget where the mouse is hovering over.
+        :param icon_name: The name of the button icon to display.
+        :param hover: Boolean value for the hovering mouse [True - Mouse is hovering | False - Mouse is not hovering]
+        =============================================================================
+        :return: None.
+        """
+
+        # If the mouse is hovering over the button show this button picture.
+        if hover:
+            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+        else:
+            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+
+
+    def emit_delete(self):
+        self.delete_clicked.emit(self)
+
+
+    def emit_rename(self):
+        self.rename_clicked.emit(self)
 
 
 class ModelReconTile(QtWidgets.QWidget, Ui_ModelReconTile):
@@ -821,5 +958,4 @@ class ModelReconTile(QtWidgets.QWidget, Ui_ModelReconTile):
         q_image.setColorTable(qt_color_table)
         pixmap = QtGui.QPixmap.fromImage(q_image).scaled(70, 70, QtCore.Qt.KeepAspectRatio)
         self.peak_window_original.setPixmap(pixmap)
-        # TODO ... The recon picture should be displayed here!
         self.peak_window_recon.setPixmap(pixmap)

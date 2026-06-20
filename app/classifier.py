@@ -57,8 +57,9 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         super().showEvent(event)
         # Check how many active consensus peaks are there.
         self.active_consensus_peaks = self.get_active_consensus_peaks_count()
-
         self.label_consesus_peak_counter.setText(f"This classification uses {self.active_consensus_peaks} consensus peaks.")
+        # Reload the classification list.
+        self.load_classifiers_to_ui()
 
 
     def get_active_consensus_peaks_count(self) -> int:
