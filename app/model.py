@@ -36,6 +36,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         self.pushButton_toggle_peak_marker.clicked.connect(self.toggle_peak_markers)
         self.consensus_peak_widgets = {}
         self.selected_consensus_peak_id = None
+        self.best_spectrum = None
 
         # ScrollArea-Layout oben ausrichten, damit Modelle nicht vertikal zentriert schweben
         if self.scrollArea_models_Contents.layout() is not None:
@@ -105,6 +106,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         """
 
         super().showEvent(event)
+        self.best_spectrum = self.get_spectrum_with_most_consensus_peaks()
         self.load_consensus_peaks()
 
 
@@ -142,27 +144,34 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
         # The number of columns inside the scroll area.
         max_columns = 2
+        index_skipped = 0
 
         # Loop through all peaks.
         for index, (consensus_id, retention_time, drift_time, min_intensity) in enumerate(consensus_peaks_data):
-            # Calculate the position of the peak widget inside the peak scroll area.
-            row = index // max_columns
-            column = index % max_columns
             # The path to the peak .npy file.
-            absolute_npy_path = Path(self.project_path).parent / "dataset"
-            # Create the consensus peak widget tile and add it to the scroll area.
-            consensus_peak_tile = ModelReconTile(db_path=self.db_path,
-                                                consensus_id=consensus_id,
-                                                retention_time=retention_time,
-                                                drift_time=drift_time,
-                                                npy_path=absolute_npy_path)
+            absolute_npy_path = Path(self.project_path).parent / "dataset" / self.best_spectrum['label_name'] / self.best_spectrum['spectrum_name'] / "consensus_peaks"
+            absolute_npy_file = absolute_npy_path / f"CID_{consensus_id}_PW_{self.best_spectrum['label_name']}_{self.best_spectrum['spectrum_name']}_21x21.npy"
 
-            # Add the consensus peak to the dictionary.
-            self.consensus_peak_widgets[consensus_id] = consensus_peak_tile
-            # Add a mouse click event listener to the peak tile.
-            consensus_peak_tile.mousePressEvent = lambda event, peak_id=consensus_id: self.on_peak_tile_clicked(peak_id)
-            # Add the peak widget to the scroll area.
-            self.scrollArea_recon_Contents.layout().addWidget(consensus_peak_tile, row, column)
+            if absolute_npy_file.exists():
+                # Calculate the position of the peak widget inside the peak scroll area.
+                row = (index - index_skipped) // max_columns
+                column = (index - index_skipped) % max_columns
+
+                # Create the consensus peak widget tile and add it to the scroll area.
+                consensus_peak_tile = ModelReconTile(db_path=self.db_path,
+                                                     consensus_id=consensus_id,
+                                                     retention_time=retention_time,
+                                                     drift_time=drift_time,
+                                                     npy_file=absolute_npy_file)
+
+                # Add the consensus peak to the dictionary.
+                self.consensus_peak_widgets[consensus_id] = consensus_peak_tile
+                # Add a mouse click event listener to the peak tile.
+                consensus_peak_tile.mousePressEvent = lambda event, peak_id=consensus_id: self.on_peak_tile_clicked(peak_id)
+                # Add the peak widget to the scroll area.
+                self.scrollArea_recon_Contents.layout().addWidget(consensus_peak_tile, row, column)
+            else:
+                index_skipped += 1
 
         self.scrollArea_recon_Contents.layout().setRowStretch(self.scrollArea_recon_Contents.layout().rowCount(), 1)
         self.scrollArea_recon_Contents.layout().setColumnStretch(max_columns, 1)
@@ -292,11 +301,9 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         # Set a dark background for the plot.
         plt.style.use('dark_background')
 
-        best_spectrum = self.get_spectrum_with_most_consensus_peaks()
-
         # Path to the hdf5 file.
-        hdf5_path = self.project_path.parent / "dataset" / best_spectrum['label_name'] / best_spectrum['spectrum_name']
-        hdf5_file = hdf5_path / f"{best_spectrum['spectrum_name']}.hdf5"
+        hdf5_path = self.project_path.parent / "dataset" / self.best_spectrum['label_name'] / self.best_spectrum['spectrum_name']
+        hdf5_file = hdf5_path / f"{self.best_spectrum['spectrum_name']}.hdf5"
         # Load the spectrum from the .hdf5 file.
         spectrum = ims.Spectrum.read_hdf5(hdf5_file)
 
@@ -347,13 +354,15 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         self.canvas_peak_marker_base = None
         self.canvas_peak_marker_fill = None
 
+        filtered_peaks = [p for p in peak_times if p[0] in self.consensus_peak_widgets]
+
         # If there are peaks mark them on the plot canvas.
-        if peak_times and self.show_peak_marker:
+        if filtered_peaks and self.show_peak_marker:
             # Extract peak information.
-            peak_ids = [p[0] for p in peak_times]
-            retention_time = [p[1] for p in peak_times]
-            drift_time = [p[2] for p in peak_times]
-            is_active = [p[3] for p in peak_times]
+            peak_ids = [p[0] for p in filtered_peaks]
+            retention_time = [p[1] for p in filtered_peaks]
+            drift_time = [p[2] for p in filtered_peaks]
+            is_active = [p[3] for p in filtered_peaks]
 
             # Color list for the peak markers depending on their selection.
             colors = []
@@ -501,6 +510,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
         query = """
                 SELECT p.spectrum_id, 
+                       p.consensus_id,
                        REPLACE(s.name, '.mea', '')    AS spectrum_name,
                        l.name                         AS label_name,
                        COUNT(DISTINCT p.consensus_id) AS consensus_peak_count
@@ -519,10 +529,12 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
         return {
             "spectrum_id": result[0],
-            "spectrum_name": result[1],
-            "label_name": result[2],
-            "count": result[3]
+            "consensus_id": result[1],
+            "spectrum_name": result[2],
+            "label_name": result[3],
+            "count": result[4]
         }
+
 
     def load_models_to_scrollarea(self):
         """
@@ -562,13 +574,114 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
             # Ins Layout packen
             layout.addWidget(tile)
 
+
     def on_model_selected(self, model_filename: str):
         """
-        Wird aufgerufen, sobald der User auf ein Modell in der Liste klickt.
+        Wird aufgerufen, sobald der User auf ein Modell in der linken Liste klickt.
         """
-        print(f"Klick auf Modell: {model_filename}")
-        # HIER kommt im nächsten Schritt dein Code rein, um das Modell
-        # in den Speicher zu laden und die Rekonstruktionen (Preview) zu berechnen!
+
+        # 1. Das PyTorch Modell instanziieren (Parameter ggf. an dein Training anpassen!)
+        self.current_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.current_vae_model = vae_model.VariationalAutoencoderCNN(
+            input_layers=1,
+            hidden_layers=64,
+            latent_dimension=16
+        ).to(self.current_device)
+
+        # 2. Die Gewichte (.pt Datei) laden
+        self.current_vae_model.load_model(model_dir="models", file_name=model_filename, device=self.current_device)
+
+        # 3. WICHTIG: Das Modell in den Evaluierungs-Modus setzen (deaktiviert Dropout etc.)
+        self.current_vae_model.eval()
+
+        # 4. Alle Bilder auf der rechten Seite aktualisieren
+        self.update_all_reconstructions()
+
+
+    def numpy_to_qimage(self, peak_data: np.ndarray) -> QtGui.QImage:
+        """
+        Wandelt ein 2D-Numpy Array in ein eingefärbtes QImage um.
+        """
+        # Werte zwischen 0 und 255 normalisieren
+        if peak_data.max() > peak_data.min():
+            normalized_peak_data = (peak_data - peak_data.min()) / (peak_data.max() - peak_data.min()) * 255
+        else:
+            normalized_peak_data = peak_data * 0
+
+        image_data = normalized_peak_data.astype(np.uint8)
+        height, width = image_data.shape
+
+        # Colormap anwenden (Nutze die moderne Methode von matplotlib)
+        color_map = plt.colormaps.get_cmap('RdBu_r')
+
+        # Bild erstellen
+        q_image = QtGui.QImage(image_data.data, width, height, width, QtGui.QImage.Format_Indexed8)
+
+        # Farbpalette anwenden
+        qt_color_table = []
+        for i in range(256):
+            rgba = color_map(i)
+            qt_color_table.append(QtGui.qRgb(
+                int(rgba[0] * 255),
+                int(rgba[1] * 255),
+                int(rgba[2] * 255)
+            ))
+        q_image.setColorTable(qt_color_table)
+
+        return q_image
+
+
+    def update_all_reconstructions(self):
+        """
+        Geht durch alle angezeigten Consensus-Peaks auf der rechten Seite und generiert
+        die Rekonstruktion mit dem aktuell ausgewählten VAE-Modell neu.
+        """
+        # Wenn noch kein Modell geklickt wurde, brechen wir ab
+        if not hasattr(self, "current_vae_model") or self.current_vae_model is None:
+            return
+
+        # self.consensus_peak_widgets ist dein Dictionary, in dem du die rechten Tiles speicherst
+        for peak_id, tile_widget in self.consensus_peak_widgets.items():
+
+            # 1. Original-Numpy-Array laden
+            npy_path = tile_widget.npy_file
+
+            # Load the peak window from the path.
+            peak_window = np.load(npy_path)
+            peak_window_dimension = 4 * 5 + 1
+
+            # Normalize the peak window.
+            min_intensity = peak_window.min()
+            max_intensity = peak_window.max()
+            if max_intensity - min_intensity == 0:
+                npy_file_normalized = np.zeros_like(peak_window)
+            else:
+                npy_file_normalized = (peak_window - min_intensity) / (max_intensity - min_intensity)
+
+            # 2. Numpy-Array in PyTorch Tensor umwandeln
+            peak_window_tensor = torch.from_numpy(npy_file_normalized).float().view(1, 1, peak_window_dimension, peak_window_dimension).to(self.current_device)
+
+            # 3. Das Bild durch das Modell jagen (Ohne Gradienten -> spart Speicher & ist schneller)
+            with torch.inference_mode():
+                # Ein VAE gibt meist Rekonstruktion, Mean, Log-Variance zurück.
+                # Wir brauchen nur die Rekonstruktion (Index 0).
+                reconstruction, mean, log_var = self.current_vae_model(peak_window_tensor)
+
+            # 4. Den Tensor wieder zurück in ein reines Numpy Array (2D) verwandeln
+            recon_data = reconstruction.squeeze().cpu().numpy()
+
+            # 5. Unseren Helfer von oben nutzen, um das QImage zu generieren
+            q_image = self.numpy_to_qimage(recon_data)
+            pixmap = QtGui.QPixmap.fromImage(q_image)
+
+            # 6. Dem rechten Label (peak_window_recon) das Bild zuweisen!
+            # Achte darauf, dass das Bild auch schön skaliert wird, falls das Label eine feste Größe hat.
+            pixmap_scaled = pixmap.scaled(
+                tile_widget.peak_window_recon.size(),
+                QtCore.Qt.KeepAspectRatio,
+                QtCore.Qt.SmoothTransformation
+            )
+            tile_widget.peak_window_recon.setPixmap(pixmap_scaled)
 
 
 
@@ -603,7 +716,7 @@ class ModelReconTile(QtWidgets.QWidget, Ui_ModelReconTile):
                  consensus_id: int,
                  retention_time: float,
                  drift_time: float,
-                 npy_path: Path):
+                 npy_file: Path):
 
         super().__init__()
         self.setupUi(self)
@@ -612,6 +725,7 @@ class ModelReconTile(QtWidgets.QWidget, Ui_ModelReconTile):
         self.consensus_id = consensus_id
         self.retention_time = retention_time
         self.drift_time = drift_time
+        self.npy_file = None
         self.is_selected = False
 
         # Erlaube dem Custom QWidget, Hintergründe per Stylesheet zu zeichnen
@@ -621,18 +735,10 @@ class ModelReconTile(QtWidgets.QWidget, Ui_ModelReconTile):
         self.icon_active = QtGui.QIcon("ui/_pics/icons/eye_open.png")
         self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")
 
-        # Connect to the datase and get one of the peak npy files which is connected to this consensus peak.
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        npy_file_query = "SELECT npy_file FROM peaks WHERE consensus_id = ? LIMIT 1"
-        cursor.execute(npy_file_query, (consensus_id,))
-        npy_file_result = cursor.fetchone()
-        conn.close()
-
         # Define the absolute path to the npy file.
-        npy_file = npy_path / npy_file_result[0]
+        self.npy_file = npy_file
         # Set the image to the peak image label.
-        self.set_peak_tile_image(npy_file)
+        self.set_peak_tile_image(self.npy_file)
         # Text area of the widget.
         self.position_label.setText(f"DT: {drift_time:.2f} | RT: {retention_time:.2f}")
         # Set hover mouse icon

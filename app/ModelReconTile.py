@@ -46,13 +46,13 @@ class Ui_ModelReconTile(object):
         self.horizontalLayout.setSpacing(3)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.peak_window_recon = QLabel(self.peak_window_container)
-        self.peak_window_recon.setObjectName(u"peak_window_recon")
-        self.peak_window_recon.setMinimumSize(QSize(70, 70))
-        self.peak_window_recon.setMaximumSize(QSize(70, 70))
-        self.peak_window_recon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.peak_window_original = QLabel(self.peak_window_container)
+        self.peak_window_original.setObjectName(u"peak_window_original")
+        self.peak_window_original.setMinimumSize(QSize(70, 70))
+        self.peak_window_original.setMaximumSize(QSize(70, 70))
+        self.peak_window_original.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.horizontalLayout.addWidget(self.peak_window_recon)
+        self.horizontalLayout.addWidget(self.peak_window_original)
 
         self.arrow_left = QLabel(self.peak_window_container)
         self.arrow_left.setObjectName(u"arrow_left")
@@ -63,13 +63,13 @@ class Ui_ModelReconTile(object):
 
         self.horizontalLayout.addWidget(self.arrow_left, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        self.peak_window_original = QLabel(self.peak_window_container)
-        self.peak_window_original.setObjectName(u"peak_window_original")
-        self.peak_window_original.setMinimumSize(QSize(70, 70))
-        self.peak_window_original.setMaximumSize(QSize(70, 70))
-        self.peak_window_original.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.peak_window_recon = QLabel(self.peak_window_container)
+        self.peak_window_recon.setObjectName(u"peak_window_recon")
+        self.peak_window_recon.setMinimumSize(QSize(70, 70))
+        self.peak_window_recon.setMaximumSize(QSize(70, 70))
+        self.peak_window_recon.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.horizontalLayout.addWidget(self.peak_window_original)
+        self.horizontalLayout.addWidget(self.peak_window_recon)
 
 
         self.verticalLayout.addWidget(self.peak_window_container)
@@ -97,9 +97,9 @@ class Ui_ModelReconTile(object):
 
     def retranslateUi(self, ModelReconTile):
         ModelReconTile.setWindowTitle(QCoreApplication.translate("ModelReconTile", u"Form", None))
-        self.peak_window_recon.setText(QCoreApplication.translate("ModelReconTile", u"Original", None))
+        self.peak_window_original.setText(QCoreApplication.translate("ModelReconTile", u"Original", None))
         self.arrow_left.setText("")
-        self.peak_window_original.setText(QCoreApplication.translate("ModelReconTile", u"Recon", None))
+        self.peak_window_recon.setText(QCoreApplication.translate("ModelReconTile", u"Recon", None))
         self.position_label.setText(QCoreApplication.translate("ModelReconTile", u"RT; XX.X - DT: XXX.XX", None))
     # retranslateUi
 
