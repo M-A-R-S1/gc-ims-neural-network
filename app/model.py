@@ -1,8 +1,6 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtCore import QSize, Qt, Signal, QTimer
-from PySide6.QtGui import QFont
 from ModelWidget import Ui_ModelWidget
 from ModelTile import Ui_ModelTile
 from dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
@@ -21,10 +19,6 @@ import re
 import shutil
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report
-
 
 class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
     def __init__(self, project_path: Path):
@@ -103,8 +97,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
     def showEvent(self, event) -> None:
         """
-        This function is called every time the user enters this page and checks if all peaks are connected to a consensus peak inside the database.
-        If peaks are not connected a consensus peak detection dialog is prompted to the user.
+        This function is called every time the user enters this page.
         =============================================================================
         :param event: The page display event.
         =============================================================================
@@ -126,7 +119,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
     def load_consensus_peaks(self) -> None:
         """
-        This function is called when this page is loaded or when the consensus peak detection is finished.
+        This function is called when this page is loaded.
         It displays all consensus peaks as widgets in the peak scroll area.
         =============================================================================
         :return: None.
@@ -362,7 +355,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
             drift_time = [p[2] for p in peak_times]
             is_active = [p[3] for p in peak_times]
 
-            # Color list for the peak markers, depending on the activity status and their selection.
+            # Color list for the peak markers depending on their selection.
             colors = []
             for peak_id, activity in zip(peak_ids, is_active):
                 if peak_id == self.selected_consensus_peak_id:
@@ -530,11 +523,6 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
             "label_name": result[2],
             "count": result[3]
         }
-
-
-
-
-
 
     def load_models_to_scrollarea(self):
         """
