@@ -103,7 +103,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
 
         super().showEvent(event)
         # Check if all peaks are connected to a consensus peak.
-        self.check_speaks_for_consensus()
+        self.check_peaks_for_consensus()
 
 
     def show_consensus_peak_calc_dialog(self) -> None:
@@ -159,7 +159,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         self.worker.progress_update.connect(self.consensus_progress_dialog.update_progress)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.consensus_progress_dialog.accept)
-        self.worker.finished.connect(self.check_speaks_for_consensus)
+        self.worker.finished.connect(self.check_peaks_for_consensus)
         self.consensus_progress_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
         self.thread.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
@@ -168,7 +168,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         self.thread.start()
 
 
-    def check_speaks_for_consensus(self) -> None:
+    def check_peaks_for_consensus(self) -> None:
         """
         This function checks if all peaks inside the database are associated with a consensus peak id.
         If peaks are missing this id the consensus peak detection dialog is shown to the user.

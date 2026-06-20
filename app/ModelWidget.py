@@ -334,17 +334,17 @@ class Ui_ModelWidget(object):
 "background-color: transparent;\n"
 "")
         self.scrollArea_recon.setWidgetResizable(True)
-        self.scrollArea_peak_Contents = QWidget()
-        self.scrollArea_peak_Contents.setObjectName(u"scrollArea_peak_Contents")
-        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 768))
-        self.gridLayout_2 = QGridLayout(self.scrollArea_peak_Contents)
+        self.scrollArea_recon_Contents = QWidget()
+        self.scrollArea_recon_Contents.setObjectName(u"scrollArea_recon_Contents")
+        self.scrollArea_recon_Contents.setGeometry(QRect(0, 0, 530, 768))
+        self.gridLayout_2 = QGridLayout(self.scrollArea_recon_Contents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.gridLayout_2.setVerticalSpacing(10)
         self.verticalSpacer_3 = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.gridLayout_2.addItem(self.verticalSpacer_3, 0, 0, 1, 1)
 
-        self.scrollArea_recon.setWidget(self.scrollArea_peak_Contents)
+        self.scrollArea_recon.setWidget(self.scrollArea_recon_Contents)
 
         self.verticalLayout_8.addWidget(self.scrollArea_recon)
 
@@ -377,6 +377,27 @@ class Ui_ModelWidget(object):
 
         self.verticalLayout_9.addWidget(self.preview_image)
 
+        self.pushButton_toggle_peak_marker = QPushButton(self.preview_container)
+        self.pushButton_toggle_peak_marker.setObjectName(u"pushButton_toggle_peak_marker")
+        self.pushButton_toggle_peak_marker.setMinimumSize(QSize(0, 60))
+        font7 = QFont()
+        font7.setFamilies([u"Lato"])
+        font7.setPointSize(20)
+        self.pushButton_toggle_peak_marker.setFont(font7)
+        self.pushButton_toggle_peak_marker.setStyleSheet(u"QPushButton {\n"
+"    border: 1px solid #ff9000;\n"
+"    background-color: #232323; \n"
+"    color: #ff9000;\n"
+"    border-radius: 10px;\n"
+"	margin-top: 10px;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: #131313;\n"
+"}")
+
+        self.verticalLayout_9.addWidget(self.pushButton_toggle_peak_marker)
+
 
         self.horizontalLayout.addWidget(self.preview_container)
 
@@ -402,5 +423,6 @@ class Ui_ModelWidget(object):
         self.pushButton_train_model.setText(QCoreApplication.translate("ModelWidget", u"Start training", None))
         self.label_recon_header.setText(QCoreApplication.translate("ModelWidget", u"Model reconstructions", None))
         self.label_preview.setText(QCoreApplication.translate("ModelWidget", u"Spectrum preview", None))
+        self.pushButton_toggle_peak_marker.setText(QCoreApplication.translate("ModelWidget", u"Hide markers", None))
     # retranslateUi
 
