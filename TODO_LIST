@@ -24,9 +24,6 @@
     - Peak export function
     - python code export function [better show a github link instead?]
 
-- New sidebar menu point -> Model
-    - The user can here train and test a model with the current dataset.
-
 - Classifier:
     - Save consensus peaks which are part of a classification in a separate table like 'cl_consensus_peaks'
     - Try to save the random forest model to a folder.
