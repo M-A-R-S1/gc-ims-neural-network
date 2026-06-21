@@ -45,7 +45,7 @@ class VaeDataset(Dataset):
             npy_file_normalized = (npy_file - min_intensity) / (max_intensity - min_intensity)
 
         image = self.transform(npy_file_normalized)
-        class_name = self.npy_paths[index].parent.parent.parent.parent.name
+        class_name = self.npy_paths[index].parent.parent.parent.name
         class_idx = self.class_dict[class_name]
 
         return image, class_idx

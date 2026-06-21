@@ -13,12 +13,12 @@ from preprocessing import PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import ims
 import torch
-import vae_model
-import plot
 import re
-import shutil
+import vae_model
+import dataloader
+from torch.utils.data import DataLoader
+from sklearn.model_selection import train_test_split
 import numpy as np
-import pandas as pd
 
 class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
     def __init__(self, project_path: Path):
@@ -46,6 +46,9 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         # Initiale Modelle laden
         self.load_models_to_scrollarea()
         self.load_available_devices_to_combobox()
+        self.update_peak_count_info()
+
+        self.pushButton_train_model.clicked.connect(self.on_start_training_clicked)
 
         # Defining the scroll area layout.
         self.scrollArea_recon_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -772,6 +775,20 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
             tile_widget.peak_window_recon.setPixmap(pixmap_scaled)
 
 
+    def update_peak_count_info(self):
+        """Liest die Anzahl der verfügbaren Peaks aus und aktualisiert das UI-Label."""
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM peaks")
+        total_peaks = cursor.fetchone()[0]
+        conn.close()
+
+        if total_peaks > 0:
+            self.label_model_info.setText(
+                f"This model will be trained on {total_peaks} peaks.")
+
+
     def load_available_devices_to_combobox(self):
 
         # Clear the combobox entries.
@@ -795,6 +812,67 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         # By default, preselect the strongest device [option 2, which is the first found GPU device].
         if self.comboBox_device.count() > 1:
             self.comboBox_device.setCurrentIndex(1)
+
+
+    def on_start_training_clicked(self):
+        # 1. Namen validieren und bereinigen
+        raw_name = self.lineEdit_name.text().strip()
+        model_name = re.sub(r'[^a-zA-Z0-9\s_-]', '', raw_name).strip()
+
+        if not model_name:
+            CustomMessageDialog.show_error("Input Error", "Please input a valid model name!")
+            return
+
+        # 2. Duplikat Check: Gibt es das Modell schon im Ordner "models"?
+        new_file_path = Path("models") / f"{model_name}.pt"
+        if new_file_path.exists():
+            CustomMessageDialog.show_error("Duplication Error",
+                                           f"A model with the name '{model_name}' already exists. Please choose another name.")
+            return
+
+        # 3. Werte aus den Dropdowns auslesen
+        epochs = int(self.comboBox_epochs.currentText())
+        device_str = self.comboBox_device.currentData()
+
+        # 4. Den Custom Progress Dialog vorbereiten und anzeigen
+        self.training_progress_dialog = CustomProgressDialog(title="Training in progress",
+                                                             header="Training new model")
+        self.training_progress_dialog.show()
+
+        # 5. Den QThread und den neuen Worker aufsetzen
+        self.thread = QtCore.QThread()
+        self.worker = TrainingWorker(
+            project_path=self.project_path,
+            db_path=self.db_path,
+            model_name=model_name,
+            epochs=epochs,
+            device_str=device_str
+        )
+        self.worker.moveToThread(self.thread)
+
+        # 6. Alle Signale sauber verknüpfen
+        self.thread.started.connect(self.worker.run)
+        # Leitet den Fortschritt (1/50 Epochen) an den Dialog weiter
+        self.worker.progress_update.connect(self.training_progress_dialog.update_progress)
+        # Zeigt eventuelle PyTorch/Numpy Fehler direkt als Popup-Message in der GUI an
+        self.worker.error_occurred.connect(
+            lambda msg: CustomMessageDialog.show_error("Training Error", f"Something went wrong:\n{msg}"))
+
+        # Thread aufräumen, wenn beendet
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+
+        # Lade-Dialog schließen und UI (ScrollArea links) neu laden
+        self.worker.finished.connect(self.training_progress_dialog.accept)
+        self.worker.finished.connect(self.load_models_to_scrollarea)
+
+        # Den "Abbrechen"-Button im Ladefenster mit dem Worker verknüpfen
+        self.training_progress_dialog.button_no.clicked.connect(self.worker.stop)
+
+        # 7. Textfeld leeren und Trainingsthread starten!
+        self.lineEdit_name.clear()
+        self.thread.start()
 
 
 class ModelTileWidget(QtWidgets.QWidget, Ui_ModelTile):
@@ -984,3 +1062,114 @@ class ModelReconTile(QtWidgets.QWidget, Ui_ModelReconTile):
         pixmap = QtGui.QPixmap.fromImage(q_image).scaled(70, 70, QtCore.Qt.KeepAspectRatio)
         self.peak_window_original.setPixmap(pixmap)
         self.peak_window_recon.setPixmap(pixmap)
+
+
+
+class TrainingWorker(QtCore.QObject):
+    # Signal definitions.
+    finished = QtCore.Signal()
+    progress_update = QtCore.Signal(int, int)  # (Aktuelle Epoche, Total Epochen)
+    error_occurred = QtCore.Signal(str)
+
+    def __init__(self,
+                 project_path: Path,
+                 db_path: Path,
+                 model_name: str,
+                 epochs: int,
+                 device_str: str):
+
+        super().__init__()
+        self.project_path = project_path
+        self.db_path = db_path
+        self.model_name = model_name
+        self.epochs = epochs
+        self.device = torch.device(device_str)
+        self.is_stopped = False
+
+    def stop(self):
+        """Wird aufgerufen, wenn der User im Ladefenster auf 'Abbrechen' klickt."""
+        self.is_stopped = True
+
+    def run(self):
+        try:
+            # 1. Daten laden (Pfade sammeln)
+            dataset_dir = self.project_path.parent / "dataset"
+            npy_paths = []
+
+            # Connect to the database and get all peak .npy files.
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT npy_file FROM peaks")
+            peak_rows = cursor.fetchall()
+
+            for row in peak_rows:
+                full_path = dataset_dir / Path(row[0])
+                npy_paths.append(full_path)
+
+            # Get all unique labels.
+            cursor.execute("SELECT name FROM labels ORDER BY name")
+            label_rows = cursor.fetchall()
+            conn.close()
+
+            class_dict = {row[0]: idx for idx, row in enumerate(label_rows)}
+
+            # Train/Test Split
+            train_paths, _ = train_test_split(npy_paths, test_size=0.20, shuffle=True)
+
+            # 2. Dataset und Dataloader aufsetzen
+            train_dataset = dataloader.VaeDataset(npy_paths=train_paths, class_dict=class_dict, window_size=5)
+            train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+
+            # 3. Modell initialisieren
+            model = vae_model.VariationalAutoencoderCNN(input_layers=1,
+                                                        hidden_layers=64,
+                                                        latent_dimension=16).to(self.device)
+
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.00005)
+
+            beta_warmup = int(self.epochs/5)
+            target_beta = 1.0
+
+            # 4. Der eigentliche Training-Loop
+            for epoch in range(self.epochs):
+                if self.is_stopped:
+                    break  # User hat auf "Abbrechen" geklickt
+
+                # Calculate the current beta value [Beta annealing].
+                if epoch < beta_warmup:
+                    current_beta = target_beta * (epoch / beta_warmup)
+                else:
+                    current_beta = target_beta
+
+                model.train()
+
+                for feature, label in train_dataloader:
+                    # Put image and label on the device.
+                    feature, label = feature.to(self.device), label.to(self.device)
+
+                    # 1. Forward pass.
+                    reconstruction, mean, log_variance = model(feature)
+                    # 2. Calculate the loss.
+                    total_loss, recon_loss, kld_loss = vae_model.vae_loss(feature, reconstruction, mean, log_variance, current_beta)
+                    # Divide the loss with the bach size.
+                    normalized_loss = total_loss / feature.size(0)
+                    # 3 Clear the gardient.
+                    optimizer.zero_grad()
+                    # 4. Backpropagation.
+                    normalized_loss.backward()
+                    # 5. Adjust parameters through gradient decent.
+                    optimizer.step()
+
+                # Nach jeder abgeschlossenen Epoche den Ladebalken updaten!
+                self.progress_update.emit(epoch + 1, self.epochs)
+
+            # 5. Modell speichern, falls das Training komplett durchlief
+            if not self.is_stopped:
+                model.save_model(model_dir="models", file_name=f"{self.model_name}.pt")
+
+        except Exception as e:
+            # Falls irgendwas in PyTorch crasht, die GUI sauber mit dem Error benachrichtigen
+            self.error_occurred.emit(str(e))
+
+        finally:
+            self.finished.emit()
