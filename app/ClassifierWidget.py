@@ -115,7 +115,7 @@ class Ui_ClassifierWidget(object):
         self.scrollArea_classifier.setWidgetResizable(True)
         self.scrollArea_classifier_Contents = QWidget()
         self.scrollArea_classifier_Contents.setObjectName(u"scrollArea_classifier_Contents")
-        self.scrollArea_classifier_Contents.setGeometry(QRect(0, 0, 748, 467))
+        self.scrollArea_classifier_Contents.setGeometry(QRect(0, 0, 748, 466))
         self.gridLayout = QGridLayout(self.scrollArea_classifier_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -318,6 +318,27 @@ class Ui_ClassifierWidget(object):
 
         self.verticalLayout_3.addWidget(self.frame_classification_details)
 
+        self.pushButton_load_single_spectrum = QPushButton(self.right_container)
+        self.pushButton_load_single_spectrum.setObjectName(u"pushButton_load_single_spectrum")
+        self.pushButton_load_single_spectrum.setMinimumSize(QSize(0, 50))
+        font8 = QFont()
+        font8.setFamilies([u"Lato"])
+        font8.setPointSize(20)
+        self.pushButton_load_single_spectrum.setFont(font8)
+        self.pushButton_load_single_spectrum.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.pushButton_load_single_spectrum.setStyleSheet(u"QPushButton {\n"
+"    border: 1px solid #00eaff;\n"
+"    background-color: #232323; \n"
+"    color: #00eaff;\n"
+"    border-radius: 10px;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"	background-color: #131313;\n"
+"}")
+
+        self.verticalLayout_3.addWidget(self.pushButton_load_single_spectrum)
+
 
         self.horizontalLayout.addWidget(self.right_container)
 
@@ -343,5 +364,6 @@ class Ui_ClassifierWidget(object):
         self.label_consesus_peak_counter.setText(QCoreApplication.translate("ClassifierWidget", u"This classification uses x consensus peaks.", None))
         self.pushButton_new_classification.setText(QCoreApplication.translate("ClassifierWidget", u"Start classification", None))
         self.label_detail_header.setText(QCoreApplication.translate("ClassifierWidget", u"Classification details", None))
+        self.pushButton_load_single_spectrum.setText(QCoreApplication.translate("ClassifierWidget", u"Classify single spectrum", None))
     # retranslateUi
 

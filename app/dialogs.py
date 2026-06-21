@@ -90,6 +90,12 @@ class CustomMessageDialog(QtWidgets.QDialog, Ui_MessageDialog):
         dlg = CustomMessageDialog(title, message, "error", parent)
         dlg.exec()
 
+    @staticmethod
+    def show_info(title, message, parent=None):
+        dlg = CustomMessageDialog(title, message, "info", parent)
+        dlg.exec()
+
+
 
 class CustomYesNoDialog(QtWidgets.QDialog, Ui_YesNoDialog):
     def __init__(self, title, message, type, parent=None):

@@ -16,6 +16,9 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
+from collections import Counter
+import joblib
+import ims
 
 
 class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
@@ -40,6 +43,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
         # Connect the button
         self.pushButton_new_classification.clicked.connect(self.show_new_classifier_dialog)
+        self.pushButton_load_single_spectrum.clicked.connect(self.on_load_single_spectrum_clicked)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -60,6 +64,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         self.label_consesus_peak_counter.setText(f"This classification uses {self.active_consensus_peaks} consensus peaks.")
         # Reload the classification list.
         self.load_classifiers_to_ui()
+        self.load_models_to_dropdown()
 
 
     def get_active_consensus_peaks_count(self) -> int:
@@ -487,6 +492,166 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         self.thread.start()
 
 
+    def on_load_single_spectrum_clicked(self):
+        """Öffnet den File-Dialog und startet die Klassifikation."""
+
+        # 1. Prüfen, ob der Nutzer links überhaupt ein Modell ausgewählt hat
+        if not self.current_selected_classifier_id:
+            CustomMessageDialog.show_error("Missing Selection",
+                                           "Please select a classification to classify.")
+            return
+
+        # 2. File-Dialog öffnen, um die .mea Datei zu finden
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Select GC-IMS Spectrum",
+            str(self.project_path.parent),  # Start-Ordner
+            "Spectrum Files (*.mea);;All Files (*)"
+        )
+
+        if not file_path:
+            return  # User hat auf "Abbrechen" geklickt
+
+        # 3. Klassifikation starten (in try-except für sichere Fehlerbehandlung)
+        try:
+            self.process_and_classify_spectrum(Path(file_path))
+        except Exception as e:
+            print(e)
+            CustomMessageDialog.show_error("Classification Error", f"Ein Fehler ist aufgetreten:\n{e}")
+
+
+
+    def process_and_classify_spectrum(self, spectrum_path: Path):
+        """Führt Preprocessing, Feature-Extraktion und Vorhersage durch."""
+
+        window_size = 5
+        peak_window_dimension = 4 * window_size + 1
+
+        # A. PREPROCESSING
+        spec = ims.Spectrum.read_mea(str(spectrum_path)).binning()
+        spectrum = spec.copy()
+        spectrum.riprel()
+        spectrum.sub_first_rows(50)
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT drift_start_cut, drift_end_cut, retention_start_cut, retention_end_cut FROM settings WHERE id = 1")
+        settings_data = cursor.fetchone()
+        d_start, d_stop, r_start, r_stop = settings_data
+
+        spectrum.cut_dt(start=float(d_start), stop=float(d_stop))
+        spectrum.cut_rt(start=float(r_start), stop=float(r_stop))
+        spectrum.savgol(window_length=10, polyorder=4)
+        spectrum.values[spectrum.values < 0] = 0.0
+
+        # 1. Spectrum normalization.
+        # Keep the non normalized values for later use.
+        values_non_normalized = spectrum.values.copy()
+        # Normalize the spectrum [0-1].
+        spectrum.normalization()
+
+        padded_values = np.pad(
+            spectrum.values,
+            pad_width=window_size,
+            mode='constant',
+            constant_values=0
+        )
+
+        padded_values_non_normalized = np.pad(
+            values_non_normalized,
+            pad_width=window_size,
+            mode='constant',
+            constant_values=0
+        )
+
+        # B. DATEN FÜR DIESEN CLASSIFIER HOLEN
+        # 1. Classifier Infos holen (Um Namen für RF und VAE zu wissen)
+        cursor.execute("SELECT name, model FROM classifier WHERE id = ?", (self.current_selected_classifier_id,))
+        classifier_data = cursor.fetchone()
+        classification_name = classifier_data[0]
+        vae_model_name = classifier_data[1]
+
+        # 2. Eingefrorene Peaks holen
+        cursor.execute("SELECT ret_time, drift_time, min_intensity FROM cl_consensus_peaks WHERE classifier_id = ?",
+                       (self.current_selected_classifier_id,))
+        frozen_peaks = cursor.fetchall()
+        conn.close()
+
+        # C. VAE MODELL LADEN
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        vae = vae_model.VariationalAutoencoderCNN(input_layers=1, hidden_layers=64, latent_dimension=16).to(device)
+        vae.load_model(model_dir="models", file_name=f"{vae_model_name}.pt", device=device)
+        vae.eval()
+
+        # Hier sammeln wir alle 16 Latent-Werte von JEDEM Peak aneinandergereiht
+        latent_features = []
+
+        with torch.inference_mode():
+            for ret_time, drift_time, min_intensity in frozen_peaks:
+                # 1. Finde die Indizes im Numpy Array, die den physikalischen Zeiten am nächsten liegen
+                ret_idx = np.abs(spectrum.ret_time - ret_time).argmin()
+                drift_idx = np.abs(spectrum.drift_time - drift_time).argmin()
+
+                # Calculate the min and max coordinates for the padded peak window.
+                start_ret_idx = ret_idx - window_size
+                end_ret_idx = ret_idx + 3 * window_size + 1
+                start_drift_idx = drift_idx - window_size
+                end_drift_idx = drift_idx + 3 * window_size + 1
+
+                # Set the adjusted peak window (One with normalized and one with non normalized intensity values)
+                peak_window_intensities = padded_values[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+                peak_window_intensities_non_normalized = padded_values_non_normalized[start_ret_idx:end_ret_idx, start_drift_idx:end_drift_idx]
+
+                if np.max(peak_window_intensities_non_normalized) >= min_intensity:
+                    min_intensity = peak_window_intensities.min()
+                    max_intensity = peak_window_intensities.max()
+                    if max_intensity - min_intensity == 0:
+                        npy_file_normalized = np.zeros_like(peak_window_intensities)
+                    else:
+                        npy_file_normalized = (peak_window_intensities - min_intensity) / (max_intensity - min_intensity)
+
+                    # 4. In Tensor umwandeln
+                    peak_tensor = torch.from_numpy(npy_file_normalized).float().view(1, 1, peak_window_dimension, peak_window_dimension).to(device)
+
+                    # 5. Durch das VAE schicken und nur den Latent Space (mean) nehmen
+                    reconstruction, mean, log_variance = vae(peak_tensor)
+
+                    # 6. Flach klopfen und an die Feature-Liste anhängen
+                    #latent_features.extend(mean.cpu().numpy().flatten())
+                    combined_feature = np.hstack((mean.cpu().numpy().flatten(), log_variance.cpu().numpy().flatten(), [ret_time, drift_time]))
+                    latent_features.append(combined_feature)
+
+
+        # E. VORHERSAGE MIT RANDOM FOREST
+        # Lade den Forest von der Festplatte
+        rf_file = self.project_path.parent / "classification" / f"{self.current_selected_classifier_id}" / f"{classification_name}.joblib"
+        if not rf_file.exists():
+            CustomMessageDialog.show_error("Error", "Random Forest Modell wurde nicht auf der Festplatte gefunden.")
+            return
+
+        rf_classifier = joblib.load(rf_file)
+
+        # Aus der Liste von Arrays ein 2D-Array machen (Zeilen = Peaks, Spalten = 34 Features)
+        # latent_features hat die Form: [ [34 Werte], [34 Werte], ... ]
+        X_input = np.array(latent_features)
+
+        peak_predictions = rf_classifier.predict(X_input)
+        vote_result = Counter(peak_predictions)
+        prediction, vote_count = vote_result.most_common(1)[0]
+
+        print(f"Stimmenverteilung: {peak_predictions}")
+
+        # Die prozentuale Sicherheit basierend auf der Einstimmigkeit der Peaks
+        total_peaks = len(peak_predictions)
+        max_prob = (vote_count / total_peaks) * 100
+
+        # F. ERGEBNIS ANZEIGEN
+        CustomMessageDialog.show_info(
+            "Classification Result",
+            f"The given spectrum was predicted as.\n\nLabel: '{prediction}'\nAccuracy: {max_prob:.1f}%"
+        )
+
+
 class ClassificationWorker(QtCore.QObject):
     # Signal definitions.
     finished = QtCore.Signal()
@@ -558,9 +723,6 @@ class ClassificationWorker(QtCore.QObject):
         4. A random forest classifier is trained and tested.
         5. The results are plotted, saved as Excel, and written to the DB.
         """
-
-        print("=======================================================")
-        print("VI. RANDOM FOREST CLASSIFICATION")
 
         # 1. Daten aus der DB laden (inklusive ret_time und drift_time!)
         conn = sqlite3.connect(db_path)
@@ -649,20 +811,44 @@ class ClassificationWorker(QtCore.QObject):
             labels.append(label)
 
         train_feature, test_feature, train_label, test_label = train_test_split(rf_features, labels, test_size=0.2)
-        rf_model = RandomForestClassifier(n_estimators=1000)
+        rf_model = RandomForestClassifier(n_estimators=1000, class_weight='balanced')
         rf_model.fit(train_feature, train_label)
 
         label_predictions = rf_model.predict(test_feature)
         results_dict = classification_report(test_label, label_predictions, output_dict=True, zero_division=0)
         results_dataframe = pd.DataFrame(results_dict).transpose()
 
-        print(
-            f"All Peak Results: {(results_dict['accuracy'] * 100): .0f}% - {results_dict['weighted avg']['support']}x")
+        # --- 1. RANDOM FOREST MODELL SPEICHERN ---
+        # Erstelle einen Ordner "rf_models", falls er nicht existiert
+        rf_dir = project_path / "classification" / f"{classifier_id}"
+        if not rf_dir.exists():
+            rf_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generiere einen Dateinamen und speichere das Modell
+        rf_filename = f"{classification_name}.joblib"
+        rf_filepath = rf_dir / rf_filename
+        joblib.dump(rf_model, rf_filepath)
 
         # --- DB SPEICHERN (Kombiniertes Ergebnis) ---
         # consensus_id = NULL bedeutet "Ergebnis über alle Peaks"
         cursor.execute("INSERT INTO classifier_result (classifier_id, consensus_id) VALUES (?, NULL)", (classifier_id,))
-        result_id = cursor.lastrowid
+        current_result_id = cursor.lastrowid
+
+        # Hole dir alle aktuell aktiven Consensus Peaks (die du fürs Training genutzt hast)
+        cursor.execute("SELECT id, ret_time, drift_time, min_intensity FROM consensus_peaks WHERE is_active = 1")
+        active_peaks = cursor.fetchall()
+
+        # Speichere jeden dieser Peaks in der neuen Tabelle, gebunden an die classifier_id
+        for peak in active_peaks:
+            original_id = peak[0]
+            ret_time = peak[1]
+            drift_time = peak[2]
+            min_intensity = peak[3]
+
+            cursor.execute("""
+                           INSERT INTO cl_consensus_peaks (classifier_id, original_id, ret_time, drift_time, min_intensity)
+                           VALUES (?, ?, ?, ?, ?)
+                           """, (classifier_id, original_id, ret_time, drift_time, min_intensity))
 
         for key, metrics in results_dict.items():
             if key == 'accuracy': continue
@@ -671,13 +857,15 @@ class ClassificationWorker(QtCore.QObject):
                            INSERT INTO classifier_value (classifier_result_id, label, is_summary, precision, recall, f1_score, support)
                            VALUES (?, ?, ?, ?, ?, ?, ?)
                            """,
-                           (result_id, key, is_summary, metrics['precision'], metrics['recall'], metrics['f1-score'], metrics['support']))
+                           (current_result_id, key, is_summary, metrics['precision'], metrics['recall'], metrics['f1-score'], metrics['support']))
         conn.commit()
         conn.close()
         # --------------------------------------------
 
         filedir = project_path / "classification" / f"{classifier_id}" / "total"
-        if not filedir.exists(): filedir.mkdir(parents=True, exist_ok=True)
+        if not filedir.exists():
+            filedir.mkdir(parents=True, exist_ok=True)
+
         results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
 
         #plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=True)

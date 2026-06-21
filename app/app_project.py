@@ -286,6 +286,20 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                        )
                        ''')
 
+        # Create the classifier consensus peaks table (Snapshots for each model)
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS cl_consensus_peaks
+                       (
+                           id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                           classifier_id INTEGER NOT NULL,
+                           original_id   INTEGER,
+                           ret_time      REAL,
+                           drift_time    REAL,
+                           min_intensity REAL,
+                           FOREIGN KEY (classifier_id) REFERENCES classifier (id) ON DELETE CASCADE
+                       )
+                       ''')
+
         conn.commit()
         conn.close()
 
