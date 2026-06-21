@@ -327,7 +327,7 @@ background-color: #2e2e2e;</string>
               <property name="font">
                <font>
                 <family>Lato</family>
-                <pointsize>14</pointsize>
+                <pointsize>12</pointsize>
                 <fontweight>Light</fontweight>
                </font>
               </property>
@@ -365,14 +365,14 @@ background-color: #2e2e2e;</string>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>200</width>
+                   <width>150</width>
                    <height>40</height>
                   </size>
                  </property>
                  <property name="font">
                   <font>
                    <family>Lato</family>
-                   <pointsize>14</pointsize>
+                   <pointsize>12</pointsize>
                   </font>
                  </property>
                  <property name="styleSheet">
@@ -404,7 +404,7 @@ background-color: #2e2e2e;</string>
                  <property name="font">
                   <font>
                    <family>Lato</family>
-                   <pointsize>14</pointsize>
+                   <pointsize>12</pointsize>
                   </font>
                  </property>
                  <property name="styleSheet">
@@ -417,6 +417,36 @@ background-color: #2e2e2e;</string>
 
 </string>
                  </property>
+                 <item>
+                  <property name="text">
+                   <string>500</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>1000</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>1500</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>2000</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>3000</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>4000</string>
+                  </property>
+                 </item>
                 </widget>
                </item>
               </layout>
@@ -438,14 +468,14 @@ background-color: #2e2e2e;</string>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>200</width>
+                   <width>150</width>
                    <height>40</height>
                   </size>
                  </property>
                  <property name="font">
                   <font>
                    <family>Lato</family>
-                   <pointsize>14</pointsize>
+                   <pointsize>12</pointsize>
                   </font>
                  </property>
                  <property name="styleSheet">
@@ -477,7 +507,7 @@ background-color: #2e2e2e;</string>
                  <property name="font">
                   <font>
                    <family>Lato</family>
-                   <pointsize>14</pointsize>
+                   <pointsize>12</pointsize>
                   </font>
                  </property>
                  <property name="styleSheet">

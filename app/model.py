@@ -45,6 +45,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
         # Initiale Modelle laden
         self.load_models_to_scrollarea()
+        self.load_available_devices_to_combobox()
 
         # Defining the scroll area layout.
         self.scrollArea_recon_Contents.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -770,6 +771,30 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
             )
             tile_widget.peak_window_recon.setPixmap(pixmap_scaled)
 
+
+    def load_available_devices_to_combobox(self):
+
+        # Clear the combobox entries.
+        self.comboBox_device.clear()
+        # Add CPU option which is always there.
+        self.comboBox_device.addItem("CPU", "cpu")
+
+        # 2. Check and add Cuda devices.
+        if torch.cuda.is_available():
+            num_gpus = torch.cuda.device_count()
+            for i in range(num_gpus):
+                gpu_name = torch.cuda.get_device_name(i)
+                display_text = f"{gpu_name}"
+                internal_data = f"cuda:{i}"
+                self.comboBox_device.addItem(display_text, internal_data)
+
+        # Check for Apple MPS devices
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            self.comboBox_device.addItem("Apple Silicon GPU", "mps")
+
+        # By default, preselect the strongest device [option 2, which is the first found GPU device].
+        if self.comboBox_device.count() > 1:
+            self.comboBox_device.setCurrentIndex(1)
 
 
 class ModelTileWidget(QtWidgets.QWidget, Ui_ModelTile):
