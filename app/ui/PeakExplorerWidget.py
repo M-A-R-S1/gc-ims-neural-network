@@ -99,7 +99,7 @@ class Ui_PeakExplorerWidget(object):
         self.scrollArea_dataset.setWidgetResizable(True)
         self.scrollArea_dataset_Contents = QWidget()
         self.scrollArea_dataset_Contents.setObjectName(u"scrollArea_dataset_Contents")
-        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 787))
+        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 786))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_dataset_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
@@ -223,7 +223,7 @@ class Ui_PeakExplorerWidget(object):
         self.scrollArea_peak.setWidgetResizable(True)
         self.scrollArea_peak_Contents = QWidget()
         self.scrollArea_peak_Contents.setObjectName(u"scrollArea_peak_Contents")
-        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 739))
+        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 530, 678))
         self.gridLayout = QGridLayout(self.scrollArea_peak_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)
@@ -237,6 +237,27 @@ class Ui_PeakExplorerWidget(object):
 
 
         self.verticalLayout_5.addWidget(self.peak_inner_container)
+
+        self.pushButton_export = QPushButton(self.peak_container)
+        self.pushButton_export.setObjectName(u"pushButton_export")
+        self.pushButton_export.setMinimumSize(QSize(0, 50))
+        font5 = QFont()
+        font5.setFamilies([u"Lato"])
+        font5.setPointSize(20)
+        self.pushButton_export.setFont(font5)
+        self.pushButton_export.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.pushButton_export.setStyleSheet(u"QPushButton {\n"
+"    border: 1px solid #00eaff;\n"
+"    background-color: #232323; \n"
+"    color: #00eaff;\n"
+"    border-radius: 10px;\n"
+"}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: #131313;\n"
+"}")
+
+        self.verticalLayout_5.addWidget(self.pushButton_export)
 
         self.verticalLayout_5.setStretch(0, 1)
 
@@ -267,11 +288,8 @@ class Ui_PeakExplorerWidget(object):
         self.pushButton_toggle_peak_marker = QPushButton(self.preview_container)
         self.pushButton_toggle_peak_marker.setObjectName(u"pushButton_toggle_peak_marker")
         self.pushButton_toggle_peak_marker.setEnabled(True)
-        self.pushButton_toggle_peak_marker.setMinimumSize(QSize(0, 60))
+        self.pushButton_toggle_peak_marker.setMinimumSize(QSize(0, 50))
         self.pushButton_toggle_peak_marker.setMaximumSize(QSize(16777215, 16777215))
-        font5 = QFont()
-        font5.setFamilies([u"Lato"])
-        font5.setPointSize(20)
         self.pushButton_toggle_peak_marker.setFont(font5)
         self.pushButton_toggle_peak_marker.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.pushButton_toggle_peak_marker.setMouseTracking(True)
@@ -281,7 +299,6 @@ class Ui_PeakExplorerWidget(object):
 "    background-color: #232323; \n"
 "    color: #ff9000;\n"
 "    border-radius: 10px;\n"
-"	margin-top: 10px;\n"
 "}\n"
 "\n"
 "QPushButton:hover {\n"
@@ -320,6 +337,7 @@ class Ui_PeakExplorerWidget(object):
         self.comboBox_sort_direction.setItemText(0, QCoreApplication.translate("PeakExplorerWidget", u"ASC", None))
         self.comboBox_sort_direction.setItemText(1, QCoreApplication.translate("PeakExplorerWidget", u"DESC", None))
 
+        self.pushButton_export.setText(QCoreApplication.translate("PeakExplorerWidget", u"Export peak data", None))
         self.label_preview.setText(QCoreApplication.translate("PeakExplorerWidget", u"Spectrum preview", None))
         self.pushButton_toggle_peak_marker.setText(QCoreApplication.translate("PeakExplorerWidget", u"Hide peak markers", None))
     # retranslateUi

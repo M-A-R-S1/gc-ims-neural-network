@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1546</width>
-    <height>993</height>
+    <width>1519</width>
+    <height>1018</height>
    </rect>
   </property>
   <property name="font">
@@ -198,7 +198,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>930</width>
-                 <height>787</height>
+                 <height>811</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="gridLayout">

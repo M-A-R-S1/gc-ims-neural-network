@@ -23,7 +23,7 @@ class Ui_ConsensusPeakWidget(object):
     def setupUi(self, ConsensusPeakWidget):
         if not ConsensusPeakWidget.objectName():
             ConsensusPeakWidget.setObjectName(u"ConsensusPeakWidget")
-        ConsensusPeakWidget.resize(1546, 993)
+        ConsensusPeakWidget.resize(1519, 1018)
         font = QFont()
         font.setWeight(QFont.Black)
         ConsensusPeakWidget.setFont(font)
@@ -100,7 +100,7 @@ class Ui_ConsensusPeakWidget(object):
         self.scrollArea_peak.setWidgetResizable(True)
         self.scrollArea_peak_Contents = QWidget()
         self.scrollArea_peak_Contents.setObjectName(u"scrollArea_peak_Contents")
-        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 930, 787))
+        self.scrollArea_peak_Contents.setGeometry(QRect(0, 0, 930, 811))
         self.gridLayout = QGridLayout(self.scrollArea_peak_Contents)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setVerticalSpacing(10)

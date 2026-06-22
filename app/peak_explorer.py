@@ -2,7 +2,7 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtCore import QSize, Qt, Signal, QTimer
 from ui.PeakExplorerWidget import Ui_PeakExplorerWidget
-from dialogs import CustomYesNoDialog, CustomProgressDialog
+from dialogs import CustomYesNoDialog, CustomProgressDialog, CustomMessageDialog
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
@@ -54,9 +54,12 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         self.scrollArea_peak.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.scrollArea_peak_Contents.layout().setSpacing(10)
 
-        # Signale für die Sortier-ComboBoxen verbinden
+        # Signale für die Filter-ComboBoxen verbinden
         self.comboBox_sort_peaks.currentTextChanged.connect(self.sort_peaks_in_layout)
         self.comboBox_sort_direction.currentTextChanged.connect(self.sort_peaks_in_layout)
+
+        # Export button connection.
+        self.pushButton_export.clicked.connect(self.export_peaks_to_excel)
 
         # Timer for window resizing.
         self.resize_timer = QTimer()
@@ -117,6 +120,70 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         super().showEvent(event)
         # Check if the peak detection was performed on all spectra.
         self.check_spectra_without_peaks()
+
+
+    def export_peaks_to_excel(self) -> None:
+
+        # 1. Speicherort vom User abfragen
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            caption="Export Peaks to Excel",
+            dir="",
+            filter="Excel Files (*.xlsx);;All Files (*)"
+        )
+
+        # Wenn der User auf "Abbrechen" geklickt hat
+        if not file_path:
+            return
+
+        # Sicherstellen, dass die Datei auf .xlsx endet
+        if not file_path.endswith('.xlsx'):
+            file_path += '.xlsx'
+
+        # 2. Verbindung zur Datenbank herstellen und Daten abfragen
+        conn = sqlite3.connect(self.db_path)
+        query = """
+                SELECT l.name       AS "Label",
+                       REPLACE(s.name, '.mea', '') AS "Spectrum",
+                       p.ret_time   AS "Retention time",
+                       p.drift_time AS "Drift time",
+                       p.intensity  AS "Intensity",
+                       p.consensus_id AS "Consensus peak ID"
+                FROM peaks p
+                         JOIN spectra s ON p.spectrum_id = s.id
+                         JOIN labels l ON p.label_id = l.id
+                WHERE p.is_active = 1
+                ORDER BY l.name, s.name, p.intensity DESC
+                """
+
+        try:
+            # 3. Pandas liest die SQL-Abfrage direkt in einen DataFrame
+            df = pd.read_sql_query(query, conn)
+
+            # Prüfen, ob überhaupt Daten vorhanden sind
+            if df.empty:
+                CustomMessageDialog.show_info(
+                    "Export Empty",
+                    "There are not peaks to export."
+                )
+                return
+
+            # 4. DataFrame als Excel exportieren (ohne den DataFrame-Index)
+            df.to_excel(file_path, index=False, engine='openpyxl')
+
+            # Erfolgsmeldung anzeigen
+            CustomMessageDialog.show_info(
+                "Export Successful",
+                f"Peaks successfully exported to:\n{file_path}"
+            )
+
+        except Exception as e:
+            CustomMessageDialog.show_error(
+                "Export Error",
+                f"Error while exporting:\n{str(e)}"
+            )
+        finally:
+            conn.close()
 
 
     def show_peak_detection_dialog(self) -> None:
