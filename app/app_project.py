@@ -19,6 +19,8 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
         # Set the current project path.
         self.project_path = project_path
+        # Path to the datase.
+        self.db_path = self.project_path.parent / "database" / "project_database.db"
 
         # Set the window titel name.
         if self.project_path:
@@ -37,11 +39,6 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.settings_page = None
         self.current_page = {}
 
-        # Sidebar color pallets.
-        self.palette_active = None
-        self.palette_deactivated = None
-        self.palette_normal = None
-
         # Initialize the database.
         self.initialize_database()
         # Pages Setup.
@@ -52,12 +49,15 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.current_page = self.Main_container.currentWidget()
         # Set the sidebar buttons.
         self.setup_sidebar_buttons()
+        # Set the default system state to the buttons.
+        self.update_menu_state()
 
 
     def setup_pages(self):
         # Dataset
         self.dataset_page = DatasetPage(self.project_path)
         self.Main_container.addWidget(self.dataset_page)
+        self.dataset_page.system_state_changed.connect(self.update_menu_dataset)
         # Preprocessing
         self.preprocessing_page = PreprocessingPage(self.project_path)
         self.Main_container.addWidget(self.preprocessing_page)
@@ -79,19 +79,9 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
 
     def setup_sidebar_buttons(self):
-        # Get the active color palette
-        self.palette_active = self.sb_dataset_button.palette()
-        self.palette_active.setColor(QPalette.ColorRole.WindowText, QColor(ACTIVE_COLOR))
-        # Get the deactivated color palette
-        self.palette_deactivated = self.sb_dataset_button.palette()
-        self.palette_deactivated.setColor(QPalette.ColorRole.WindowText, QColor(DEACTIVATED_COLOR))
-        # Get the normal color palette
-        self.palette_normal = self.sb_dataset_button.palette()
-        self.palette_normal.setColor(QPalette.ColorRole.WindowText, QColor(NORMAL_COLOR))
-
         # Set the dataset as active.
         self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_orange.png"))
-        self.sb_dataset_label.setPalette(self.palette_active)
+        self.sb_dataset_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
 
         # Connect the buttons.
         self.sb_dataset_button.clicked.connect(lambda: self.change_page(self.dataset_page))
@@ -107,57 +97,167 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         # Make the latest button and label on the sidebar white.
         if self.current_page == self.dataset_page:
             self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_white.png"))
-            self.sb_dataset_label.setPalette(self.palette_normal)
+            self.sb_dataset_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.preprocessing_page:
             self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_white.png"))
-            self.sb_preprocessing_label.setPalette(self.palette_normal)
+            self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.peak_explorer_page:
             self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_white.png"))
-            self.sb_peak_explorer_label.setPalette(self.palette_normal)
+            self.sb_peak_explorer_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.consensus_peak_page:
             self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_white.png"))
-            self.sb_consensus_label.setPalette(self.palette_normal)
+            self.sb_consensus_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.model_page:
             self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_white.png"))
-            self.sb_model_label.setPalette(self.palette_normal)
+            self.sb_model_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.classifier_page:
             self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_white.png"))
-            self.sb_classifier_label.setPalette(self.palette_normal)
+            self.sb_classifier_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.settings_page:
             self.sb_settings_button.setIcon(QIcon("ui/_pics/icons/settings_white.png"))
-            self.sb_settings_label.setPalette(self.palette_normal)
+            self.sb_settings_label.setStyleSheet(f"color: {NORMAL_COLOR};")
 
         # Change the active color of the sidebar button/label
         if page == self.dataset_page:
             self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_orange.png"))
-            self.sb_dataset_label.setPalette(self.palette_active)
+            self.sb_dataset_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
         elif page == self.preprocessing_page:
             self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_orange.png"))
-            self.sb_preprocessing_label.setPalette(self.palette_active)
+            self.sb_preprocessing_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
             self.preprocessing_page.load_data()
             self.preprocessing_page.check_processed_spectra()
         elif page == self.peak_explorer_page:
             self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_orange.png"))
-            self.sb_peak_explorer_label.setPalette(self.palette_active)
+            self.sb_peak_explorer_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
             self.peak_explorer_page.load_data()
         elif page == self.consensus_peak_page:
             self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_orange.png"))
-            self.sb_consensus_label.setPalette(self.palette_active)
+            self.sb_consensus_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
             self.consensus_peak_page.load_data()
         elif page == self.model_page:
             self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_orange.png"))
-            self.sb_model_label.setPalette(self.palette_active)
+            self.sb_model_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
         elif page == self.classifier_page:
             self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_orange.png"))
-            self.sb_classifier_label.setPalette(self.palette_active)
+            self.sb_classifier_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
         elif page == self.settings_page:
             self.sb_settings_button.setIcon(QIcon("ui/_pics/icons/settings_orange.png"))
-            self.sb_settings_label.setPalette(self.palette_active)
+            self.sb_settings_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
 
         # Set the dataset page as active.
         self.Main_container.setCurrentWidget(page)
 
         self.current_page = page
+
+
+    def update_menu_dataset(self) -> None:
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                           SELECT has_spectra,
+                                  dataset_changed
+                           FROM system_state
+                           WHERE id = 1
+                           """)
+            state = cursor.fetchone()
+
+            if state:
+                has_spectra = bool(state[0])
+                dataset_changed = bool(state[1])
+
+                if has_spectra:
+                    self.sb_preprocessing_button.setEnabled(True)
+                    self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_white.png"))
+                    if self.current_page == self.preprocessing_page:
+                        self.sb_preprocessing_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
+                    else:
+                        self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+                else:
+                    self.sb_preprocessing_button.setEnabled(False)
+                    self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_grey.png"))
+                    self.sb_preprocessing_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_peak_explorer_button.setEnabled(False)
+                    self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_grey.png"))
+                    self.sb_peak_explorer_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_consensus_button.setEnabled(False)
+                    self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_grey.png"))
+                    self.sb_consensus_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_model_button.setEnabled(False)
+                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
+                    self.sb_model_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_classifier_button.setEnabled(False)
+                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+                    self.sb_classifier_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+        except sqlite3.Error as e:
+            print(f"Error while changing the system state. {e}")
+        finally:
+            conn.close()
+
+
+
+
+    def update_menu_state(self) -> None:
+
+        if not self.db_path.exists():
+            return
+
+        self.update_menu_dataset()
+
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                           SELECT has_spectra, dataset_changed, is_preprocessed, preprocessing_changed, has_peaks, peaks_changed, has_consensus_peaks, consensus_peaks_changed
+                           FROM system_state
+                           WHERE id = 1
+                           """)
+            state = cursor.fetchone()
+
+            if state:
+                has_spectra = bool(state[0])
+                dataset_changed = bool(state[1])
+                is_preprocessed = bool(state[2])
+                preprocessing_changed = bool(state[3])
+                has_peaks = bool(state[4])
+                peaks_changed = bool(state[5])
+                has_consensus_peaks = bool(state[6])
+                consensus_peaks_changed = bool(state[7])
+
+                # Peak Explorer.
+                if is_preprocessed:
+                    self.sb_peak_explorer_button.setEnabled(True)
+                    self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_white.png"))
+                    self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+                else:
+                    self.sb_peak_explorer_button.setEnabled(False)
+
+                # Consensus Peaks.
+                if has_peaks:
+                    self.sb_consensus_button.setEnabled(True)
+                else:
+                    self.sb_consensus_button.setEnabled(False)
+
+                if has_consensus_peaks:
+                    self.sb_model_button.setEnabled(True)
+                    self.sb_classifier_button.setEnabled(True)
+                else:
+                    self.sb_model_button.setEnabled(False)
+                    self.sb_classifier_button.setEnabled(False)
+
+        except sqlite3.Error as e:
+            print(f"Error while changing the system state. {e}")
+        finally:
+            conn.close()
 
 
     def initialize_database(self) -> None:
@@ -193,6 +293,27 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
         # Input the settings.
         cursor.execute("INSERT OR IGNORE INTO settings (id, drift_start_cut, drift_end_cut, retention_start_cut, retention_end_cut) VALUES (1, 0, 0, 0, 0)")
+        conn.commit()
+
+        # Creat the system state table.
+        cursor.execute('''
+                       CREATE TABLE IF NOT EXISTS system_state
+                       (
+                           id                           INTEGER PRIMARY KEY CHECK (id = 1),
+                           has_spectra                  INTEGER DEFAULT 0,
+                           dataset_changed              INTEGER DEFAULT 0,
+                           is_preprocessed              INTEGER DEFAULT 0,
+                           preprocessing_changed        INTEGER DEFAULT 0,
+                           has_peaks                    INTEGER DEFAULT 0,
+                           peaks_changed                INTEGER DEFAULT 0,
+                           has_consensus_peaks          INTEGER DEFAULT 0,
+                           consensus_peaks_changed      INTEGER DEFAULT 0
+                       )
+                       ''')
+
+        # Input the default system states.
+        cursor.execute(
+            "INSERT OR IGNORE INTO system_state (id) VALUES (1)")
         conn.commit()
 
         # Creat the labels table.

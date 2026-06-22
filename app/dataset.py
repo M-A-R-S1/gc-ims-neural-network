@@ -15,6 +15,9 @@ import shutil
 import ims
 
 class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
+    # Signal definition.
+    system_state_changed = QtCore.Signal()
+
     def __init__(self, project_path: str) -> None   :
         super().__init__()
         self.setupUi(self)
@@ -237,9 +240,18 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             result = cursor.fetchone()
             label_id = result[0]
             cursor.execute("DELETE FROM labels WHERE id = ?", (label_id,))
+
+            # Check if there are still any spectra left.
+            cursor.execute("SELECT COUNT(*) FROM spectra")
+            spectra_count = cursor.fetchone()[0]
+
+            if spectra_count == 0:
+                cursor.execute("UPDATE system_state SET has_spectra = 0 WHERE id = 1")
+
             conn.commit()
             conn.close()
 
+            self.system_state_changed.emit()
             self.update_spectra_list()
 
 
@@ -420,9 +432,15 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
         if spectra_to_insert:
             cursor.executemany("INSERT INTO spectra (label_id, name, path) VALUES (?, ?, ?)", spectra_to_insert)
 
+
+        # Update the System state
+        cursor.execute("UPDATE system_state SET has_spectra = 1 WHERE id = 1")
         conn.commit()
         conn.close()
 
+        # Send the state changed signal for the sidebar.
+        self.system_state_changed.emit()
+        # Update the spectra scroll area.
         self.update_spectra_list()
 
 
@@ -549,9 +567,18 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             result = cursor.fetchone()
             spectrum_id = result[0]
             cursor.execute("DELETE FROM spectra WHERE id = ?", (spectrum_id,))
+
+            # Check if there are still any spectra left.
+            cursor.execute("SELECT COUNT(*) FROM spectra")
+            spectra_count = cursor.fetchone()[0]
+
+            if spectra_count == 0:
+                cursor.execute("UPDATE system_state SET has_spectra = 0 WHERE id = 1")
+
             conn.commit()
             conn.close()
 
+            self.system_state_changed.emit()
             self.update_spectra_list()
 
 
