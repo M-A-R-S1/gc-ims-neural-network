@@ -65,9 +65,11 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         # Peak Explorer
         self.peak_explorer_page = PeakExplorerPage(self.project_path)
         self.Main_container.addWidget(self.peak_explorer_page)
+        self.peak_explorer_page.system_state_changed.connect(self.update_menu_peak_explorer)
         # Consensus Peak
         self.consensus_peak_page = ConsensusPeakPage(self.project_path)
         self.Main_container.addWidget(self.consensus_peak_page)
+        self.consensus_peak_page.system_state_changed.connect(self.update_menu_consensus)
         # Model
         self.model_page = ModelPage(self.project_path)
         self.Main_container.addWidget(self.model_page)
@@ -243,6 +245,88 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
             conn.close()
 
 
+    def update_menu_peak_explorer(self) -> None:
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                           SELECT has_peaks,
+                                  peaks_changed
+                           FROM system_state
+                           WHERE id = 1
+                           """)
+            state = cursor.fetchone()
+
+            if state:
+                has_peaks = bool(state[0])
+                peaks_changed = bool(state[1])
+
+                if has_peaks:
+                    self.sb_consensus_button.setEnabled(True)
+                    self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_white.png"))
+                    self.sb_consensus_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+                else:
+                    self.sb_consensus_button.setEnabled(False)
+                    self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_grey.png"))
+                    self.sb_consensus_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_model_button.setEnabled(False)
+                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
+                    self.sb_model_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_classifier_button.setEnabled(False)
+                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+                    self.sb_classifier_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+        except sqlite3.Error as e:
+            print(f"Error while changing the system state. {e}")
+        finally:
+            conn.close()
+
+
+    def update_menu_consensus(self) -> None:
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                           SELECT has_consensus_peaks,
+                                  consensus_peaks_changed
+                           FROM system_state
+                           WHERE id = 1
+                           """)
+            state = cursor.fetchone()
+
+            if state:
+                has_consensus_peaks = bool(state[0])
+                consensus_peaks_changed = bool(state[1])
+
+                if has_consensus_peaks:
+                    self.sb_model_button.setEnabled(True)
+                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_white.png"))
+                    self.sb_model_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+
+                    self.sb_classifier_button.setEnabled(True)
+                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_white.png"))
+                    self.sb_classifier_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+                else:
+                    self.sb_model_button.setEnabled(False)
+                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
+                    self.sb_model_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_classifier_button.setEnabled(False)
+                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+                    self.sb_classifier_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+        except sqlite3.Error as e:
+            print(f"Error while changing the system state. {e}")
+        finally:
+            conn.close()
+
+
     def update_menu_state(self) -> None:
 
         if not self.db_path.exists():
@@ -250,54 +334,8 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
         self.update_menu_dataset()
         self.update_menu_preprocessing()
-
-        # Connect to the database.
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                           SELECT has_spectra, dataset_changed, is_preprocessed, preprocessing_changed, has_peaks, peaks_changed, has_consensus_peaks, consensus_peaks_changed
-                           FROM system_state
-                           WHERE id = 1
-                           """)
-            state = cursor.fetchone()
-
-            if state:
-                has_spectra = bool(state[0])
-                dataset_changed = bool(state[1])
-                is_preprocessed = bool(state[2])
-                preprocessing_changed = bool(state[3])
-                has_peaks = bool(state[4])
-                peaks_changed = bool(state[5])
-                has_consensus_peaks = bool(state[6])
-                consensus_peaks_changed = bool(state[7])
-
-                # Peak Explorer.
-                if is_preprocessed:
-                    self.sb_peak_explorer_button.setEnabled(True)
-                    self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_white.png"))
-                    self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
-                else:
-                    self.sb_peak_explorer_button.setEnabled(False)
-
-                # Consensus Peaks.
-                if has_peaks:
-                    self.sb_consensus_button.setEnabled(True)
-                else:
-                    self.sb_consensus_button.setEnabled(False)
-
-                if has_consensus_peaks:
-                    self.sb_model_button.setEnabled(True)
-                    self.sb_classifier_button.setEnabled(True)
-                else:
-                    self.sb_model_button.setEnabled(False)
-                    self.sb_classifier_button.setEnabled(False)
-
-        except sqlite3.Error as e:
-            print(f"Error while changing the system state. {e}")
-        finally:
-            conn.close()
+        self.update_menu_peak_explorer()
+        self.update_menu_consensus()
 
 
     def initialize_database(self) -> None:

@@ -20,6 +20,9 @@ import sqlite3
 import ims
 
 class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
+    # Signal definition.
+    system_state_changed = QtCore.Signal()
+
     def __init__(self, project_path: str):
         super().__init__()
         self.setupUi(self)
@@ -185,9 +188,17 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         # If there are peaks without a consensus id show the user the "consensus peak calculation dialog".
         if peaks_without_consensus > 0:
             QtCore.QTimer.singleShot(100, self.show_consensus_peak_calc_dialog)
+            # Update the system state.
+            cursor.execute("UPDATE system_state SET has_consensus_peaks = 0 WHERE id = 1")
+            conn.commit()
+            self.system_state_changed.emit()
         else:
             self.overlay.hide()
             self.load_consensus_peaks()
+            # Update the system state.
+            cursor.execute("UPDATE system_state SET has_consensus_peaks = 1 WHERE id = 1")
+            conn.commit()
+            self.system_state_changed.emit()
 
         conn.close()
 

@@ -759,6 +759,11 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                                                        margin-bottom: 10px;
                                                """)
 
+            # Update the system state.
+            cursor.execute("UPDATE system_state SET is_preprocessed = 0, has_peaks = 0, has_consensus_peaks = 0 WHERE id = 1")
+            conn.commit()
+            self.system_state_changed.emit()
+
         conn.close()
 
 

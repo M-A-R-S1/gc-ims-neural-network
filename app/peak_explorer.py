@@ -19,6 +19,9 @@ import sqlite3
 import ims
 
 class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
+    # Signal definition.
+    system_state_changed = QtCore.Signal()
+
     def __init__(self, project_path: str):
         super().__init__()
         self.setupUi(self)
@@ -196,8 +199,17 @@ class PeakExplorerPage(QtWidgets.QWidget, Ui_PeakExplorerWidget):
         # If there are spectra without peaks prompt the user with the "peak detection dialog".
         if spectra_without_peaks > 0:
             QtCore.QTimer.singleShot(100, self.show_peak_detection_dialog)
+            # Update the system state.
+            cursor.execute("UPDATE system_state SET has_peaks = 0 WHERE id = 1")
+            conn.commit()
+            self.system_state_changed.emit()
+
         else:
             self.overlay.hide()
+            # Update the system state.
+            cursor.execute("UPDATE system_state SET has_peaks = 1 WHERE id = 1")
+            conn.commit()
+            self.system_state_changed.emit()
 
         conn.close()
 
