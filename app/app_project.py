@@ -61,6 +61,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         # Preprocessing
         self.preprocessing_page = PreprocessingPage(self.project_path)
         self.Main_container.addWidget(self.preprocessing_page)
+        self.preprocessing_page.system_state_changed.connect(self.update_menu_preprocessing)
         # Peak Explorer
         self.peak_explorer_page = PeakExplorerPage(self.project_path)
         self.Main_container.addWidget(self.peak_explorer_page)
@@ -124,8 +125,6 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         elif page == self.preprocessing_page:
             self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_orange.png"))
             self.sb_preprocessing_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
-            self.preprocessing_page.load_data()
-            self.preprocessing_page.check_processed_spectra()
         elif page == self.peak_explorer_page:
             self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_orange.png"))
             self.sb_peak_explorer_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
@@ -171,10 +170,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                 if has_spectra:
                     self.sb_preprocessing_button.setEnabled(True)
                     self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_white.png"))
-                    if self.current_page == self.preprocessing_page:
-                        self.sb_preprocessing_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
-                    else:
-                        self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+                    self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
                 else:
                     self.sb_preprocessing_button.setEnabled(False)
                     self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_grey.png"))
@@ -202,6 +198,49 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
             conn.close()
 
 
+    def update_menu_preprocessing(self) -> None:
+        # Connect to the database.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                           SELECT is_preprocessed,
+                                  preprocessing_changed
+                           FROM system_state
+                           WHERE id = 1
+                           """)
+            state = cursor.fetchone()
+
+            if state:
+                is_preprocessed = bool(state[0])
+                preprocessing_changed = bool(state[1])
+
+                if is_preprocessed:
+                    self.sb_peak_explorer_button.setEnabled(True)
+                    self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_white.png"))
+                    self.sb_peak_explorer_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+                else:
+                    self.sb_peak_explorer_button.setEnabled(False)
+                    self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_grey.png"))
+                    self.sb_peak_explorer_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_consensus_button.setEnabled(False)
+                    self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_grey.png"))
+                    self.sb_consensus_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_model_button.setEnabled(False)
+                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
+                    self.sb_model_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+                    self.sb_classifier_button.setEnabled(False)
+                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+                    self.sb_classifier_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
+
+        except sqlite3.Error as e:
+            print(f"Error while changing the system state. {e}")
+        finally:
+            conn.close()
 
 
     def update_menu_state(self) -> None:
@@ -210,6 +249,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
             return
 
         self.update_menu_dataset()
+        self.update_menu_preprocessing()
 
         # Connect to the database.
         conn = sqlite3.connect(self.db_path)

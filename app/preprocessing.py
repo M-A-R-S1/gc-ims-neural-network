@@ -18,6 +18,9 @@ import ims
 
 
 class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
+    # Signal definition.
+    system_state_changed = QtCore.Signal()
+
     def __init__(self, project_path: str):
         super().__init__()
         self.setupUi(self)
@@ -73,6 +76,20 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # load dataset from the database.
         self.load_data()
         # Check if any spectra are already processed.
+        self.check_processed_spectra()
+
+
+    def showEvent(self, event) -> None:
+        """
+        This function is called every time the user enters this page.
+        =============================================================================
+        :param event: The page display event.
+        =============================================================================
+        :return: None
+        """
+
+        super().showEvent(event)
+        self.load_data()
         self.check_processed_spectra()
 
 
@@ -698,7 +715,6 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM spectra", )
         total_spectra = cursor.fetchone()[0]
-        conn.close()
 
         # Check if the dataset folder exists and if so check how many spectra are already processed.
         if path.exists():
@@ -708,6 +724,11 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
         # Dont show the user notification of non spectra are processed.
         if processed_spectra == 0:
             self.label_process_info.hide()
+            # Update the system state.
+            cursor.execute("UPDATE system_state SET is_preprocessed = 0 WHERE id = 1")
+            conn.commit()
+            self.system_state_changed.emit()
+
         # Show this info if all spectra are processed.
         elif processed_spectra == total_spectra:
             self.label_process_info.show()
@@ -718,6 +739,11 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                                                         color: #00eaff;
                                                         margin-bottom: 10px;
                                                 """)
+            # Update the system state.
+            cursor.execute("UPDATE system_state SET is_preprocessed = 1 WHERE id = 1")
+            conn.commit()
+            self.system_state_changed.emit()
+
         # Show this info only when a subset of all spectra are processed.
         else:
             new_spectra_count = total_spectra - processed_spectra
@@ -728,10 +754,12 @@ class PreprocessingPage(QtWidgets.QWidget, Ui_PreprocessingWidget):
                 self.label_process_info.setText(f"{new_spectra_count} unprocessed spectra")
             self.label_process_info.setStyleSheet(f"""
                                                        border: 1.5px dashed #ff00c6;
-                                                       background-color: #232323; 
+                                                       background-color: #232323;
                                                        color: #ff00c6;
                                                        margin-bottom: 10px;
                                                """)
+
+        conn.close()
 
 
 class DatasetMainEntry(QtWidgets.QLabel, Ui_DatasetMainEntry):

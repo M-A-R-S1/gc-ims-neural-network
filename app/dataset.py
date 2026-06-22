@@ -246,7 +246,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             spectra_count = cursor.fetchone()[0]
 
             if spectra_count == 0:
-                cursor.execute("UPDATE system_state SET has_spectra = 0 WHERE id = 1")
+                cursor.execute("UPDATE system_state SET has_spectra = 0, is_preprocessed = 0, has_peaks = 0, has_consensus_peaks = 0 WHERE id = 1")
 
             conn.commit()
             conn.close()
@@ -573,7 +573,7 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
             spectra_count = cursor.fetchone()[0]
 
             if spectra_count == 0:
-                cursor.execute("UPDATE system_state SET has_spectra = 0 WHERE id = 1")
+                cursor.execute("UPDATE system_state SET has_spectra = 0, is_preprocessed = 0, has_peaks = 0, has_consensus_peaks = 0 WHERE id = 1")
 
             conn.commit()
             conn.close()
