@@ -79,7 +79,12 @@ class CustomMessageDialog(QtWidgets.QDialog, Ui_MessageDialog):
         # Set the message.
         self.label_message.setText(message)
         # Set the icon according to the message type.
-        # TODO ....
+        if type == "error":
+            self.label_icon.setPixmap(QPixmap("ui/_pics/icons/error_magenta.png"))
+        elif type == "info":
+            self.label_icon.setPixmap(QPixmap("ui/_pics/icons/info_blue.png"))
+        else:
+            self.label_icon.setPixmap(QPixmap("ui/_pics/icons/error_magenta.png"))
 
         # Connect the button with the close function of the dialog.
         self.button_ok.clicked.connect(self.accept)
