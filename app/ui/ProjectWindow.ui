@@ -546,6 +546,9 @@
        </item>
        <item>
         <widget class="QWidget" name="Sidebar_bottom" native="true">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -585,6 +588,9 @@
           </property>
           <item>
            <widget class="QWidget" name="sb_settings_container" native="true">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
             <property name="styleSheet">
              <string notr="true"/>
             </property>

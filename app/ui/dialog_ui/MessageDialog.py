@@ -41,7 +41,7 @@ class Ui_MessageDialog(object):
         self.button_ok.setGeometry(QRect(150, 340, 101, 41))
         font1 = QFont()
         font1.setFamilies([u"Lato"])
-        font1.setPointSize(14)
+        font1.setPointSize(13)
         self.button_ok.setFont(font1)
         self.button_ok.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button_ok.setStyleSheet(u"QPushButton {\n"

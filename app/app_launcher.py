@@ -1,5 +1,5 @@
 import sys
-from config import *
+from misc.config import *
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QPalette, QColor, QFontDatabase
 from ui.LauncherWindow import Ui_StartWidget

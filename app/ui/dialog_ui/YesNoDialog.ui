@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MessageDialog</class>
- <widget class="QDialog" name="MessageDialog">
+ <class>YesNoDialog</class>
+ <widget class="QDialog" name="YesNoDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -32,9 +32,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>230</y>
+     <y>200</y>
      <width>361</width>
-     <height>81</height>
+     <height>121</height>
     </rect>
    </property>
    <property name="font">
@@ -56,10 +56,10 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QPushButton" name="button_ok">
+  <widget class="QPushButton" name="button_yes">
    <property name="geometry">
     <rect>
-     <x>150</x>
+     <x>280</x>
      <y>340</y>
      <width>101</width>
      <height>41</height>
@@ -68,7 +68,66 @@
    <property name="font">
     <font>
      <family>Lato</family>
-     <pointsize>14</pointsize>
+     <pointsize>13</pointsize>
+    </font>
+   </property>
+   <property name="cursor">
+    <cursorShape>PointingHandCursor</cursorShape>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QPushButton {
+    border: 1px solid #00eaff;
+    background-color: #232323; 
+    color: #00eaff;
+    border-radius: 10px;
+}
+
+QPushButton:hover {
+	background-color: #131313;
+}</string>
+   </property>
+   <property name="text">
+    <string>Yes</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_icon">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>20</y>
+     <width>161</width>
+     <height>161</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="pixmap">
+    <pixmap>ui/_pics/icons/attention_orange.png</pixmap>
+   </property>
+   <property name="scaledContents">
+    <bool>true</bool>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignmentFlag::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="button_no">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>340</y>
+     <width>101</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <family>Lato</family>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="cursor">
@@ -88,32 +147,7 @@ QPushButton:hover {
 </string>
    </property>
    <property name="text">
-    <string>Ok</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_icon">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>20</y>
-     <width>201</width>
-     <height>191</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="pixmap">
-    <pixmap>ui/_pics/icons/error_magenta.png</pixmap>
-   </property>
-   <property name="scaledContents">
-    <bool>true</bool>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignmentFlag::AlignCenter</set>
+    <string>No</string>
    </property>
   </widget>
  </widget>

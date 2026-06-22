@@ -41,7 +41,7 @@ class Ui_YesNoDialog(object):
         self.button_yes.setGeometry(QRect(280, 340, 101, 41))
         font1 = QFont()
         font1.setFamilies([u"Lato"])
-        font1.setPointSize(14)
+        font1.setPointSize(13)
         self.button_yes.setFont(font1)
         self.button_yes.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button_yes.setStyleSheet(u"QPushButton {\n"

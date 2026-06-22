@@ -1,20 +1,20 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtCore import QSize, Qt, Signal, QTimer
-from ModelWidget import Ui_ModelWidget
-from ModelTile import Ui_ModelTile
-from dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
+from PySide6.QtCore import QSize, Qt, QTimer
+from ui.neural_network_ui.ModelWidget import Ui_ModelWidget
+from ui.neural_network_ui.ModelTile import Ui_ModelTile
+from ui.neural_network_ui.ModelReconTile import Ui_ModelReconTile
+from misc.dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
 import sqlite3
 from pathlib import Path
 from matplotlib import pyplot as plt
 from matplotlib import cm
-from ModelReconTile import Ui_ModelReconTile
 from preprocessing import PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import ims
 import torch
 import re
-import vae_model
+import misc.vae_model
 import dataloader
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
@@ -601,7 +601,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
         # 1. Das PyTorch Modell instanziieren (Parameter ggf. an dein Training anpassen!)
         self.current_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.current_vae_model = vae_model.VariationalAutoencoderCNN(
+        self.current_vae_model = misc.vae_model.VariationalAutoencoderCNN(
             input_layers=1,
             hidden_layers=64,
             latent_dimension=16
@@ -1121,7 +1121,7 @@ class TrainingWorker(QtCore.QObject):
             train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 
             # 3. Modell initialisieren
-            model = vae_model.VariationalAutoencoderCNN(input_layers=1,
+            model = misc.vae_model.VariationalAutoencoderCNN(input_layers=1,
                                                         hidden_layers=64,
                                                         latent_dimension=16).to(self.device)
 
@@ -1150,7 +1150,7 @@ class TrainingWorker(QtCore.QObject):
                     # 1. Forward pass.
                     reconstruction, mean, log_variance = model(feature)
                     # 2. Calculate the loss.
-                    total_loss, recon_loss, kld_loss = vae_model.vae_loss(feature, reconstruction, mean, log_variance, current_beta)
+                    total_loss, recon_loss, kld_loss = misc.vae_model.vae_loss(feature, reconstruction, mean, log_variance, current_beta)
                     # Divide the loss with the bach size.
                     normalized_loss = total_loss / feature.size(0)
                     # 3 Clear the gardient.

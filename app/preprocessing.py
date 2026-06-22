@@ -2,7 +2,7 @@ from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QDoubleValidator
 from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
-from dialogs import CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
+from misc.dialogs import CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
 from ui.preprocessing_ui.PreprocessingWidget import Ui_PreprocessingWidget
 from ui.preprocessing_ui.DatasetSubEntry import Ui_DatasetSubEntry
 from ui.preprocessing_ui.DatasetMainEntry import Ui_DatasetMainEntry

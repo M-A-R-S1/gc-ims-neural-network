@@ -1,14 +1,14 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtCore import QSize, Qt, Signal, QTimer
-from ConsensusPeakWidget import Ui_ConsensusPeakWidget
-from dialogs import CustomYesNoDialog, CustomProgressDialog
+from ui.consensus_peak_ui.ConsensusPeakWidget import Ui_ConsensusPeakWidget
+from ui.consensus_peak_ui.ConsensusPeakTile import Ui_ConsensusPeakTile
+from misc.dialogs import CustomYesNoDialog, CustomProgressDialog
 from preprocessing import PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from pathlib import Path
-from ConsensusPeakTile import Ui_ConsensusPeakTile
 from collections import defaultdict
 import numpy as np
 import pandas as pd

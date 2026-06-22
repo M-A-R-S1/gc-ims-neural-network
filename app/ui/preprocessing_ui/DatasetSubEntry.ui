@@ -48,7 +48,7 @@ QWidget:hover {
      <property name="font">
       <font>
        <family>Lato</family>
-       <pointsize>15</pointsize>
+       <pointsize>13</pointsize>
        <italic>true</italic>
        <fontweight>Light</fontweight>
       </font>
@@ -80,7 +80,7 @@ background-color: transparent;</string>
      <property name="font">
       <font>
        <family>Lato</family>
-       <pointsize>15</pointsize>
+       <pointsize>13</pointsize>
        <italic>true</italic>
        <fontweight>Light</fontweight>
       </font>

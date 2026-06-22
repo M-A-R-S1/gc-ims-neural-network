@@ -41,7 +41,7 @@ class Ui_TwoChoiceDialog(object):
         self.button_b.setGeometry(QRect(440, 340, 131, 41))
         font1 = QFont()
         font1.setFamilies([u"Lato"])
-        font1.setPointSize(14)
+        font1.setPointSize(13)
         self.button_b.setFont(font1)
         self.button_b.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button_b.setStyleSheet(u"QPushButton {\n"
@@ -57,7 +57,7 @@ class Ui_TwoChoiceDialog(object):
         self.label_icon = QLabel(TwoChoiceDialog)
         self.label_icon.setObjectName(u"label_icon")
         self.label_icon.setEnabled(True)
-        self.label_icon.setGeometry(QRect(200, 20, 201, 191))
+        self.label_icon.setGeometry(QRect(190, 20, 201, 191))
         self.label_icon.setPixmap(QPixmap(u"ui/_pics/icons/attention_orange.png"))
         self.label_icon.setScaledContents(True)
         self.label_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)

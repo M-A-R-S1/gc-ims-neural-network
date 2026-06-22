@@ -56,7 +56,7 @@ class Ui_DatasetSpectrumEntry(object):
         self.spectrum_name.setObjectName(u"spectrum_name")
         font = QFont()
         font.setFamilies([u"Lato"])
-        font.setPointSize(15)
+        font.setPointSize(13)
         font.setWeight(QFont.Light)
         self.spectrum_name.setFont(font)
         self.spectrum_name.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))

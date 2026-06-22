@@ -42,7 +42,7 @@ class Ui_DatasetSubEntry(object):
         self.label_name.setObjectName(u"label_name")
         font = QFont()
         font.setFamilies([u"Lato"])
-        font.setPointSize(15)
+        font.setPointSize(13)
         font.setWeight(QFont.Light)
         font.setItalic(True)
         self.label_name.setFont(font)

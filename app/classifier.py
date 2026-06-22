@@ -1,13 +1,13 @@
 from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QFont
-from ClassifierWidget import Ui_ClassifierWidget
-from ClassifierTile import Ui_ClassifierTile
-from dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
+from ui.classifier_ui.ClassifierWidget import Ui_ClassifierWidget
+from ui.classifier_ui.ClassifierTile import Ui_ClassifierTile
+from misc.dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
 import sqlite3
 from pathlib import Path
 import torch
-import vae_model
+import misc.vae_model
 import plot
 import re
 import shutil
@@ -580,7 +580,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
         # C. VAE MODELL LADEN
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        vae = vae_model.VariationalAutoencoderCNN(input_layers=1, hidden_layers=64, latent_dimension=16).to(device)
+        vae = misc.vae_model.VariationalAutoencoderCNN(input_layers=1, hidden_layers=64, latent_dimension=16).to(device)
         vae.load_model(model_dir="models", file_name=f"{vae_model_name}.pt", device=device)
         vae.eval()
 
@@ -687,7 +687,7 @@ class ClassificationWorker(QtCore.QObject):
         # Device agnostic code.
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # Initialize the model.
-        model = vae_model.VariationalAutoencoderCNN(input_layers=1,
+        model = misc.vae_model.VariationalAutoencoderCNN(input_layers=1,
                                                     hidden_layers=64,
                                                     latent_dimension=16).to(device)
 

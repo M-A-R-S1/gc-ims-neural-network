@@ -1,5 +1,5 @@
 from PySide6 import QtWidgets
-from ui.SettingsWidget import Ui_SettingsWidget
+from ui.settings_ui.SettingsWidget import Ui_SettingsWidget
 
 class SettingsPage(QtWidgets.QWidget, Ui_SettingsWidget):
     def __init__(self):

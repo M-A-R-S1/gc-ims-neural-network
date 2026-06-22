@@ -1,11 +1,11 @@
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QPixmap
-from ui.dataset_ui.CreateLabelDialog import Ui_CreateLabelDialog
-from ui.dataset_ui.RenameLabelDialog import Ui_RenameLabelDialog
-from ui.MessageDialog import Ui_MessageDialog
-from ui.YesNoDialog import Ui_YesNoDialog
-from ui.ProgressDialog import Ui_ProgressDialog
-from ui.TwoChoiceDialog import Ui_TwoChoiceDialog
+from app.ui.dataset_ui.CreateLabelDialog import Ui_CreateLabelDialog
+from app.ui.dialog_ui.RenameLabelDialog import Ui_RenameLabelDialog
+from app.ui.dialog_ui.MessageDialog import Ui_MessageDialog
+from app.ui.dialog_ui.YesNoDialog import Ui_YesNoDialog
+from app.ui.dialog_ui.ProgressDialog import Ui_ProgressDialog
+from app.ui.dialog_ui.TwoChoiceDialog import Ui_TwoChoiceDialog
 import time
 
 class CreateLabelDialog(QtWidgets.QDialog, Ui_CreateLabelDialog):

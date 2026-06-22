@@ -23,7 +23,7 @@ class Ui_PreprocessingWidget(object):
     def setupUi(self, PreprocessingWidget):
         if not PreprocessingWidget.objectName():
             PreprocessingWidget.setObjectName(u"PreprocessingWidget")
-        PreprocessingWidget.resize(1546, 993)
+        PreprocessingWidget.resize(1729, 1095)
         font = QFont()
         font.setWeight(QFont.Black)
         PreprocessingWidget.setFont(font)
@@ -51,7 +51,7 @@ class Ui_PreprocessingWidget(object):
         self.label_subheader.setMaximumSize(QSize(1500, 200))
         font2 = QFont()
         font2.setFamilies([u"Lato"])
-        font2.setPointSize(15)
+        font2.setPointSize(14)
         font2.setWeight(QFont.Light)
         font2.setKerning(True)
         self.label_subheader.setFont(font2)
@@ -116,7 +116,7 @@ class Ui_PreprocessingWidget(object):
         self.scrollArea_dataset.setWidgetResizable(True)
         self.scrollArea_dataset_Contents = QWidget()
         self.scrollArea_dataset_Contents.setObjectName(u"scrollArea_dataset_Contents")
-        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 680))
+        self.scrollArea_dataset_Contents.setGeometry(QRect(0, 0, 430, 786))
         self.verticalLayout_4 = QVBoxLayout(self.scrollArea_dataset_Contents)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalSpacer = QSpacerItem(20, 585, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)

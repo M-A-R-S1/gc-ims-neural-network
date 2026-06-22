@@ -1,13 +1,13 @@
 import sys
-from config import *
+from app.model import ModelPage
+from misc.config import *
 from PySide6 import QtWidgets
-from PySide6.QtGui import QIcon, QPalette, QColor
+from PySide6.QtGui import QIcon
 from ui.ProjectWindow import Ui_ProjectWindow
 from dataset import DatasetPage
 from preprocessing import PreprocessingPage
 from peak_explorer import PeakExplorerPage
 from consensus_peak import ConsensusPeakPage
-from model import ModelPage
 from classifier import ClassifierPage
 from settings import SettingsPage
 import sqlite3
@@ -38,6 +38,10 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.classifier_page = None
         self.settings_page = None
         self.current_page = {}
+
+        # TODO ...
+        # Hiding settings for now (not used ... maybe later!?)
+        self.Sidebar_bottom.hide()
 
         # Initialize the database.
         self.initialize_database()

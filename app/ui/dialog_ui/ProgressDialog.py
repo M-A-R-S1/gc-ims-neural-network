@@ -31,7 +31,7 @@ class Ui_ProgressDialog(object):
         self.button_no.setGeometry(QRect(320, 260, 151, 41))
         font = QFont()
         font.setFamilies([u"Lato"])
-        font.setPointSize(14)
+        font.setPointSize(13)
         self.button_no.setFont(font)
         self.button_no.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.button_no.setStyleSheet(u"QPushButton {\n"

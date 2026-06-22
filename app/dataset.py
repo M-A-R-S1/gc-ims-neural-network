@@ -4,7 +4,7 @@ from PySide6.QtCore import QSize, Qt
 from ui.dataset_ui.DatasetWidget import Ui_DatasetWidget
 from ui.dataset_ui.DatasetLabelEntry import Ui_DatasetLabelEntry
 from ui.dataset_ui.DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
-from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
+from misc.dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar

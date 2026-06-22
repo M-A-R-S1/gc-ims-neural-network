@@ -40,7 +40,7 @@
    <property name="font">
     <font>
      <family>Lato</family>
-     <pointsize>14</pointsize>
+     <pointsize>13</pointsize>
     </font>
    </property>
    <property name="cursor">

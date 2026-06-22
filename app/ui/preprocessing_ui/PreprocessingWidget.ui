@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1546</width>
-    <height>993</height>
+    <width>1729</width>
+    <height>1095</height>
    </rect>
   </property>
   <property name="font">
@@ -80,7 +80,7 @@
      <property name="font">
       <font>
        <family>Lato</family>
-       <pointsize>15</pointsize>
+       <pointsize>14</pointsize>
        <kerning>true</kerning>
        <fontweight>Light</fontweight>
       </font>
@@ -231,7 +231,7 @@ background-color: transparent;
                  <x>0</x>
                  <y>0</y>
                  <width>430</width>
-                 <height>680</height>
+                 <height>786</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_4">

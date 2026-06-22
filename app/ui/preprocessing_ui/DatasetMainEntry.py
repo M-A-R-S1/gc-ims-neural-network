@@ -42,7 +42,7 @@ class Ui_DatasetMainEntry(object):
         self.label_name.setObjectName(u"label_name")
         font = QFont()
         font.setFamilies([u"Lato"])
-        font.setPointSize(15)
+        font.setPointSize(13)
         font.setWeight(QFont.Light)
         self.label_name.setFont(font)
         self.label_name.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))

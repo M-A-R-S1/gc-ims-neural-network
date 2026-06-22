@@ -177,6 +177,7 @@ class Ui_ModelWidget(object):
         self.model_epoch_container.setStyleSheet(u"background-color: #2e2e2e;")
         self.horizontalLayout_2 = QHBoxLayout(self.model_epoch_container)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.horizontalLayout_2.setContentsMargins(9, -1, 0, -1)
         self.label_epochs = QLabel(self.model_epoch_container)
         self.label_epochs.setObjectName(u"label_epochs")
         self.label_epochs.setMinimumSize(QSize(0, 0))
@@ -202,12 +203,19 @@ class Ui_ModelWidget(object):
         self.comboBox_epochs.setMinimumSize(QSize(200, 40))
         self.comboBox_epochs.setMaximumSize(QSize(20000, 40))
         self.comboBox_epochs.setFont(font4)
-        self.comboBox_epochs.setStyleSheet(u"\n"
+        self.comboBox_epochs.setStyleSheet(u"QComboBox {\n"
 "    border: 1px solid #ff9000;\n"
 "    background-color: #232323; \n"
 "    color: #9e9e9e;\n"
 "    border-radius: 10px;\n"
-"   padding-left: 10px;\n"
+"    padding-left: 10px;\n"
+"}\n"
+"\n"
+"QComboBox::drop-down {\n"
+"	border-radius: 10px;\n"
+"}\n"
+"\n"
+"    \n"
 "\n"
 "")
 
@@ -221,6 +229,7 @@ class Ui_ModelWidget(object):
         self.model_device_container.setStyleSheet(u"background-color: #2e2e2e;")
         self.horizontalLayout_4 = QHBoxLayout(self.model_device_container)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.horizontalLayout_4.setContentsMargins(-1, -1, 0, -1)
         self.label_device = QLabel(self.model_device_container)
         self.label_device.setObjectName(u"label_device")
         self.label_device.setMinimumSize(QSize(0, 0))
@@ -237,14 +246,17 @@ class Ui_ModelWidget(object):
         self.comboBox_device.setMinimumSize(QSize(200, 40))
         self.comboBox_device.setMaximumSize(QSize(20000, 40))
         self.comboBox_device.setFont(font4)
-        self.comboBox_device.setStyleSheet(u"\n"
+        self.comboBox_device.setStyleSheet(u"QComboBox {\n"
 "    border: 1px solid #ff9000;\n"
 "    background-color: #232323; \n"
 "    color: #9e9e9e;\n"
 "    border-radius: 10px;\n"
-"   padding-left: 10px;\n"
+"    padding-left: 10px;\n"
+"}\n"
 "\n"
-"")
+"QComboBox::drop-down {\n"
+"	border-radius: 10px;\n"
+"}")
 
         self.horizontalLayout_4.addWidget(self.comboBox_device)
 
