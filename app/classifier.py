@@ -464,7 +464,8 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         """
 
         # Open the progress dialog which informs the user about the current state of the preprocessing.
-        self.classification_progress_dialog = CustomProgressDialog(title="Classification in progress...", header="Classifying...",)
+        self.classification_progress_dialog = CustomProgressDialog(title="Classification in progress...",
+                                                                   header="Classifying...",)
         # Reset the start time.
         self.classification_progress_dialog.start_time = None
         self.classification_progress_dialog.show()

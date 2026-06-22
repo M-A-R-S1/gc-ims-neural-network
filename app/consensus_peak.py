@@ -120,8 +120,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         # Create a custom yes/no dialog for the user where he can start the consensus peak calculation process.
         dialog = CustomYesNoDialog(
             title="Consensus peak calculation",
-            message="Some of the peaks are not associated with a consensus peak. You need to start the consensus peak calculation process first. Do you "
-                    " want to calculate the consensus peaks?",
+            message="Some of the peaks are not associated with a consensus peak.\n\nDo you want to calculate the consensus peaks now?",
             type="warning",
             parent=self
         )
@@ -162,6 +161,7 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         self.worker.progress_update.connect(self.consensus_progress_dialog.update_progress)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.consensus_progress_dialog.accept)
+        self.worker.finished.connect(self.update_system_state)
         self.worker.finished.connect(self.check_peaks_for_consensus)
         self.consensus_progress_dialog.button_no.clicked.connect(self.worker.stop, type=QtCore.Qt.DirectConnection)
         self.thread.finished.connect(self.worker.deleteLater)
@@ -169,6 +169,17 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
 
         # Start the thread.
         self.thread.start()
+
+
+    def update_system_state(self) -> None:
+        # Connect to the database and get the number of peaks where the consensus id is NULL.
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE system_state SET has_consensus_peaks = 1, consensus_peaks_changed = 0 WHERE id = 1")
+        conn.commit()
+        conn.close()
+
+        self.system_state_changed.emit()
 
 
     def check_peaks_for_consensus(self) -> None:
@@ -185,20 +196,16 @@ class ConsensusPeakPage(QtWidgets.QWidget, Ui_ConsensusPeakWidget):
         cursor.execute("SELECT COUNT(*) FROM peaks WHERE consensus_id IS NULL AND is_active = 1")
         peaks_without_consensus = cursor.fetchone()[0]
 
+        cursor.execute("SELECT consensus_peaks_changed FROM system_state WHERE id = 1")
+        state = cursor.fetchone()
+        consensus_peaks_changed = bool(state[0])
+
         # If there are peaks without a consensus id show the user the "consensus peak calculation dialog".
-        if peaks_without_consensus > 0:
+        if consensus_peaks_changed or peaks_without_consensus > 0:
             QtCore.QTimer.singleShot(100, self.show_consensus_peak_calc_dialog)
-            # Update the system state.
-            cursor.execute("UPDATE system_state SET has_consensus_peaks = 0 WHERE id = 1")
-            conn.commit()
-            self.system_state_changed.emit()
         else:
             self.overlay.hide()
             self.load_consensus_peaks()
-            # Update the system state.
-            cursor.execute("UPDATE system_state SET has_consensus_peaks = 1 WHERE id = 1")
-            conn.commit()
-            self.system_state_changed.emit()
 
         conn.close()
 

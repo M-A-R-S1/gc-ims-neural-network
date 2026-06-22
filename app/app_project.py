@@ -159,7 +159,10 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         try:
             cursor.execute("""
                            SELECT has_spectra,
-                                  dataset_changed
+                                  is_preprocessed,
+                                  has_peaks,
+                                  has_consensus_peaks,
+                                  consensus_peaks_changed
                            FROM system_state
                            WHERE id = 1
                            """)
@@ -167,12 +170,25 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
             if state:
                 has_spectra = bool(state[0])
-                dataset_changed = bool(state[1])
+                is_preprocessed = bool(state[1])
+                has_peaks = bool(state[2])
+                has_consensus_peaks = bool(state[3])
+                consensus_peaks_changed = bool(state[4])
 
                 if has_spectra:
                     self.sb_preprocessing_button.setEnabled(True)
                     self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_white.png"))
                     self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+
+                    if not is_preprocessed:
+                        self.update_menu_preprocessing()
+
+                    if not has_peaks:
+                        self.update_menu_peak_explorer()
+
+                    if not has_consensus_peaks or consensus_peaks_changed:
+                        self.update_menu_consensus()
+
                 else:
                     self.sb_preprocessing_button.setEnabled(False)
                     self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_grey.png"))
@@ -304,7 +320,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                 has_consensus_peaks = bool(state[0])
                 consensus_peaks_changed = bool(state[1])
 
-                if has_consensus_peaks:
+                if has_consensus_peaks and not consensus_peaks_changed:
                     self.sb_model_button.setEnabled(True)
                     self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_white.png"))
                     self.sb_model_label.setStyleSheet(f"color: {NORMAL_COLOR};")
