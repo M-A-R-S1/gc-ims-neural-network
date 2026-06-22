@@ -130,7 +130,6 @@ class VariationalAutoencoderCNN(nn.Module):
 
         # Save the state dict of this model.
         torch.save(obj=self.state_dict(), f=model_save_path)
-        print(f"Model saved at {model_save_path}")
 
 
     def load_model(self, model_dir: str, file_name: str, device: torch.device) -> None:

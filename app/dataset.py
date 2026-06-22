@@ -345,14 +345,45 @@ class DatasetPage(QtWidgets.QWidget, Ui_DatasetWidget):
                                            parent=self)
             return
 
-        # Open a file dialog and collect paths to .mea files.
-        file_paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self,
-                                                               caption="Select GC-IMS spectra",
-                                                               dir="",
-                                                               filter="GC-IMS File (*.mea)")
-        # Forward the paths for handling.
-        if file_paths:
-            self.add_spectra(paths=file_paths)
+        # Dialog box - Does the user want to open .mea files or a folder.
+        msg_box = QtWidgets.QMessageBox(self)
+        msg_box.setWindowTitle("Add Spectra")
+        msg_box.setText("Do you want to select individual files or an entire folder?")
+        btn_files = msg_box.addButton("Files", QtWidgets.QMessageBox.ActionRole)
+        btn_folder = msg_box.addButton("Folder", QtWidgets.QMessageBox.ActionRole)
+        btn_cancel = msg_box.addButton("Cancel", QtWidgets.QMessageBox.RejectRole)
+
+        msg_box.exec()
+        mea_files = []
+
+        # Open .mea files directly.
+        if msg_box.clickedButton() == btn_files:
+            paths, _ = QtWidgets.QFileDialog.getOpenFileNames(self,
+                                                              caption="Select GC-IMS spectra files",
+                                                              dir="",
+                                                              filter="GC-IMS File (*.mea)")
+            mea_files = paths
+
+        # Open folders.
+        elif msg_box.clickedButton() == btn_folder:
+            dir_path = QtWidgets.QFileDialog.getExistingDirectory(self,
+                                                                  caption="Select GC-IMS spectra folder",
+                                                                  dir="")
+            if dir_path:
+                folder_path = Path(dir_path)
+
+                # Look for .mea files in the selected folder (and subfolders).
+                mea_files = [str(p) for p in folder_path.rglob("*.mea")]
+
+                # Folder without .mea files was selected.
+                if not mea_files:
+                    CustomMessageDialog.show_error(title="No Spectra found",
+                                                   message="Could not find any .mea files in the selected directory.",
+                                                   parent=self)
+                    return
+
+        if mea_files:
+            self.add_spectra(paths=mea_files)
 
 
     def add_spectra(self,

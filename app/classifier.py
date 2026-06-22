@@ -639,8 +639,6 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         vote_result = Counter(peak_predictions)
         prediction, vote_count = vote_result.most_common(1)[0]
 
-        print(f"Stimmenverteilung: {peak_predictions}")
-
         # Die prozentuale Sicherheit basierend auf der Einstimmigkeit der Peaks
         total_peaks = len(peak_predictions)
         max_prob = (vote_count / total_peaks) * 100
@@ -867,11 +865,7 @@ class ClassificationWorker(QtCore.QObject):
             filedir.mkdir(parents=True, exist_ok=True)
 
         results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
-
-        #plot.random_forest_importance_plot(model=rf_model, output_dir=filedir, coordinates=True)
         plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,output_dir=filedir)
-        #plot.random_forest_boxplot(features=rf_features, labels=labels, output_dir=filedir)
-        print("Random Forest: Combined Peaks classified")
 
 
 class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
