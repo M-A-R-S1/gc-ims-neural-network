@@ -3,7 +3,6 @@ from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import ConfusionMatrixDisplay
 
-
 def random_forest_confusion_matrix(model: RandomForestClassifier,
                                    test_feature: list,
                                    test_label: list,
@@ -20,17 +19,18 @@ def random_forest_confusion_matrix(model: RandomForestClassifier,
     :return: None.
     """
 
-    # --- FARB-SETUP FÜR DEINEN DARK MODE ---
+    # Color definitions.
     bg_color = '#2e2e2e'
     text_color = '#ebebeb'
 
+    # Create a figure and axis.
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    # 1. Den Hintergrund der Figure und der Achsen dunkel färben
+    # Apply the background color to the figure and the axis.
     fig.patch.set_facecolor(bg_color)
     ax.set_facecolor(bg_color)
 
-    # 2. Matrix zeichnen (NEU: colorbar=False blendet die Farbskala aus!)
+    # Create a confusion matrix without the colorbar legend.
     ConfusionMatrixDisplay.from_estimator(
         model,
         test_feature,
@@ -40,23 +40,21 @@ def random_forest_confusion_matrix(model: RandomForestClassifier,
         colorbar=False
     )
 
-    # tight_layout berechnet die Platzverhältnisse neu
     plt.tight_layout()
-
-    # 3. Textfarben anpassen (Titel und X/Y Labels)
+    # Set title/axis text and color.
     plt.title("Confusion Matrix", color=text_color, pad=25)
     ax.set_xlabel("")
     ax.set_ylabel("")
 
-    # 4. Tick-Marks (Die Beschriftungen der Labels) einfärben
+    # Color and rotate the ticks.
     plt.xticks(rotation=45, color=text_color)
     plt.yticks(color=text_color)
 
-    # 5. Ränder (Spines) dezent grau machen
+    # More color stuff for the axis spines.
     for spine in ax.spines.values():
         spine.set_color('#666666')
 
-    # bbox_inches='tight' verhindert abgeschnittene Labels
+    # Save the figure.
     plt.savefig(output_dir / "confusion_matrix.png",
                 dpi=300,
                 facecolor=fig.get_facecolor(),
