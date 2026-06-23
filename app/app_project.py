@@ -29,7 +29,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         else:
             self.setWindowTitle("GC-IMS suite - No Project Loaded")
 
-        # All different pages.
+        # Page varaibles.
         self.dataset_page = None
         self.preprocessing_page = None
         self.peak_explorer_page = None
@@ -57,7 +57,14 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.update_menu_state()
 
 
-    def setup_pages(self):
+    def setup_pages(self) -> None:
+        """
+        Initializes each page class object and adds them as a widget for the sidebar.
+        Also connects the system_sate signals of each page.
+
+        :return: None.
+        """
+
         # Dataset
         self.dataset_page = DatasetPage(self.project_path)
         self.Main_container.addWidget(self.dataset_page)
@@ -85,7 +92,13 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         self.Main_container.addWidget(self.settings_page)
 
 
-    def setup_sidebar_buttons(self):
+    def setup_sidebar_buttons(self) -> None:
+        """
+        This function creates the sidebar button links for the pages and sets the dataset page as the default page.
+
+        :return: None.
+        """
+
         # Set the dataset as active.
         self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_orange.png"))
         self.sb_dataset_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
@@ -101,7 +114,17 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
 
     def change_page(self, page) -> None:
-        # Make the latest button and label on the sidebar white.
+        """
+        this function is called when the user clicked on one of the sidebar buttons to switch the page.
+        This function changes the color of the sidebar buttons and highlights the active page with a different color
+        and displays the selected page.
+
+        :param page: the page to display.
+
+        :return: None
+        """
+
+        # Color the old page button and label on the sidebar white.
         if self.current_page == self.dataset_page:
             self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_white.png"))
             self.sb_dataset_label.setStyleSheet(f"color: {NORMAL_COLOR};")
@@ -151,39 +174,48 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
         # Set the dataset page as active.
         self.Main_container.setCurrentWidget(page)
-
         self.current_page = page
 
 
     def update_menu_dataset(self) -> None:
+        """
+        This function is called on startup and each time the user changes something on the dataset.
+        This function checks the system_state of the dataset and handels which pages the user can access.
+        If for instance the user did delete all spectra of this project, the user can't no longer access most of the
+        other pages, because these pages require a dataset.
+
+        :return: None
+        """
+
         # Connect to the database.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
         try:
+            # Get some of the system_state values from the database.
             cursor.execute("""
-                           SELECT has_spectra,
-                                  is_preprocessed,
-                                  has_peaks,
-                                  has_consensus_peaks,
-                                  consensus_peaks_changed
+                           SELECT has_spectra, is_preprocessed, has_peaks, has_consensus_peaks, consensus_peaks_changed
                            FROM system_state
                            WHERE id = 1
                            """)
             state = cursor.fetchone()
 
             if state:
+                # Convert the state values as booleans.
                 has_spectra = bool(state[0])
                 is_preprocessed = bool(state[1])
                 has_peaks = bool(state[2])
                 has_consensus_peaks = bool(state[3])
                 consensus_peaks_changed = bool(state[4])
 
+                # Looks like the current project has some spectra.
                 if has_spectra:
+                    # Activate the preprocessing page so that the user can access it.
                     self.sb_preprocessing_button.setEnabled(True)
                     self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_white.png"))
                     self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
 
+                    # check if the other pages can also be accessed.
                     if not is_preprocessed:
                         self.update_menu_preprocessing()
 
@@ -193,7 +225,9 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                     if not has_consensus_peaks or consensus_peaks_changed:
                         self.update_menu_consensus()
 
+                # There are currently no spectra in this project.
                 else:
+                    # Deactivate all other pages!
                     self.sb_preprocessing_button.setEnabled(False)
                     self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_grey.png"))
                     self.sb_preprocessing_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
@@ -221,27 +255,33 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
 
     def update_menu_preprocessing(self) -> None:
+        """
+        This function is called on startup and each time the user changes something on the preprocessing page .
+        This function checks the system_state of the preprocessing and handels which pages the user can access.
+
+        :return: None.
+        """
+
         # Connect to the database.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
-                           SELECT is_preprocessed,
-                                  preprocessing_changed
-                           FROM system_state
-                           WHERE id = 1
-                           """)
+            # Get a system_state from the database.
+            cursor.execute("SELECT is_preprocessed FROM system_state WHERE id = 1")
             state = cursor.fetchone()
 
             if state:
+                # Convert the system state to a boolean value.
                 is_preprocessed = bool(state[0])
-                preprocessing_changed = bool(state[1])
 
+                # The dataset is preprocessed -> The user can access the peak explorer page.
                 if is_preprocessed:
                     self.sb_peak_explorer_button.setEnabled(True)
                     self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_white.png"))
                     self.sb_peak_explorer_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+
+                # The dataset is NOT preprocessed -> The user can't access any pages beyond the preprocessing page.
                 else:
                     self.sb_peak_explorer_button.setEnabled(False)
                     self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_grey.png"))
@@ -266,27 +306,33 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
 
     def update_menu_peak_explorer(self) -> None:
+        """
+        This function is called on startup and each time the user changes something on the peak explorer page.
+        This function checks the system_state of the peak explorer and handels which pages the user can access.
+
+        :return: None.
+        """
+
         # Connect to the database.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
-                           SELECT has_peaks,
-                                  peaks_changed
-                           FROM system_state
-                           WHERE id = 1
-                           """)
+            # Get a system_state from the database.
+            cursor.execute("SELECT has_peaks FROM system_state WHERE id = 1")
             state = cursor.fetchone()
 
             if state:
+                # Convert the system_state to a boolean value.
                 has_peaks = bool(state[0])
-                peaks_changed = bool(state[1])
 
+                # The project has peaks -> The user can access the consensus peak page.
                 if has_peaks:
                     self.sb_consensus_button.setEnabled(True)
                     self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_white.png"))
                     self.sb_consensus_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+
+                # The project has NO peaks -> The user can't access any pages beyond the peak explorer page.
                 else:
                     self.sb_consensus_button.setEnabled(False)
                     self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_grey.png"))
@@ -307,23 +353,28 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
 
     def update_menu_consensus(self) -> None:
+        """
+        This function is called on startup and each time the user changes something on the consensus peak page.
+        This function checks the system_state of the consensus peak page and handels which pages the user can access.
+
+        :return: None.
+        """
+
         # Connect to the database.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
-                           SELECT has_consensus_peaks,
-                                  consensus_peaks_changed
-                           FROM system_state
-                           WHERE id = 1
-                           """)
+            # Get some system_state values.
+            cursor.execute("SELECT has_consensus_peaks, consensus_peaks_changed FROM system_state WHERE id = 1")
             state = cursor.fetchone()
 
             if state:
+                # Convert the system_state values to boolean values.
                 has_consensus_peaks = bool(state[0])
                 consensus_peaks_changed = bool(state[1])
 
+                # The project has consensus peaks -> The user can access the model and classifier pages.
                 if has_consensus_peaks and not consensus_peaks_changed:
                     self.sb_model_button.setEnabled(True)
                     self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_white.png"))
@@ -332,6 +383,8 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                     self.sb_classifier_button.setEnabled(True)
                     self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_white.png"))
                     self.sb_classifier_label.setStyleSheet(f"color: {NORMAL_COLOR};")
+
+                # The project has NO consensus peaks -> The user can't access the model and classifier pages.
                 else:
                     self.sb_model_button.setEnabled(False)
                     self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
@@ -348,10 +401,17 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
 
     def update_menu_state(self) -> None:
+        """
+        This function is called on startup and handels which pages the user can access.
 
+        :return: None.
+        """
+
+        # Is the database there?
         if not self.db_path.exists():
             return
 
+        # Handle the system_states individually for each page.
         self.update_menu_dataset()
         self.update_menu_preprocessing()
         self.update_menu_peak_explorer()
@@ -361,7 +421,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
     def initialize_database(self) -> None:
         """
         This function initializes the database of this project where all the detected peaks and more is saved.
-        =============================================================================
+
         :return: None.
         """
 
@@ -378,119 +438,102 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         cursor = conn.cursor()
 
         # Creat the settings table.
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS settings
-                       (
-                           id INTEGER PRIMARY KEY CHECK (id = 1),
-                           drift_start_cut REAL,
-                           drift_end_cut REAL,
-                           retention_start_cut INTEGER,
-                           retention_end_cut INTEGER
-                       )
-                       ''')
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS settings (
+                           id                       INTEGER PRIMARY KEY CHECK (id = 1),
+                           drift_start_cut          REAL,
+                           drift_end_cut            REAL,
+                           retention_start_cut      INTEGER,
+                           retention_end_cut        INTEGER)
+                       """)
 
         # Input the settings.
         cursor.execute("INSERT OR IGNORE INTO settings (id, drift_start_cut, drift_end_cut, retention_start_cut, retention_end_cut) VALUES (1, 0, 0, 0, 0)")
         conn.commit()
 
         # Creat the system state table.
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS system_state
-                       (
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS system_state (
                            id                           INTEGER PRIMARY KEY CHECK (id = 1),
                            has_spectra                  INTEGER DEFAULT 0,
                            dataset_changed              INTEGER DEFAULT 0,
                            is_preprocessed              INTEGER DEFAULT 0,
                            has_peaks                    INTEGER DEFAULT 0,
                            has_consensus_peaks          INTEGER DEFAULT 0,
-                           consensus_peaks_changed      INTEGER DEFAULT 0
-                       )
-                       ''')
+                           consensus_peaks_changed      INTEGER DEFAULT 0)
+                       """)
 
         # Input the default system states.
-        cursor.execute(
-            "INSERT OR IGNORE INTO system_state (id) VALUES (1)")
+        cursor.execute("INSERT OR IGNORE INTO system_state (id) VALUES (1)")
         conn.commit()
 
         # Creat the labels table.
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS labels
-                       (
-                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                           name TEXT UNIQUE NOT NULL
-                        )
-                    ''')
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS labels (
+                           id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                           name     TEXT UNIQUE NOT NULL)
+                    """)
 
         # Creat the spectra table.
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS spectra
-                       (
-                           id INTEGER PRIMARY KEY AUTOINCREMENT,
-                           label_id INTEGER NOT NULL,
-                           name TEXT NOT NULL,
-                           path TEXT NOT NULL,
-                           processing_done INTEGER DEFAULT 0,
-                           peaks_done INTEGER DEFAULT 0,
-                           intensity_max INTEGER DEFAULT NULL,
-                           intensity_min INTEGER DEFAULT NULL,
-                           FOREIGN KEY (label_id) REFERENCES labels (id) ON DELETE CASCADE
-                       )
-                       ''')
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS spectra (
+                           id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+                           label_id             INTEGER NOT NULL,
+                           name                 TEXT NOT NULL,
+                           path                 TEXT NOT NULL,
+                           processing_done      INTEGER DEFAULT 0,
+                           peaks_done           INTEGER DEFAULT 0,
+                           intensity_max        INTEGER DEFAULT NULL,
+                           intensity_min        INTEGER DEFAULT NULL,
+                           FOREIGN KEY (label_id) REFERENCES labels (id) ON DELETE CASCADE)
+                       """)
 
         # Create the peak table.
-        cursor.execute('''
+        cursor.execute("""
                             CREATE TABLE IF NOT EXISTS peaks (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                label_id INTEGER NOT NULL,
-                                spectrum_id INTEGER NOT NULL,
-                                consensus_id INTEGER DEFAULT NULL,
-                                ret_time REAL,
-                                drift_time REAL,
-                                intensity REAL,
-                                npy_file TEXT,
-                                is_active INTEGER DEFAULT 1,
+                                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                                label_id        INTEGER NOT NULL,
+                                spectrum_id     INTEGER NOT NULL,
+                                consensus_id    INTEGER DEFAULT NULL,
+                                ret_time        REAL,
+                                drift_time      REAL,
+                                intensity       REAL,
+                                npy_file        TEXT,
+                                is_active       INTEGER DEFAULT 1,
                                 FOREIGN KEY (label_id) REFERENCES labels (id) ON DELETE CASCADE,
-                                FOREIGN KEY (spectrum_id) REFERENCES spectra (id) ON DELETE CASCADE
-                            )
-                        ''')
+                                FOREIGN KEY (spectrum_id) REFERENCES spectra (id) ON DELETE CASCADE)
+                        """)
 
         # Create the consensus peak table.
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS consensus_peaks
-                       (
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS consensus_peaks (
                            id               INTEGER PRIMARY KEY,
                            ret_time         REAL,
                            drift_time       REAL,
                            min_intensity    REAL,
-                           is_active        INTEGER DEFAULT 1
-                       )
-                       ''')
+                           is_active        INTEGER DEFAULT 1)
+                       """)
 
         # Create the classifier table.
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS classifier
-                       (
-                           id                   INTEGER PRIMARY KEY,
-                           name                 TEXT NOT NULL,
-                           model                TEXT NOT NULL
-                       )
-                       ''')
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS classifier (
+                           id       INTEGER PRIMARY KEY,
+                           name     TEXT NOT NULL,
+                           model    TEXT NOT NULL)
+                       """)
 
         # Create the classifier result table.
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS classifier_result
-                       (
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS classifier_result (
                            id               INTEGER PRIMARY KEY,
                            classifier_id    INTEGER NOT NULL,
                            consensus_id     INTEGER DEFAULT NULL,
-                           FOREIGN KEY (classifier_id) REFERENCES classifier (id) ON DELETE CASCADE
-                       )
-                       ''')
+                           FOREIGN KEY (classifier_id) REFERENCES classifier (id) ON DELETE CASCADE)
+                       """)
 
         # Create the classifier value table.
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS classifier_value
-                       (
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS classifier_value (
                            id                       INTEGER PRIMARY KEY,
                            classifier_result_id     INTEGER NOT NULL,
                            label                    TEXT,
@@ -499,23 +542,20 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                            recall                   REAL,
                            f1_score                 REAL,
                            support                  INTEGER,
-                           FOREIGN KEY (classifier_result_id) REFERENCES classifier_result (id) ON DELETE CASCADE
-                       )
-                       ''')
+                           FOREIGN KEY (classifier_result_id) REFERENCES classifier_result (id) ON DELETE CASCADE)
+                       """)
 
         # Create the classifier consensus peaks table (Snapshots for each model)
-        cursor.execute('''
-                       CREATE TABLE IF NOT EXISTS cl_consensus_peaks
-                       (
-                           id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                           classifier_id INTEGER NOT NULL,
-                           original_id   INTEGER,
-                           ret_time      REAL,
-                           drift_time    REAL,
-                           min_intensity REAL,
-                           FOREIGN KEY (classifier_id) REFERENCES classifier (id) ON DELETE CASCADE
-                       )
-                       ''')
+        cursor.execute("""
+                       CREATE TABLE IF NOT EXISTS cl_consensus_peaks (
+                           id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                           classifier_id    INTEGER NOT NULL,
+                           original_id      INTEGER,
+                           ret_time         REAL,
+                           drift_time       REAL,
+                           min_intensity    REAL,
+                           FOREIGN KEY (classifier_id) REFERENCES classifier (id) ON DELETE CASCADE )
+                       """)
 
         conn.commit()
         conn.close()
