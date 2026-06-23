@@ -9,7 +9,7 @@ import re
 import json
 
 class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
-    # Signal for project opening.
+    # Signal definitions.
     open_project_signal = QtCore.Signal(Path)
 
     def __init__(self):
@@ -37,16 +37,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
                                     end_color=QtGui.QColor(BUTTON_BACKGROUND_HOVER_COLOR),
                                     dashed=False)
 
-        # Connect the buttons to change the index of the currently shown stacked widget.
+        # Connect the buttons and input fields
         self.button_create.clicked.connect(self.create_project_page)
         self.button_cancle.clicked.connect(self.create_home_page)
-        # Connect the location button to open a "folder selection dialog".
         self.button_location.clicked.connect(self.select_project_location)
-        # Connect the name input field with the validation function.
         self.lineEdit_project_name.textChanged.connect(self.validate_project_inputs)
-        # Connect the create project button.
         self.button_create_2.clicked.connect(self.create_project)
-        # Connect the open project button.
         self.button_open.clicked.connect(self.open_project)
 
 
@@ -238,8 +234,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
 
         :return: None
         """
-        # Change to the "home" page by changing the index of the stacked widget.
+        # Switch to the "home" page by changing the index of the stacked widget.
         self.stackedWidget.setCurrentIndex(0)
+
 
     def button_hover_animation(self,
                                button: QtWidgets.QPushButton,
@@ -265,6 +262,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
         animation.setStartValue(start_color)
         animation.setEndValue(end_color)
 
+
         def update_stylesheet_dashed(color: QtGui.QColor) -> None:
             """
             Updates the stylesheet of the button while the animation is running.
@@ -283,6 +281,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
                                         border-radius: 10px;
                                     }}
                                 """)
+
 
         def update_stylesheet_solid(color: QtGui.QColor) -> None:
             """
