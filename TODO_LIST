@@ -4,3 +4,7 @@
     - Occurrence in labels or spectra
 
 - Consensus Peak info box below the scroll area which displays the label names ect.
+
+- Putting more stuff into the config.py
+    - such as color definitions
+    - maybe use this later for a settings page, so that the user can adjust some stuff.
