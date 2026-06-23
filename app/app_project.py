@@ -401,9 +401,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                            has_spectra                  INTEGER DEFAULT 0,
                            dataset_changed              INTEGER DEFAULT 0,
                            is_preprocessed              INTEGER DEFAULT 0,
-                           preprocessing_changed        INTEGER DEFAULT 0,
                            has_peaks                    INTEGER DEFAULT 0,
-                           peaks_changed                INTEGER DEFAULT 0,
                            has_consensus_peaks          INTEGER DEFAULT 0,
                            consensus_peaks_changed      INTEGER DEFAULT 0
                        )

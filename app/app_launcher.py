@@ -315,6 +315,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
         button.enterEvent = lambda e: self.run_animation(button, True)
         button.leaveEvent = lambda e: self.run_animation(button, False)
 
+
     def run_animation(self,
                       button: QtWidgets.QPushButton,
                       hover: bool) -> None:
@@ -337,7 +338,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_StartWidget):
         button.background_animation.start()
 
 
-def load_custom_fonts():
+def load_custom_fonts() -> None:
+    """
+    Loads the lato font from the asset directory.
+
+    :return: None.
+    """
+
     # Path to the fonts.
     font_path =  Path(__file__).parent / "assets" / "fonts"
 
