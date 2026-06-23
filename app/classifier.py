@@ -30,28 +30,33 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         self.project_path = Path(project_path)
         # Database path.
         self.db_path = self.project_path.parent / "database" / "project_database.db"
+        # Current selected tile and id.
         self.current_selected_classifier_id = None
         self.current_selected_tile = None
+        # Number of active consesus peaks.
         self.active_consensus_peaks = 0
 
-        # ScrollArea-Layout oben ausrichten, damit Elemente nicht mittig schweben
+        # Aligning the classifier scroll area content to the top.
         self.scrollArea_classifier_Contents.layout().setAlignment(QtCore.Qt.AlignTop)
 
-        # Initiale Daten laden
+        # Load initial data.
         self.load_classifiers_to_ui()
         self.load_models_to_dropdown()
 
-        # Connect the button
+        # Connect the buttons.
         self.pushButton_new_classification.clicked.connect(self.show_new_classifier_dialog)
         self.pushButton_load_single_spectrum.clicked.connect(self.on_load_single_spectrum_clicked)
+
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update_confusion_matrix_image()
 
+
     def showEvent(self, event) -> None:
         """
-        This function is called every time the user enters this page and checks the number of active consensus peaks.
+        This function is called every time the user enters this page.
+        It checks the number of active consensus peaks and reloads all classifications and VAE models.
         =============================================================================
         :param event: The page display event.
         =============================================================================
@@ -68,6 +73,13 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
 
     def get_active_consensus_peaks_count(self) -> int:
+        """
+        This function is called each time the user enters the classifier page.
+        It connects to the database and fetches the number of active consensus peaks.
+
+        :return: Number of active consensus peaks.
+        """
+
         # Connect to the database and get the number of active consensus peaks.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -78,26 +90,27 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
         return active_peaks_count
 
-    def load_classifiers_to_ui(self):
+    def load_classifiers_to_ui(self) -> None:
         """
-        Lädt alle Classifier aus der Datenbank und baut die Tiles auf.
+
+        :return: None
         """
+
+        # Get the layout of the classifier scroll area.
         layout = self.scrollArea_classifier_Contents.layout()
+        # Reset the selected classifier id and the selected tile.
         self.current_selected_classifier_id = None
         self.current_selected_tile = None
 
-        # 1. Altes Layout bereinigen (Wichtig, falls die Liste neu geladen wird)
+        # 1. Remove everything from the classifier scroll area.
         while layout.count():
             child = layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
 
-        # 2. Datenbankverbindung und Query
+        # Connect to the database and fetch some classification data.
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-
-        # SQL: Wir holen uns den Classifier und joinen die Tabellen, um den
-        # is_summary=1 Wert (das Gesamtergebnis) direkt abzugreifen.
         query = """
                 SELECT c.id,
                        c.name,
@@ -112,27 +125,34 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         classifiers = cursor.fetchall()
         conn.close()
 
-        # 3. Tiles erstellen und dem Layout hinzufügen
+        # Create a tile for each classification and add this tile to the classifier scroll area.
         for c_id, name, model, accuracy in classifiers:
-            # Hier nutzen wir unsere Custom-Klasse von oben
-            tile = ClassifierTileWidget(
-                classifier_id=c_id,
-                name=name,
-                model_name=model,
-                accuracy=accuracy
-            )
 
-            # Signale mit Funktionen in dieser Klasse verbinden
+            tile = ClassifierTileWidget(classifier_id=c_id,
+                                        name=name,
+                                        model_name=model,
+                                        accuracy=accuracy)
+
+            # Connect the tile with some signals.
             tile.delete_clicked.connect(self.on_delete_classifier)
             tile.rename_clicked.connect(self.on_rename_classifier)
             tile.tile_clicked.connect(self.on_open_results)
 
-            # Ab ins UI-Layout
             layout.addWidget(tile)
 
 
     def on_delete_classifier(self,
                              classification_widget: ClassifierTileWidget) -> None:
+        """
+        This is function is called when the user clicked on the "delete" button of a classification tile in the scroll area.
+        The user is prompted with a dialog where he needs to verify that the wants to delete the classification.
+        If the user chooses to delete, the classification is removed from the database and the folder with the saved confusion matrix
+        and random forest model is deleted from the drive.
+
+        :param classification_widget: The classification widget which should be deleted.
+
+        :return:  None
+        """
 
         # Get the name of the classification.
         classification_name = classification_widget.label_name.text()
