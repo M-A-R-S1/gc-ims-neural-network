@@ -8,7 +8,7 @@ import sqlite3
 from pathlib import Path
 import torch
 import misc.vae_model
-import plot
+import misc.plot
 import re
 import shutil
 import numpy as np
@@ -866,7 +866,7 @@ class ClassificationWorker(QtCore.QObject):
             filedir.mkdir(parents=True, exist_ok=True)
 
         results_dataframe.to_excel(filedir / "classification_results.xlsx", index=True)
-        plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,output_dir=filedir)
+        misc.plot.random_forest_confusion_matrix(model=rf_model, test_feature=test_feature, test_label=test_label,output_dir=filedir)
 
 
 class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
