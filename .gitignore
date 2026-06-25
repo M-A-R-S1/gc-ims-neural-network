@@ -1,9 +1,6 @@
 .idea/
 data/
 output/
-app/ui/mockups/psd/
-app/dist/
-app/build/
 .ipynb_checkpoints/
 .venv/
 venv/git

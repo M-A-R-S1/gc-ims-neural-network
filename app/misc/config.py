@@ -1,7 +1,0 @@
-# Color Button definitions
-BUTTON_BACKGROUND_COLOR = "#232323"
-BUTTON_BACKGROUND_HOVER_COLOR = "#131313"
-# General Color definitions
-ACTIVE_COLOR = "#ff9000"
-DEACTIVATED_COLOR = "#666666"
-NORMAL_COLOR = "#e9edf1"
