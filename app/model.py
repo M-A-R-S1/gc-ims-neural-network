@@ -4,18 +4,19 @@ from PySide6.QtCore import QSize, Qt, QTimer
 from ui.neural_network_ui.ModelWidget import Ui_ModelWidget
 from ui.neural_network_ui.ModelTile import Ui_ModelTile
 from ui.neural_network_ui.ModelReconTile import Ui_ModelReconTile
-from misc.dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
+from dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
 import sqlite3
 from pathlib import Path
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from preprocessing import PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from misc.utils import get_resource_path
 import ims
 import torch
 import re
 import misc.vae_model
-import dataloader
+import misc.dataloader
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -547,7 +548,8 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
         Liest alle .pt Dateien aus dem 'models' Ordner und fügt sie als
         Tiles in die ScrollArea ein.
         """
-        models_dir = Path("models")
+
+        models_dir = get_resource_path("models")
         layout = self.scrollArea_models_Contents.layout()
         self.selected_model_tile = None
 
@@ -607,8 +609,9 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
             latent_dimension=16
         ).to(self.current_device)
 
+        model_dir = get_resource_path("models")
         # 2. Die Gewichte (.pt Datei) laden
-        self.current_vae_model.load_model(model_dir="models", file_name=f"{tile_widget.name}.pt", device=self.current_device)
+        self.current_vae_model.load_model(model_dir=model_dir, file_name=f"{tile_widget.name}.pt", device=self.current_device)
 
         # 3. WICHTIG: Das Modell in den Evaluierungs-Modus setzen (deaktiviert Dropout etc.)
         self.current_vae_model.eval()
@@ -633,7 +636,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
             # Try to delete the model file from the "model" folder.
             try:
-                model_file = Path("models") / f"{model_name}.pt"
+                model_file = get_resource_path("models") / f"{model_name}.pt"
                 if model_file.exists():
                     model_file.unlink()
             except Exception as e:
@@ -659,7 +662,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
                 return
 
             # Duplikation check.
-            new_file_path = Path("models") / f"{new_model_name}.pt"
+            new_file_path = get_resource_path("models") / f"{new_model_name}.pt"
             if new_file_path.exists():
                 CustomMessageDialog.show_error("Error - Duplication",
                                                f"A model with the name '{new_model_name}' already exists. Please choose another name.")
@@ -668,7 +671,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
 
             # Change the actual file name.
             old_model_name = model_widget.label_name.text()
-            old_file_path = Path("models") / f"{old_model_name}.pt"
+            old_file_path = get_resource_path("models") / f"{old_model_name}.pt"
             if old_file_path.exists():
                 old_file_path.rename(new_file_path)
 
@@ -824,7 +827,7 @@ class ModelPage(QtWidgets.QWidget, Ui_ModelWidget):
             return
 
         # 2. Duplikat Check: Gibt es das Modell schon im Ordner "models"?
-        new_file_path = Path("models") / f"{model_name}.pt"
+        new_file_path = get_resource_path("models") / f"{model_name}.pt"
         if new_file_path.exists():
             CustomMessageDialog.show_error("Duplication Error",
                                            f"A model with the name '{model_name}' already exists. Please choose another name.")
@@ -937,9 +940,9 @@ class ModelTileWidget(QtWidgets.QWidget, Ui_ModelTile):
 
         # If the mouse is hovering over the button show this button picture.
         if hover:
-            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+            button.setIcon(QtGui.QIcon(f':/ui/_pics/icons/{icon_name}.png'))
         else:
-            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+            button.setIcon(QtGui.QIcon(f':/ui/_pics/icons/{icon_name}.png'))
 
 
     def emit_delete(self):
@@ -972,8 +975,8 @@ class ModelReconTile(QtWidgets.QWidget, Ui_ModelReconTile):
         self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
 
         # Image paths for the activity icons.
-        self.icon_active = QtGui.QIcon("ui/_pics/icons/eye_open.png")
-        self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")
+        self.icon_active = QtGui.QIcon(":/ui/_pics/icons/eye_open.png")
+        self.icon_inactive = QtGui.QIcon(":/ui/_pics/icons/eye_closed.png")
 
         # Define the absolute path to the npy file.
         self.npy_file = npy_file
@@ -1117,7 +1120,7 @@ class TrainingWorker(QtCore.QObject):
             train_paths, _ = train_test_split(npy_paths, test_size=0.20, shuffle=True)
 
             # 2. Dataset und Dataloader aufsetzen
-            train_dataset = dataloader.VaeDataset(npy_paths=train_paths, class_dict=class_dict, window_size=5)
+            train_dataset = misc.dataloader.VaeDataset(npy_paths=train_paths, class_dict=class_dict, window_size=5)
             train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 
             # 3. Modell initialisieren
@@ -1165,7 +1168,9 @@ class TrainingWorker(QtCore.QObject):
 
             # 5. Modell speichern, falls das Training komplett durchlief
             if not self.is_stopped:
-                model.save_model(model_dir="models", file_name=f"{self.model_name}.pt")
+                model_dir = get_resource_path("models")
+                model.save_model(model_dir=model_dir,
+                                 file_name=f"{self.model_name}.pt")
 
         except Exception as e:
             # Falls irgendwas in PyTorch crasht, die GUI sauber mit dem Error benachrichtigen

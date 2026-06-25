@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtCore import QSize, Qt, Signal, QTimer
 from ui.consensus_peak_ui.ConsensusPeakWidget import Ui_ConsensusPeakWidget
 from ui.consensus_peak_ui.ConsensusPeakTile import Ui_ConsensusPeakTile
-from misc.dialogs import CustomYesNoDialog, CustomProgressDialog
+from dialogs import CustomYesNoDialog, CustomProgressDialog
 from preprocessing import PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
@@ -716,8 +716,8 @@ class ConsensusPeakTile(QtWidgets.QWidget, Ui_ConsensusPeakTile):
         self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
 
         # Image paths for the activity icons.
-        self.icon_active = QtGui.QIcon("ui/_pics/icons/eye_open.png")
-        self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")
+        self.icon_active = QtGui.QIcon(":/ui/_pics/icons/eye_open.png")
+        self.icon_inactive = QtGui.QIcon(":/ui/_pics/icons/eye_closed.png")
 
         # Define the main layout of this widget and its margins.
         #self.main_layout = QtWidgets.QVBoxLayout(self)

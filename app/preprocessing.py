@@ -2,7 +2,7 @@ from __future__ import annotations
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QDoubleValidator
 from PySide6.QtCore import QSize, Qt, QTimer, QLocale, Signal
-from misc.dialogs import CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
+from dialogs import CustomYesNoDialog, CustomProgressDialog, CustomTwoChoiceDialog
 from ui.preprocessing_ui.PreprocessingWidget import Ui_PreprocessingWidget
 from ui.preprocessing_ui.DatasetSubEntry import Ui_DatasetSubEntry
 from ui.preprocessing_ui.DatasetMainEntry import Ui_DatasetMainEntry
@@ -812,11 +812,11 @@ class DatasetMainEntry(QtWidgets.QLabel, Ui_DatasetMainEntry):
         """
 
         if extend:
-            self.button_open_close.setIcon(QtGui.QIcon(f'ui/_pics/icons/chevron_down_white.png'))
+            self.button_open_close.setIcon(QtGui.QIcon(f':/ui/_pics/icons/chevron_down_white.png'))
             self.extended = True
             self.label_name.setStyleSheet("border: None; color: #ff9000; background-color: transparent; font-weight: bold;")
         else:
-            self.button_open_close.setIcon(QtGui.QIcon(f'ui/_pics/icons/chevron_right_white.png'))
+            self.button_open_close.setIcon(QtGui.QIcon(f':/ui/_pics/icons/chevron_right_white.png'))
             self.extended = False
             self.label_name.setStyleSheet("border: None; color: #ebebeb; background-color: transparent; font-weight: light;")
 

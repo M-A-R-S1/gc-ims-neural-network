@@ -18,6 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout,
     QWidget)
+import resources_rc
 
 class Ui_DatasetWidget(object):
     def setupUi(self, DatasetWidget):
@@ -149,7 +150,7 @@ class Ui_DatasetWidget(object):
 "\n"
 "")
         icon = QIcon()
-        icon.addFile(u"ui/_pics/icons/add_circle_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/ui/_pics/icons/add_circle_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_add_label.setIcon(icon)
         self.button_add_label.setIconSize(QSize(35, 35))
 

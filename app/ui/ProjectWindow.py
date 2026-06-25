@@ -18,6 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QMainWindow,
     QPushButton, QSizePolicy, QSpacerItem, QStackedWidget,
     QVBoxLayout, QWidget)
+import resources_rc
 
 class Ui_ProjectWindow(object):
     def setupUi(self, ProjectWindow):
@@ -26,7 +27,7 @@ class Ui_ProjectWindow(object):
         ProjectWindow.resize(1599, 944)
         ProjectWindow.setMinimumSize(QSize(1400, 820))
         icon = QIcon()
-        icon.addFile(u"ui/_pics/logo_small.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/ui/_pics/logo_small.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         ProjectWindow.setWindowIcon(icon)
         self.centralwidget = QWidget(ProjectWindow)
         self.centralwidget.setObjectName(u"centralwidget")
@@ -74,7 +75,7 @@ class Ui_ProjectWindow(object):
 "    border: none;\n"
 "}")
         icon1 = QIcon()
-        icon1.addFile(u"ui/_pics/icons/dataset_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(u":/ui/_pics/icons/dataset_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_dataset_button.setIcon(icon1)
         self.sb_dataset_button.setIconSize(QSize(60, 60))
 
@@ -114,7 +115,7 @@ class Ui_ProjectWindow(object):
 "}\n"
 "")
         icon2 = QIcon()
-        icon2.addFile(u"ui/_pics/icons/preprocessing_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon2.addFile(u":/ui/_pics/icons/preprocessing_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_preprocessing_button.setIcon(icon2)
         self.sb_preprocessing_button.setIconSize(QSize(60, 60))
 
@@ -148,7 +149,7 @@ class Ui_ProjectWindow(object):
 "	padding-top: 20px;\n"
 "}")
         icon3 = QIcon()
-        icon3.addFile(u"ui/_pics/icons/peak_explorer_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon3.addFile(u":/ui/_pics/icons/peak_explorer_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_peak_explorer_button.setIcon(icon3)
         self.sb_peak_explorer_button.setIconSize(QSize(60, 60))
 
@@ -182,7 +183,7 @@ class Ui_ProjectWindow(object):
 "	padding-top: 20px;\n"
 "}")
         icon4 = QIcon()
-        icon4.addFile(u"ui/_pics/icons/consensus_peak_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon4.addFile(u":/ui/_pics/icons/consensus_peak_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_consensus_button.setIcon(icon4)
         self.sb_consensus_button.setIconSize(QSize(60, 60))
 
@@ -216,7 +217,7 @@ class Ui_ProjectWindow(object):
 "	padding-top: 20px;\n"
 "}")
         icon5 = QIcon()
-        icon5.addFile(u"ui/_pics/icons/neural_network_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon5.addFile(u":/ui/_pics/icons/neural_network_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_model_button.setIcon(icon5)
         self.sb_model_button.setIconSize(QSize(60, 60))
 
@@ -250,7 +251,7 @@ class Ui_ProjectWindow(object):
 "	padding-top: 20px;\n"
 "}")
         icon6 = QIcon()
-        icon6.addFile(u"ui/_pics/icons/classifier_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon6.addFile(u":/ui/_pics/icons/classifier_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_classifier_button.setIcon(icon6)
         self.sb_classifier_button.setIconSize(QSize(60, 60))
 
@@ -277,6 +278,7 @@ class Ui_ProjectWindow(object):
 
         self.Sidebar_bottom = QWidget(self.Sidebar_container)
         self.Sidebar_bottom.setObjectName(u"Sidebar_bottom")
+        self.Sidebar_bottom.setEnabled(True)
         sizePolicy.setHeightForWidth(self.Sidebar_bottom.sizePolicy().hasHeightForWidth())
         self.Sidebar_bottom.setSizePolicy(sizePolicy)
         self.Sidebar_bottom.setMinimumSize(QSize(80, 100))
@@ -288,6 +290,7 @@ class Ui_ProjectWindow(object):
         self.verticalLayout_8.setContentsMargins(0, 0, 0, 0)
         self.sb_settings_container = QWidget(self.Sidebar_bottom)
         self.sb_settings_container.setObjectName(u"sb_settings_container")
+        self.sb_settings_container.setEnabled(True)
         self.sb_settings_container.setStyleSheet(u"")
         self.verticalLayout_6 = QVBoxLayout(self.sb_settings_container)
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
@@ -303,7 +306,7 @@ class Ui_ProjectWindow(object):
 "	padding-top: 20px;\n"
 "}")
         icon7 = QIcon()
-        icon7.addFile(u"ui/_pics/icons/settings_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon7.addFile(u":/ui/_pics/icons/settings_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.sb_settings_button.setIcon(icon7)
         self.sb_settings_button.setIconSize(QSize(60, 60))
 

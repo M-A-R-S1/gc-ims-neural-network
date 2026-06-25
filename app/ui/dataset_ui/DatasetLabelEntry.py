@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
     QSizePolicy, QWidget)
+import resources_rc
 
 class Ui_DatasetLabelEntry(object):
     def setupUi(self, DatasetLabelEntry):
@@ -46,7 +47,7 @@ class Ui_DatasetLabelEntry(object):
 "    border: none;\n"
 "}")
         icon = QIcon()
-        icon.addFile(u"ui/_pics/icons/delete_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/ui/_pics/icons/delete_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_labelDelete.setIcon(icon)
         self.button_labelDelete.setIconSize(QSize(30, 30))
 
@@ -62,7 +63,7 @@ class Ui_DatasetLabelEntry(object):
 "	background-image: url(\"ui/_pics/icons/classifier_grey.png\");\n"
 "}")
         icon1 = QIcon()
-        icon1.addFile(u"ui/_pics/icons/edit_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(u":/ui/_pics/icons/edit_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_labelRename.setIcon(icon1)
         self.button_labelRename.setIconSize(QSize(30, 30))
 

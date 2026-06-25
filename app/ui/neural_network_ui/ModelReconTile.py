@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QSizePolicy,
     QVBoxLayout, QWidget)
+import resources_rc
 
 class Ui_ModelReconTile(object):
     def setupUi(self, ModelReconTile):
@@ -58,7 +59,7 @@ class Ui_ModelReconTile(object):
         self.arrow_left.setObjectName(u"arrow_left")
         self.arrow_left.setMinimumSize(QSize(50, 60))
         self.arrow_left.setMaximumSize(QSize(50, 50))
-        self.arrow_left.setPixmap(QPixmap(u"ui/_pics/icons/arrow_right.png"))
+        self.arrow_left.setPixmap(QPixmap(u":/ui/_pics/icons/arrow_right.png"))
         self.arrow_left.setScaledContents(True)
 
         self.horizontalLayout.addWidget(self.arrow_left, 0, Qt.AlignmentFlag.AlignVCenter)

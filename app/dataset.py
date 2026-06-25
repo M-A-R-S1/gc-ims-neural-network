@@ -4,7 +4,7 @@ from PySide6.QtCore import QSize, Qt
 from ui.dataset_ui.DatasetWidget import Ui_DatasetWidget
 from ui.dataset_ui.DatasetLabelEntry import Ui_DatasetLabelEntry
 from ui.dataset_ui.DatasetSpectrumEntry import Ui_DatasetSpectrumEntry
-from misc.dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
+from dialogs import CreateLabelDialog, CustomMessageDialog, CustomYesNoDialog, RenameLabelDialog
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -832,9 +832,9 @@ class DatasetLabelEntry(QtWidgets.QLabel, Ui_DatasetLabelEntry):
 
         # If the mouse is hovering over the button show this button picture.
         if hover:
-            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+            button.setIcon(QtGui.QIcon(f':/ui/_pics/icons/{icon_name}.png'))
         else:
-            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+            button.setIcon(QtGui.QIcon(f':/ui/_pics/icons/{icon_name}.png'))
 
 
     def mousePressEvent(self,
@@ -890,8 +890,8 @@ class DatasetSpectrumEntry(QtWidgets.QWidget, Ui_DatasetSpectrumEntry):
         self.spectrum_path = path
         self.spectrum_name.setText(f"{number} - {Path(self.spectrum_path).parent.name}/{Path(self.spectrum_path).stem}")
         # Hover effects for buttons.
-        self.button_spectrumDelete.enterEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_magenta.png'))
-        self.button_spectrumDelete.leaveEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r'ui/_pics/icons/delete_grey.png'))
+        self.button_spectrumDelete.enterEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r':/ui/_pics/icons/delete_magenta.png'))
+        self.button_spectrumDelete.leaveEvent = lambda e: self.button_spectrumDelete.setIcon(QtGui.QIcon(r':/ui/_pics/icons/delete_grey.png'))
 
         # Connect the delete button
         self.button_spectrumDelete.clicked.connect(lambda: self.delete_signal.emit(self))

@@ -96,8 +96,8 @@ background-color: transparent;</string>
       <string/>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>ui/_pics/icons/chevron_right_white.png</normaloff>ui/_pics/icons/chevron_right_white.png</iconset>
+      <iconset resource="../../resources.qrc">
+       <normaloff>:/ui/_pics/icons/chevron_right_white.png</normaloff>:/ui/_pics/icons/chevron_right_white.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -112,6 +112,8 @@ background-color: transparent;</string>
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

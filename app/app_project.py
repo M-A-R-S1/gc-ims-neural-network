@@ -1,7 +1,7 @@
 import sys
-from app.model import ModelPage
+from model import ModelPage
 from misc.config import *
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtGui
 from PySide6.QtGui import QIcon
 from ui.ProjectWindow import Ui_ProjectWindow
 from dataset import DatasetPage
@@ -10,6 +10,7 @@ from peak_explorer import PeakExplorerPage
 from consensus_peak import ConsensusPeakPage
 from classifier import ClassifierPage
 from settings import SettingsPage
+import resources_rc
 import sqlite3
 
 class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
@@ -100,7 +101,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
         """
 
         # Set the dataset as active.
-        self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_orange.png"))
+        self.sb_dataset_button.setIcon(QIcon(":/ui/_pics/icons/dataset_orange.png"))
         self.sb_dataset_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
 
         # Connect the buttons.
@@ -126,50 +127,50 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
         # Color the old page button and label on the sidebar white.
         if self.current_page == self.dataset_page:
-            self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_white.png"))
+            self.sb_dataset_button.setIcon(QIcon(":/ui/_pics/icons/dataset_white.png"))
             self.sb_dataset_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.preprocessing_page:
-            self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_white.png"))
+            self.sb_preprocessing_button.setIcon(QIcon(":/ui/_pics/icons/preprocessing_white.png"))
             self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.peak_explorer_page:
-            self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_white.png"))
+            self.sb_peak_explorer_button.setIcon(QIcon(":/ui/_pics/icons/peak_explorer_white.png"))
             self.sb_peak_explorer_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.consensus_peak_page:
-            self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_white.png"))
+            self.sb_consensus_button.setIcon(QIcon(":/ui/_pics/icons/consensus_peak_white.png"))
             self.sb_consensus_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.model_page:
-            self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_white.png"))
+            self.sb_model_button.setIcon(QIcon(":/ui/_pics/icons/neural_network_white.png"))
             self.sb_model_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.classifier_page:
-            self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_white.png"))
+            self.sb_classifier_button.setIcon(QIcon(":/ui/_pics/icons/classifier_white.png"))
             self.sb_classifier_label.setStyleSheet(f"color: {NORMAL_COLOR};")
         elif self.current_page == self.settings_page:
-            self.sb_settings_button.setIcon(QIcon("ui/_pics/icons/settings_white.png"))
+            self.sb_settings_button.setIcon(QIcon(":/ui/_pics/icons/settings_white.png"))
             self.sb_settings_label.setStyleSheet(f"color: {NORMAL_COLOR};")
 
         # Change the active color of the sidebar button/label
         if page == self.dataset_page:
-            self.sb_dataset_button.setIcon(QIcon("ui/_pics/icons/dataset_orange.png"))
+            self.sb_dataset_button.setIcon(QIcon(":/ui/_pics/icons/dataset_orange.png"))
             self.sb_dataset_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
         elif page == self.preprocessing_page:
-            self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_orange.png"))
+            self.sb_preprocessing_button.setIcon(QIcon(":/ui/_pics/icons/preprocessing_orange.png"))
             self.sb_preprocessing_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
         elif page == self.peak_explorer_page:
-            self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_orange.png"))
+            self.sb_peak_explorer_button.setIcon(QIcon(":/ui/_pics/icons/peak_explorer_orange.png"))
             self.sb_peak_explorer_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
             self.peak_explorer_page.load_data()
         elif page == self.consensus_peak_page:
-            self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_orange.png"))
+            self.sb_consensus_button.setIcon(QIcon(":/ui/_pics/icons/consensus_peak_orange.png"))
             self.sb_consensus_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
             self.consensus_peak_page.load_data()
         elif page == self.model_page:
-            self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_orange.png"))
+            self.sb_model_button.setIcon(QIcon(":/ui/_pics/icons/neural_network_orange.png"))
             self.sb_model_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
         elif page == self.classifier_page:
-            self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_orange.png"))
+            self.sb_classifier_button.setIcon(QIcon(":/ui/_pics/icons/classifier_orange.png"))
             self.sb_classifier_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
         elif page == self.settings_page:
-            self.sb_settings_button.setIcon(QIcon("ui/_pics/icons/settings_orange.png"))
+            self.sb_settings_button.setIcon(QIcon(":/ui/_pics/icons/settings_orange.png"))
             self.sb_settings_label.setStyleSheet(f"color: {ACTIVE_COLOR};")
 
         # Set the dataset page as active.
@@ -212,7 +213,7 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                 if has_spectra:
                     # Activate the preprocessing page so that the user can access it.
                     self.sb_preprocessing_button.setEnabled(True)
-                    self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_white.png"))
+                    self.sb_preprocessing_button.setIcon(QIcon(":/ui/_pics/icons/preprocessing_white.png"))
                     self.sb_preprocessing_label.setStyleSheet(f"color: {NORMAL_COLOR};")
 
                     # check if the other pages can also be accessed.
@@ -229,23 +230,23 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                 else:
                     # Deactivate all other pages!
                     self.sb_preprocessing_button.setEnabled(False)
-                    self.sb_preprocessing_button.setIcon(QIcon("ui/_pics/icons/preprocessing_grey.png"))
+                    self.sb_preprocessing_button.setIcon(QIcon(":/ui/_pics/icons/preprocessing_grey.png"))
                     self.sb_preprocessing_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_peak_explorer_button.setEnabled(False)
-                    self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_grey.png"))
+                    self.sb_peak_explorer_button.setIcon(QIcon(":/ui/_pics/icons/peak_explorer_grey.png"))
                     self.sb_peak_explorer_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_consensus_button.setEnabled(False)
-                    self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_grey.png"))
+                    self.sb_consensus_button.setIcon(QIcon(":/ui/_pics/icons/consensus_peak_grey.png"))
                     self.sb_consensus_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_model_button.setEnabled(False)
-                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
+                    self.sb_model_button.setIcon(QIcon(":/ui/_pics/icons/neural_network_grey.png"))
                     self.sb_model_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_classifier_button.setEnabled(False)
-                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+                    self.sb_classifier_button.setIcon(QIcon(":/ui/_pics/icons/classifier_grey.png"))
                     self.sb_classifier_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
         except sqlite3.Error as e:
@@ -278,25 +279,25 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                 # The dataset is preprocessed -> The user can access the peak explorer page.
                 if is_preprocessed:
                     self.sb_peak_explorer_button.setEnabled(True)
-                    self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_white.png"))
+                    self.sb_peak_explorer_button.setIcon(QIcon(":/ui/_pics/icons/peak_explorer_white.png"))
                     self.sb_peak_explorer_label.setStyleSheet(f"color: {NORMAL_COLOR};")
 
                 # The dataset is NOT preprocessed -> The user can't access any pages beyond the preprocessing page.
                 else:
                     self.sb_peak_explorer_button.setEnabled(False)
-                    self.sb_peak_explorer_button.setIcon(QIcon("ui/_pics/icons/peak_explorer_grey.png"))
+                    self.sb_peak_explorer_button.setIcon(QIcon(":/ui/_pics/icons/peak_explorer_grey.png"))
                     self.sb_peak_explorer_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_consensus_button.setEnabled(False)
-                    self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_grey.png"))
+                    self.sb_consensus_button.setIcon(QIcon(":/ui/_pics/icons/consensus_peak_grey.png"))
                     self.sb_consensus_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_model_button.setEnabled(False)
-                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
+                    self.sb_model_button.setIcon(QIcon(":/ui/_pics/icons/neural_network_grey.png"))
                     self.sb_model_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_classifier_button.setEnabled(False)
-                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+                    self.sb_classifier_button.setIcon(QIcon(":/ui/_pics/icons/classifier_grey.png"))
                     self.sb_classifier_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
         except sqlite3.Error as e:
@@ -329,21 +330,21 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                 # The project has peaks -> The user can access the consensus peak page.
                 if has_peaks:
                     self.sb_consensus_button.setEnabled(True)
-                    self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_white.png"))
+                    self.sb_consensus_button.setIcon(QIcon(":/ui/_pics/icons/consensus_peak_white.png"))
                     self.sb_consensus_label.setStyleSheet(f"color: {NORMAL_COLOR};")
 
                 # The project has NO peaks -> The user can't access any pages beyond the peak explorer page.
                 else:
                     self.sb_consensus_button.setEnabled(False)
-                    self.sb_consensus_button.setIcon(QIcon("ui/_pics/icons/consensus_peak_grey.png"))
+                    self.sb_consensus_button.setIcon(QIcon(":/ui/_pics/icons/consensus_peak_grey.png"))
                     self.sb_consensus_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_model_button.setEnabled(False)
-                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
+                    self.sb_model_button.setIcon(QIcon(":/ui/_pics/icons/neural_network_grey.png"))
                     self.sb_model_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_classifier_button.setEnabled(False)
-                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+                    self.sb_classifier_button.setIcon(QIcon(":/ui/_pics/icons/classifier_grey.png"))
                     self.sb_classifier_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
         except sqlite3.Error as e:
@@ -377,21 +378,21 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
                 # The project has consensus peaks -> The user can access the model and classifier pages.
                 if has_consensus_peaks and not consensus_peaks_changed:
                     self.sb_model_button.setEnabled(True)
-                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_white.png"))
+                    self.sb_model_button.setIcon(QIcon(":/ui/_pics/icons/neural_network_white.png"))
                     self.sb_model_label.setStyleSheet(f"color: {NORMAL_COLOR};")
 
                     self.sb_classifier_button.setEnabled(True)
-                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_white.png"))
+                    self.sb_classifier_button.setIcon(QIcon(":/ui/_pics/icons/classifier_white.png"))
                     self.sb_classifier_label.setStyleSheet(f"color: {NORMAL_COLOR};")
 
                 # The project has NO consensus peaks -> The user can't access the model and classifier pages.
                 else:
                     self.sb_model_button.setEnabled(False)
-                    self.sb_model_button.setIcon(QIcon("ui/_pics/icons/neural_network_grey.png"))
+                    self.sb_model_button.setIcon(QIcon(":/ui/_pics/icons/neural_network_grey.png"))
                     self.sb_model_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
                     self.sb_classifier_button.setEnabled(False)
-                    self.sb_classifier_button.setIcon(QIcon("ui/_pics/icons/classifier_grey.png"))
+                    self.sb_classifier_button.setIcon(QIcon(":/ui/_pics/icons/classifier_grey.png"))
                     self.sb_classifier_label.setStyleSheet(f"color: {DEACTIVATED_COLOR};")
 
         except sqlite3.Error as e:
@@ -562,11 +563,25 @@ class ProjectWindow(QtWidgets.QMainWindow, Ui_ProjectWindow):
 
 
 if __name__ == "__main__":
+
+    if sys.platform == "win32":
+        import ctypes
+        myappid = 'RUB.gc_ims_suite.app.1_0'
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        except Exception:
+            pass
+
     # Create an application instance!
     app = QtWidgets.QApplication(sys.argv)
 
+    if sys.platform == "linux":
+        app.setDesktopFileName("gc_ims_suite.desktop")
+
+
     # Create a window and show it.
     project_window = ProjectWindow("")
+    app.setWindowIcon(QtGui.QIcon(':/app_icon.ico'))
     project_window.showMaximized()
 
     # Start the App.

@@ -111,7 +111,7 @@ class VariationalAutoencoderCNN(nn.Module):
         return self.decoder(x), mean, log_variance
 
 
-    def save_model(self, model_dir: str, file_name: str) -> None:
+    def save_model(self, model_dir: Path, file_name: str) -> None:
         """
         Save the state dict of this model to a specified directory and filename.
 
@@ -132,7 +132,7 @@ class VariationalAutoencoderCNN(nn.Module):
         torch.save(obj=self.state_dict(), f=model_save_path)
 
 
-    def load_model(self, model_dir: str, file_name: str, device: torch.device) -> None:
+    def load_model(self, model_dir: Path, file_name: str, device: torch.device) -> None:
         """
         Load the state dict of this model from the specified directory and filename
 
@@ -200,6 +200,7 @@ class ClassificationModel(nn.Module):
         # Save the state dict of this model.
         torch.save(obj=self.state_dict(), f=model_save_path)
         print(f"Model saved at {model_save_path}")
+
 
     def load_model(self, model_dir: str, file_name: str) -> None:
         """

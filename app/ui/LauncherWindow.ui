@@ -34,8 +34,8 @@
    <string>GC-IMS suite</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>ui/_pics/logo_small.png</normaloff>ui/_pics/logo_small.png</iconset>
+   <iconset resource="../resources.qrc">
+    <normaloff>:/ui/_pics/logo_small.png</normaloff>:/ui/_pics/logo_small.png</iconset>
   </property>
   <property name="autoFillBackground">
    <bool>false</bool>
@@ -160,8 +160,8 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>ui/_pics/icons/folder-orange.png</normaloff>ui/_pics/icons/folder-orange.png</iconset>
+      <iconset resource="../resources.qrc">
+       <normaloff>:/ui/_pics/icons/folder-orange.png</normaloff>:/ui/_pics/icons/folder-orange.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -205,8 +205,8 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>ui/_pics/icons/add_blue.png</normaloff>ui/_pics/icons/add_blue.png</iconset>
+      <iconset resource="../resources.qrc">
+       <normaloff>:/ui/_pics/icons/add_blue.png</normaloff>:/ui/_pics/icons/add_blue.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -231,7 +231,7 @@
       <string/>
      </property>
      <property name="pixmap">
-      <pixmap>ui/_pics/logo_big.png</pixmap>
+      <pixmap resource="../resources.qrc">:/ui/_pics/logo_big.png</pixmap>
      </property>
      <property name="alignment">
       <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -431,8 +431,8 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>ui/_pics/icons/folder-orange.png</normaloff>ui/_pics/icons/folder-orange.png</iconset>
+      <iconset resource="../resources.qrc">
+       <normaloff>:/ui/_pics/icons/folder-orange.png</normaloff>:/ui/_pics/icons/folder-orange.png</iconset>
      </property>
      <property name="iconSize">
       <size>
@@ -543,6 +543,8 @@
   <tabstop>button_cancle</tabstop>
   <tabstop>button_create_2</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

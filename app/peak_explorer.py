@@ -2,7 +2,7 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtCore import QSize, Qt, Signal, QTimer
 from ui.peak_explorer_ui.PeakExplorerWidget import Ui_PeakExplorerWidget
-from misc.dialogs import CustomYesNoDialog, CustomProgressDialog, CustomMessageDialog
+from dialogs import CustomYesNoDialog, CustomProgressDialog, CustomMessageDialog
 from preprocessing import DatasetSubEntry, DatasetMainEntry, PlottingCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import pyplot as plt
@@ -1217,8 +1217,8 @@ class PeakTileWidget(QtWidgets.QFrame):
             self.setGraphicsEffect(self.opacity_effect)
 
         # Image paths for the activity icons.
-        self.icon_active = QtGui.QIcon("ui/_pics/icons/eye_open.png")
-        self.icon_inactive = QtGui.QIcon("ui/_pics/icons/eye_closed.png")
+        self.icon_active = QtGui.QIcon(":/ui/_pics/icons/eye_open.png")
+        self.icon_inactive = QtGui.QIcon(":/ui/_pics/icons/eye_closed.png")
 
         # Set the size and the style for the peak tile widget.
         self.setFixedSize(90, 120)

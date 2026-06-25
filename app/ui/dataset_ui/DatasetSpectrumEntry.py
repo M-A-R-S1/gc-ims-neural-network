@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
     QSizePolicy, QWidget)
+import resources_rc
 
 class Ui_DatasetSpectrumEntry(object):
     def setupUi(self, DatasetSpectrumEntry):
@@ -46,7 +47,7 @@ class Ui_DatasetSpectrumEntry(object):
 "    border: none;\n"
 "}")
         icon = QIcon()
-        icon.addFile(u"ui/_pics/icons/delete_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/ui/_pics/icons/delete_grey.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_spectrumDelete.setIcon(icon)
         self.button_spectrumDelete.setIconSize(QSize(30, 30))
 

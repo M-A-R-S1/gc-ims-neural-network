@@ -20,8 +20,8 @@
    <string>MainWindow</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>ui/_pics/logo_small.png</normaloff>ui/_pics/logo_small.png</iconset>
+   <iconset resource="../resources.qrc">
+    <normaloff>:/ui/_pics/logo_small.png</normaloff>:/ui/_pics/logo_small.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -157,8 +157,8 @@
                 <string/>
                </property>
                <property name="icon">
-                <iconset>
-                 <normaloff>ui/_pics/icons/dataset_white.png</normaloff>ui/_pics/icons/dataset_white.png</iconset>
+                <iconset resource="../resources.qrc">
+                 <normaloff>:/ui/_pics/icons/dataset_white.png</normaloff>:/ui/_pics/icons/dataset_white.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -232,8 +232,8 @@
                 <string/>
                </property>
                <property name="icon">
-                <iconset>
-                 <normaloff>ui/_pics/icons/preprocessing_white.png</normaloff>ui/_pics/icons/preprocessing_white.png</iconset>
+                <iconset resource="../resources.qrc">
+                 <normaloff>:/ui/_pics/icons/preprocessing_white.png</normaloff>:/ui/_pics/icons/preprocessing_white.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -297,8 +297,8 @@
                 <string/>
                </property>
                <property name="icon">
-                <iconset>
-                 <normaloff>ui/_pics/icons/peak_explorer_white.png</normaloff>ui/_pics/icons/peak_explorer_white.png</iconset>
+                <iconset resource="../resources.qrc">
+                 <normaloff>:/ui/_pics/icons/peak_explorer_white.png</normaloff>:/ui/_pics/icons/peak_explorer_white.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -362,8 +362,8 @@
                 <string/>
                </property>
                <property name="icon">
-                <iconset>
-                 <normaloff>ui/_pics/icons/consensus_peak_white.png</normaloff>ui/_pics/icons/consensus_peak_white.png</iconset>
+                <iconset resource="../resources.qrc">
+                 <normaloff>:/ui/_pics/icons/consensus_peak_white.png</normaloff>:/ui/_pics/icons/consensus_peak_white.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -427,8 +427,8 @@
                 <string/>
                </property>
                <property name="icon">
-                <iconset>
-                 <normaloff>ui/_pics/icons/neural_network_white.png</normaloff>ui/_pics/icons/neural_network_white.png</iconset>
+                <iconset resource="../resources.qrc">
+                 <normaloff>:/ui/_pics/icons/neural_network_white.png</normaloff>:/ui/_pics/icons/neural_network_white.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -492,8 +492,8 @@
                 <string/>
                </property>
                <property name="icon">
-                <iconset>
-                 <normaloff>ui/_pics/icons/classifier_white.png</normaloff>ui/_pics/icons/classifier_white.png</iconset>
+                <iconset resource="../resources.qrc">
+                 <normaloff>:/ui/_pics/icons/classifier_white.png</normaloff>:/ui/_pics/icons/classifier_white.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -627,8 +627,8 @@
                 <string/>
                </property>
                <property name="icon">
-                <iconset>
-                 <normaloff>ui/_pics/icons/settings_white.png</normaloff>ui/_pics/icons/settings_white.png</iconset>
+                <iconset resource="../resources.qrc">
+                 <normaloff>:/ui/_pics/icons/settings_white.png</normaloff>:/ui/_pics/icons/settings_white.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -680,6 +680,8 @@
    </layout>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

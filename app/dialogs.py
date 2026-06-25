@@ -1,11 +1,11 @@
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QPixmap
-from app.ui.dataset_ui.CreateLabelDialog import Ui_CreateLabelDialog
-from app.ui.dialog_ui.RenameLabelDialog import Ui_RenameLabelDialog
-from app.ui.dialog_ui.MessageDialog import Ui_MessageDialog
-from app.ui.dialog_ui.YesNoDialog import Ui_YesNoDialog
-from app.ui.dialog_ui.ProgressDialog import Ui_ProgressDialog
-from app.ui.dialog_ui.TwoChoiceDialog import Ui_TwoChoiceDialog
+from ui.dataset_ui.CreateLabelDialog import Ui_CreateLabelDialog
+from ui.dialog_ui.RenameLabelDialog import Ui_RenameLabelDialog
+from ui.dialog_ui.MessageDialog import Ui_MessageDialog
+from ui.dialog_ui.YesNoDialog import Ui_YesNoDialog
+from ui.dialog_ui.ProgressDialog import Ui_ProgressDialog
+from ui.dialog_ui.TwoChoiceDialog import Ui_TwoChoiceDialog
 import time
 
 class CreateLabelDialog(QtWidgets.QDialog, Ui_CreateLabelDialog):
@@ -80,11 +80,11 @@ class CustomMessageDialog(QtWidgets.QDialog, Ui_MessageDialog):
         self.label_message.setText(message)
         # Set the icon according to the message type.
         if type == "error":
-            self.label_icon.setPixmap(QPixmap("ui/_pics/icons/error_magenta.png"))
+            self.label_icon.setPixmap(QPixmap(":/ui/_pics/icons/error_magenta.png"))
         elif type == "info":
-            self.label_icon.setPixmap(QPixmap("ui/_pics/icons/info_blue.png"))
+            self.label_icon.setPixmap(QPixmap(":/ui/_pics/icons/info_blue.png"))
         else:
-            self.label_icon.setPixmap(QPixmap("ui/_pics/icons/error_magenta.png"))
+            self.label_icon.setPixmap(QPixmap(":/ui/_pics/icons/error_magenta.png"))
 
         # Connect the button with the close function of the dialog.
         self.button_ok.clicked.connect(self.accept)
@@ -122,7 +122,7 @@ class CustomYesNoDialog(QtWidgets.QDialog, Ui_YesNoDialog):
         self.label_message.setText(message)
         # Set the icon according to the message type.
         if type == "warning":
-            self.label_icon.setPixmap(QPixmap("ui/_pics/icons/attention_orange.png"))
+            self.label_icon.setPixmap(QPixmap(":/ui/_pics/icons/attention_orange.png"))
 
         # Connect the buttons.
         self.button_yes.clicked.connect(self.accept)
@@ -205,7 +205,7 @@ class CustomTwoChoiceDialog(QtWidgets.QDialog, Ui_TwoChoiceDialog):
         self.label_message.setText(message)
         # Set the icon according to the message type.
         if type == "warning":
-            self.label_icon.setPixmap(QPixmap("ui/_pics/icons/attention_orange.png"))
+            self.label_icon.setPixmap(QPixmap(":/ui/_pics/icons/attention_orange.png"))
         self.button_a.setText(button_a_label)
         self.button_b.setText(button_b_label)
 

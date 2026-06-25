@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'StartUpWindow.ui'
+## Form generated from reading UI file 'LauncherWindow.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.10.2
 ##
@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QLabel, QLineEdit, QPushButton,
     QSizePolicy, QStackedWidget, QWidget)
+import resources_rc
 
 class Ui_StartWidget(object):
     def setupUi(self, StartWidget):
@@ -30,7 +31,7 @@ class Ui_StartWidget(object):
         StartWidget.setFont(font)
         StartWidget.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         icon = QIcon()
-        icon.addFile(u"ui/_pics/logo_small.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/ui/_pics/logo_small.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         StartWidget.setWindowIcon(icon)
         StartWidget.setAutoFillBackground(False)
         StartWidget.setStyleSheet(u"background-color: rgb(29, 29, 29)")
@@ -82,7 +83,7 @@ class Ui_StartWidget(object):
 "}\n"
 "")
         icon1 = QIcon()
-        icon1.addFile(u"ui/_pics/icons/folder-orange.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(u":/ui/_pics/icons/folder-orange.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_open.setIcon(icon1)
         self.button_open.setIconSize(QSize(100, 100))
         self.button_create = QPushButton(self.StartUpWindow)
@@ -99,14 +100,14 @@ class Ui_StartWidget(object):
 "}\n"
 "")
         icon2 = QIcon()
-        icon2.addFile(u"ui/_pics/icons/add_blue.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon2.addFile(u":/ui/_pics/icons/add_blue.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_create.setIcon(icon2)
         self.button_create.setIconSize(QSize(100, 100))
         self.label_logo_big = QLabel(self.StartUpWindow)
         self.label_logo_big.setObjectName(u"label_logo_big")
         self.label_logo_big.setGeometry(QRect(0, 50, 851, 131))
         self.label_logo_big.setStyleSheet(u"")
-        self.label_logo_big.setPixmap(QPixmap(u"ui/_pics/logo_big.png"))
+        self.label_logo_big.setPixmap(QPixmap(u":/ui/_pics/logo_big.png"))
         self.label_logo_big.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label_header = QLabel(self.StartUpWindow)
         self.label_header.setObjectName(u"label_header")

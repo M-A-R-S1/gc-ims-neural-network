@@ -3,7 +3,8 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QFont
 from ui.classifier_ui.ClassifierWidget import Ui_ClassifierWidget
 from ui.classifier_ui.ClassifierTile import Ui_ClassifierTile
-from misc.dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
+from dialogs import CustomYesNoDialog, CustomProgressDialog, RenameLabelDialog, CustomMessageDialog
+from misc.utils import get_resource_path
 import sqlite3
 from pathlib import Path
 import torch
@@ -410,7 +411,7 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
 
     def load_models_to_dropdown(self):
         # Pfad zum models-Ordner (passe diesen ggf. an deine Ordnerstruktur an)
-        models_dir = Path("models")
+        models_dir = get_resource_path("models")
 
         if not models_dir.exists():
             print(f"Warnung: Models-Ordner nicht gefunden unter {models_dir}")
@@ -599,9 +600,10 @@ class ClassifierPage(QtWidgets.QWidget, Ui_ClassifierWidget):
         conn.close()
 
         # C. VAE MODELL LADEN
+        model_dir = get_resource_path("models")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         vae = misc.vae_model.VariationalAutoencoderCNN(input_layers=1, hidden_layers=64, latent_dimension=16).to(device)
-        vae.load_model(model_dir="models", file_name=f"{vae_model_name}.pt", device=device)
+        vae.load_model(model_dir=model_dir, file_name=f"{vae_model_name}.pt", device=device)
         vae.eval()
 
         # Hier sammeln wir alle 16 Latent-Werte von JEDEM Peak aneinandergereiht
@@ -708,11 +710,12 @@ class ClassificationWorker(QtCore.QObject):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # Initialize the model.
         model = misc.vae_model.VariationalAutoencoderCNN(input_layers=1,
-                                                    hidden_layers=64,
-                                                    latent_dimension=16).to(device)
+                                                         hidden_layers=64,
+                                                         latent_dimension=16).to(device)
 
         # Load the model state dict.
-        model.load_model(model_dir="models", file_name=self.model_filename, device=device)
+        model_dir = get_resource_path("models")
+        model.load_model(model_dir=model_dir, file_name=self.model_filename, device=device)
         # Start the random forest algorithm.
         self.start_random_forest(model=model,
                                  model_name=self.model_filename,
@@ -953,9 +956,9 @@ class ClassifierTileWidget(QtWidgets.QWidget, Ui_ClassifierTile):
 
         # If the mouse is hovering over the button show this button picture.
         if hover:
-            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+            button.setIcon(QtGui.QIcon(f':/ui/_pics/icons/{icon_name}.png'))
         else:
-            button.setIcon(QtGui.QIcon(f'ui/_pics/icons/{icon_name}.png'))
+            button.setIcon(QtGui.QIcon(f':/ui/_pics/icons/{icon_name}.png'))
 
 
     def emit_delete(self):

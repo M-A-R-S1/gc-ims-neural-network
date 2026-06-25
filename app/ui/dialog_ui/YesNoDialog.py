@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QDialog, QLabel, QPushButton,
     QSizePolicy, QWidget)
+import resources_rc
 
 class Ui_YesNoDialog(object):
     def setupUi(self, YesNoDialog):
@@ -58,7 +59,7 @@ class Ui_YesNoDialog(object):
         self.label_icon.setObjectName(u"label_icon")
         self.label_icon.setEnabled(True)
         self.label_icon.setGeometry(QRect(120, 20, 161, 161))
-        self.label_icon.setPixmap(QPixmap(u"ui/_pics/icons/attention_orange.png"))
+        self.label_icon.setPixmap(QPixmap(u":/ui/_pics/icons/attention_orange.png"))
         self.label_icon.setScaledContents(True)
         self.label_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.button_no = QPushButton(YesNoDialog)

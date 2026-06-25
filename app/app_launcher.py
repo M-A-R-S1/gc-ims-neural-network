@@ -4,6 +4,8 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtGui import QPalette, QColor, QFontDatabase
 from ui.LauncherWindow import Ui_StartWidget
 from app_project import ProjectWindow
+from misc.utils import get_resource_path
+import multiprocessing
 from pathlib import Path
 import re
 import json
@@ -344,8 +346,11 @@ def load_custom_fonts() -> None:
     :return: None.
     """
 
-    # Path to the fonts.
-    font_path =  Path(__file__).parent / "assets" / "fonts"
+    font_path = get_resource_path("assets/fonts")
+
+    if not font_path.exists():
+        print(f"Warning: Font directory not found at: {font_path}")
+        return
 
     # Load and register all fonts from the path.
     for font_file in font_path.glob("*.ttf"):
@@ -353,6 +358,8 @@ def load_custom_fonts() -> None:
 
 
 def main():
+    multiprocessing.freeze_support()
+
     # Create an application instance!
     app = QtWidgets.QApplication(sys.argv)
 
@@ -371,8 +378,20 @@ def main():
     # Load the custom fonts of this app [Lato...]
     load_custom_fonts()
 
+    if sys.platform == "win32":
+        import ctypes
+        myappid = 'RUB.gc_ims_suite.app.1_0'
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        except Exception:
+            pass
+
+    if sys.platform == "linux":
+        app.setDesktopFileName("gc_ims_suite.desktop")
+
     # Create a window and show it.
     launcher = MainWindow()
+    app.setWindowIcon(QtGui.QIcon(':/app_icon.ico'))
     # turns of the minimize and maximize buttons.
     launcher.setWindowFlags(QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowCloseButtonHint)
     launcher.show()

@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
     QSizePolicy, QWidget)
+import resources_rc
 
 class Ui_DatasetMainEntry(object):
     def setupUi(self, DatasetMainEntry):
@@ -65,7 +66,7 @@ class Ui_DatasetMainEntry(object):
 "	background-image: url(\"ui/_pics/icons/classifier_grey.png\");\n"
 "}")
         icon = QIcon()
-        icon.addFile(u"ui/_pics/icons/chevron_right_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u":/ui/_pics/icons/chevron_right_white.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.button_open_close.setIcon(icon)
         self.button_open_close.setIconSize(QSize(30, 30))
         self.button_open_close.setCheckable(False)

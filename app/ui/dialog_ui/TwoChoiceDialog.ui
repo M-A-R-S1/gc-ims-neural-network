@@ -106,7 +106,7 @@ QPushButton:hover {
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap>ui/_pics/icons/attention_orange.png</pixmap>
+    <pixmap resource="../../resources.qrc">:/ui/_pics/icons/attention_orange.png</pixmap>
    </property>
    <property name="scaledContents">
     <bool>true</bool>
@@ -185,6 +185,8 @@ QPushButton:hover {
    </property>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

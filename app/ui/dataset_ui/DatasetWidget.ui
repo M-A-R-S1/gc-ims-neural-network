@@ -293,8 +293,8 @@ background-color: #131313;
                <string>Add label</string>
               </property>
               <property name="icon">
-               <iconset>
-                <normaloff>ui/_pics/icons/add_circle_white.png</normaloff>ui/_pics/icons/add_circle_white.png</iconset>
+               <iconset resource="../../resources.qrc">
+                <normaloff>:/ui/_pics/icons/add_circle_white.png</normaloff>:/ui/_pics/icons/add_circle_white.png</iconset>
               </property>
               <property name="iconSize">
                <size>
@@ -512,8 +512,8 @@ background-color: #131313;
                <string>Add spectrum</string>
               </property>
               <property name="icon">
-               <iconset>
-                <normaloff>ui/_pics/icons/add_circle_white.png</normaloff>ui/_pics/icons/add_circle_white.png</iconset>
+               <iconset resource="../../resources.qrc">
+                <normaloff>:/ui/_pics/icons/add_circle_white.png</normaloff>:/ui/_pics/icons/add_circle_white.png</iconset>
               </property>
               <property name="iconSize">
                <size>
@@ -608,6 +608,8 @@ background-color: #131313;
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>
