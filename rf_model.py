@@ -163,10 +163,6 @@ def start_random_forest(model: torch.nn.Module,
                                                 test_feature=test_feature,
                                                 test_label=test_label,
                                                 output_dir=filedir)
-            # Plot the comparison boxplot.
-            plot.random_forest_boxplot(features=rf_features,
-                                       labels=labels,
-                                       output_dir=filedir)
 
         print("Random Forest: All Individual peaks classified")
 
@@ -256,9 +252,5 @@ def start_random_forest(model: torch.nn.Module,
                                             test_feature=test_feature,
                                             test_label=test_label,
                                             output_dir=filedir)
-        # Plot the comparison boxplot.
-        plot.random_forest_boxplot(features=rf_features,
-                                   labels=labels,
-                                   output_dir=filedir)
 
         print("Random Forest: Combined Peaks classified")
